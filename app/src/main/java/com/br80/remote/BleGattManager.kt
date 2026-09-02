@@ -135,18 +135,19 @@ class BleGattManager(
 
         val savedMac = mappingStorage.getLastConnectedMac()
         if (!savedMac.isNullOrEmpty() && BluetoothAdapter.checkBluetoothAddress(savedMac)) {
-            log("Tentativo di connessione rapida al MAC salvato: $savedMac...")
+            log("In attesa del telecomando $savedMac (premi un tasto sul telecomando)...")
             try {
                 val device = adapter.getRemoteDevice(savedMac)
                 startConnectionWatchdog()
                 connectGattTo(device)
-                return
             } catch (e: Exception) {
-                log("Connessione diretta fallita: ${e.message}, avvio scansione...")
+                log("Connessione rapida fallita: ${e.message}")
             }
+        } else {
+            startConnectionWatchdog()
         }
 
-        startConnectionWatchdog()
+        // Avvia contemporaneamente la scansione ad alta reattività per agganciare il telecomando non appena si risveglia
         startLeScan(adapter, isBackgroundStandby = false)
     }
 
@@ -163,11 +164,11 @@ class BleGattManager(
 
         stopLeScan()
 
-        log(if (isBackgroundStandby) "Avvio ascolto Standby BLE (a schermo spento)..." else "Avvio scansione BLE per Livall BR80 / BlingRemote...")
+        log(if (isBackgroundStandby) "Ascolto Standby attivo (premi un tasto sul telecomando)..." else "Scansione rapida attiva per Livall BR80...")
         isScanning = true
 
         val scanMode = if (isBackgroundStandby) {
-            ScanSettings.SCAN_MODE_LOW_POWER
+            ScanSettings.SCAN_MODE_BALANCED
         } else {
             ScanSettings.SCAN_MODE_LOW_LATENCY
         }
@@ -183,10 +184,8 @@ class BleGattManager(
         if (!savedMac.isNullOrEmpty() && BluetoothAdapter.checkBluetoothAddress(savedMac)) {
             filters.add(ScanFilter.Builder().setDeviceAddress(savedMac).build())
         }
-        filters.add(ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceUuid)).build())
-        filters.add(ScanFilter.Builder().setDeviceName("BlingRemote").build())
-        filters.add(ScanFilter.Builder().setDeviceName("BR80").build())
-        filters.add(ScanFilter.Builder().setDeviceName("Livall").build())
+        // Filtro generico per garantire la compatibilità con tutti i firmware BR80/BlingRemote a schermo spento
+        filters.add(ScanFilter.Builder().build())
 
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -198,15 +197,15 @@ class BleGattManager(
                 val serviceUuids = result.scanRecord?.serviceUuids?.map { it.uuid } ?: emptyList()
                 val savedMacCurrent = mappingStorage.getLastConnectedMac()
 
-                val matchesName = (devName != null && isMatchingName(devName)) ||
-                        (recordName != null && isMatchingName(recordName))
+                val matchesName = isMatchingName(devName) || isMatchingName(recordName)
                 val matchesService = serviceUuids.contains(serviceUuid)
                 val matchesMac = (savedMacCurrent != null && device.address.equals(savedMacCurrent, ignoreCase = true))
 
                 if (matchesName || matchesService || matchesMac) {
                     val displayName = recordName ?: devName ?: "BR80"
-                    log("Dispositivo rilevato: $displayName [${device.address}], RSSI: ${result.rssi}")
+                    log("Telecomando rilevato: $displayName [${device.address}], RSSI: ${result.rssi}")
                     stopLeScan()
+                    stopConnectionWatchdog()
                     mappingStorage.setLastConnectedMac(device.address)
                     connectGattTo(device)
                 }
@@ -232,10 +231,9 @@ class BleGattManager(
         }
 
         if (!isBackgroundStandby) {
-            // Timeout scansione attiva a 8 secondi -> passa all'ascolto Standby a schermo spento
+            // Dopo 8 secondi di scansione attiva passa all'ascolto continuo BALANCED
             scanTimeoutRunnable = Runnable {
                 if (isScanning) {
-                    log("Nessun segnale immediato: passo all'ascolto Standby in background...")
                     stopLeScan()
                     startLeScan(adapter, isBackgroundStandby = true)
                 }
@@ -244,9 +242,10 @@ class BleGattManager(
         }
     }
 
-    private fun isMatchingName(name: String): Boolean {
+    private fun isMatchingName(name: String?): Boolean {
+        if (name == null) return false
         val lower = name.lowercase()
-        return lower.contains("blingremote") || lower.contains("br80") || lower.contains("livall")
+        return lower.contains("blingremote") || lower.contains("br80") || lower.contains("livall") || lower.contains("remote") || lower.contains("bling")
     }
 
     @SuppressLint("MissingPermission")

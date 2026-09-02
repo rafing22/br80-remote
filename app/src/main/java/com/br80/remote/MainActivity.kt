@@ -123,7 +123,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 if (it.batteryLevel >= 0) {
                     onBatteryUpdated(it.batteryLevel)
                 }
-                if (pendingConnectOnBind && it.currentState == BleGattManager.ConnectionState.DISCONNECTED) {
+                val hasSavedMac = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
+                if ((pendingConnectOnBind || hasSavedMac) && it.currentState == BleGattManager.ConnectionState.DISCONNECTED) {
                     pendingConnectOnBind = false
                     it.connectDevice()
                 }
@@ -148,6 +149,12 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         selectButton(Br80Button.UP)
         updateBatteryOptButtonState()
         updateTapSpeedText()
+
+        // Auto-avvio servizio e ascolto se c'è un telecomando già associato
+        if (!mappingStorage.getLastConnectedMac().isNullOrEmpty()) {
+            pendingConnectOnBind = true
+            startAndBindBleService()
+        }
 
         // Controllo aggiornamenti all'avvio
         AppUpdateManager.checkForUpdates(this, isManualCheck = false)
@@ -759,17 +766,26 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             when (state) {
                 BleGattManager.ConnectionState.DISCONNECTED -> {
-                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#94A3B8"))
                     val hasSaved = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
-                    tvHeaderStatus.text = if (hasSaved) "Standby (In ascolto)" else "Disconnesso"
-                    tvHeaderStatus.setTextColor(Color.parseColor("#64748B"))
-                    tvHeaderBattery.text = ""
-                    btnQuickConnect.text = "Connetti"
-                    btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                    if (hasSaved) {
+                        viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#EAB308"))
+                        tvHeaderStatus.text = "In ascolto (Premi un tasto)"
+                        tvHeaderStatus.setTextColor(Color.parseColor("#CA8A04"))
+                        tvHeaderBattery.text = ""
+                        btnQuickConnect.text = "Riconnetti"
+                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                    } else {
+                        viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
+                        tvHeaderStatus.text = "Disconnesso"
+                        tvHeaderStatus.setTextColor(Color.parseColor("#64748B"))
+                        tvHeaderBattery.text = ""
+                        btnQuickConnect.text = "Connetti"
+                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                    }
                 }
                 BleGattManager.ConnectionState.CONNECTING -> {
                     viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#EAB308"))
-                    tvHeaderStatus.text = "Connessione..."
+                    tvHeaderStatus.text = "Connessione in corso..."
                     tvHeaderStatus.setTextColor(Color.parseColor("#CA8A04"))
                     btnQuickConnect.text = "Annulla"
                     btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#CA8A04"))
