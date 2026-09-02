@@ -15,6 +15,8 @@ import android.bluetooth.le.ScanResult
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -33,6 +35,11 @@ class MainActivity : Activity() {
   private val buttonUuid = UUID.fromString("0000a2a4-0000-1000-8000-00805f9b34fb")
   private val cccdUuid = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
+  private val maxWakeRetries = 5
+  private val wakeRetryDelayMillis = 1000L
+  private var wakeRetries = 0
+  private val handler = Handler(Looper.getMainLooper())
+
   private val buttonNames = mapOf(
     6 to "UP press", 38 to "UP release",
     5 to "DOWN press", 37 to "DOWN release",
@@ -41,7 +48,7 @@ class MainActivity : Activity() {
     9 to "HOME press", 41 to "HOME release",
     2 to "CAMERA press", 34 to "CAMERA release",
     29 to "CALL press", 45 to "CALL release"
-    )
+  )
 
   private lateinit var logView: TextView
   private lateinit var scrollView: ScrollView
@@ -79,7 +86,7 @@ class MainActivity : Activity() {
   private fun requestPermissionsAndScan() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       val needed = listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
-      .filter { ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        .filter { ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
       if (needed.isNotEmpty()) {
         ActivityCompat.requestPermissions(this, needed.toTypedArray(), 1)
         return
@@ -127,12 +134,14 @@ class MainActivity : Activity() {
   @SuppressLint("MissingPermission")
   private fun connect(device: BluetoothDevice) {
     log("Connessione a ${device.address}...")
+    wakeRetries = 0
     bluetoothGatt = device.connectGatt(this, false, gattCallback)
   }
 
   private val gattCallback = object : BluetoothGattCallback() {
     @SuppressLint("MissingPermission")
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+      log("Connection state change: status=$status newState=$newState")
       if (newState == BluetoothProfile.STATE_CONNECTED) {
         log("Connesso. Scopro i servizi...")
         gatt.discoverServices()
@@ -151,6 +160,7 @@ class MainActivity : Activity() {
       log("Servizio a2a0 trovato. Sveglio il device (write 0xFF su a2a3)...")
       val wakeChar = service.getCharacteristic(wakeUuid)
       if (wakeChar != null) {
+        wakeRetries = 0
         writeWake(gatt, wakeChar)
       } else {
         log("Characteristic a2a3 non trovata.")
@@ -160,11 +170,21 @@ class MainActivity : Activity() {
     @SuppressLint("MissingPermission")
     override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
       if (characteristic.uuid == wakeUuid) {
-        log("Wake inviato (status $status). Abilito le notifiche su a2a4...")
-        val service = gatt.getService(serviceUuid)
-        val buttonChar = service?.getCharacteristic(buttonUuid)
-        if (buttonChar != null) {
-          enableNotify(gatt, buttonChar)
+        if (status == BluetoothGatt.GATT_SUCCESS) {
+          log("Wake inviato correttamente (status $status). Abilito le notifiche su a2a4...")
+          val service = gatt.getService(serviceUuid)
+          val buttonChar = service?.getCharacteristic(buttonUuid)
+          if (buttonChar != null) {
+            enableNotify(gatt, buttonChar)
+          }
+        } else if (wakeRetries < maxWakeRetries) {
+          wakeRetries++
+          log("Wake fallito (status $status). Riprovo tra 1s (tentativo $wakeRetries/$maxWakeRetries)...")
+          handler.postDelayed({
+            writeWake(gatt, characteristic)
+          }, wakeRetryDelayMillis)
+        } else {
+          log("Wake fallito dopo $maxWakeRetries tentativi (status $status). Riprova a premere Scan.")
         }
       }
     }
