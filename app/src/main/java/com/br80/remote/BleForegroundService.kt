@@ -67,8 +67,6 @@ class BleForegroundService : Service() {
         listener?.onLog(msg)
     }
 
-    // ---- Profilo BR80 (validato sul device reale, build #5) ----
-
     private val serviceUuid = UUID.fromString("0000a2a0-0000-1000-8000-00805f9b34fb")
     private val wakeUuid = UUID.fromString("0000a2a3-0000-1000-8000-00805f9b34fb")
     private val buttonUuid = UUID.fromString("0000a2a4-0000-1000-8000-00805f9b34fb")
@@ -95,35 +93,45 @@ class BleForegroundService : Service() {
 
     @SuppressLint("MissingPermission")
     fun connectDevice(macAddress: String? = null) {
-        userRequestedDisconnect = false
-        updateState(ConnectionState.CONNECTING)
-        updateNotification("Connessione al BR80 in corso...")
-        closeExistingGatt()
+        try {
+            userRequestedDisconnect = false
+            updateState(ConnectionState.CONNECTING)
+            updateNotification("Connessione al BR80 in corso...")
+            closeExistingGatt()
 
-        val bluetoothManager = getSystemService(BluetoothManager::class.java)
-        val adapter = bluetoothManager.adapter
-        if (adapter == null || !adapter.isEnabled) {
-            log("Bluetooth non disponibile o spento.")
-            updateState(ConnectionState.DISCONNECTED)
-            return
-        }
-        val scanner = adapter.bluetoothLeScanner
-        log("Scansione in corso, cerco BlingRemote (a2a0)...")
+            val bluetoothManager = getSystemService(BluetoothManager::class.java)
+            val adapter = bluetoothManager.adapter
+            if (adapter == null || !adapter.isEnabled) {
+                log("Bluetooth non disponibile o spento.")
+                updateState(ConnectionState.DISCONNECTED)
+                return
+            }
+            val scanner = adapter.bluetoothLeScanner
+            log("Scansione in corso, cerco BlingRemote (a2a0)...")
 
-        val callback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                val name = result.device.name
-                if (name == "BlingRemote") {
-                    log("Trovato: $name (${result.device.address}), RSSI ${result.rssi}")
-                    scanner.stopScan(this)
-                    connectGattTo(result.device)
+            val callback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult) {
+                    try {
+                        val name = result.device.name
+                        if (name == "BlingRemote") {
+                            log("Trovato: " + name + " (" + result.device.address + "), RSSI " + result.rssi)
+                            scanner.stopScan(this)
+                            connectGattTo(result.device)
+                        }
+                    } catch (e: Exception) {
+                        log("ERRORE in onScanResult: " + e.javaClass.simpleName + ": " + e.message)
+                    }
+                }
+                override fun onScanFailed(errorCode: Int) {
+                    log("Scan fallito, codice $errorCode")
+                    updateState(ConnectionState.DISCONNECTED)
                 }
             }
-            override fun onScanFailed(errorCode: Int) {
-                log("Scan fallito, codice $errorCode")
-            }
+            scanner.startScan(callback)
+        } catch (e: Exception) {
+            log("ERRORE avvio connessione: " + e.javaClass.simpleName + ": " + e.message)
+            updateState(ConnectionState.DISCONNECTED)
         }
-        scanner.startScan(callback)
     }
 
     @SuppressLint("MissingPermission")
@@ -150,8 +158,13 @@ class BleForegroundService : Service() {
     private fun connectGattTo(device: BluetoothDevice) {
         wakeRetries = 0
         handler.postDelayed({
-            log("Connessione a ${device.address}...")
-            bluetoothGatt = device.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+            try {
+                log("Connessione a " + device.address + "...")
+                bluetoothGatt = device.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+            } catch (e: Exception) {
+                log("ERRORE connectGatt: " + e.javaClass.simpleName + ": " + e.message)
+                updateState(ConnectionState.DISCONNECTED)
+            }
         }, connectDelayMillis)
     }
 
@@ -172,7 +185,6 @@ class BleForegroundService : Service() {
                 }
                 updateState(ConnectionState.DISCONNECTED)
                 updateNotification("Disconnesso")
-                // Riconnessione automatica: implementata in una fase successiva (§2 del piano)
             }
         }
 
@@ -222,7 +234,7 @@ class BleForegroundService : Service() {
                 if (value != null && value.isNotEmpty()) {
                     val code = value[0].toInt() and 0xFF
                     val label = buttonNames[code] ?: "sconosciuto"
-                    log("a2a4 = $code (0x${code.toString(16)}) -> $label")
+                    log("a2a4 = " + code + " (0x" + code.toString(16) + ") -> " + label)
                     val parts = label.split(" ")
                     if (parts.size == 2) {
                         listener?.onButtonEvent(parts[0], parts[1].uppercase())
@@ -261,8 +273,6 @@ class BleForegroundService : Service() {
             log("Notifiche abilitate su a2a4. Premi un tasto sul BR80.")
         }
     }
-
-    // ---- Stato / notifica ----
 
     private fun updateState(newState: ConnectionState) {
         currentState = newState
