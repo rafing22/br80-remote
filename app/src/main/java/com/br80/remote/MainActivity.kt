@@ -7,14 +7,17 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.widget.Button
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.br80.remote.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListener {
 
-    private lateinit var binding: ActivityMainBinding
     private var bleService: BleForegroundService? = null
     private var isBound = false
+
+    private lateinit var tvStatus: TextView
+    private lateinit var btnConnect: Button
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -35,11 +38,17 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Inflate del layout tramite View Binding
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // Recupero dinamico dei layout e degli ID per evitare errori con la classe R
+        val layoutResId = resources.getIdentifier("activity_main", "layout", packageName)
+        setContentView(layoutResId)
 
-        binding.btnConnect.setOnClickListener {
+        val tvStatusId = resources.getIdentifier("tvStatus", "id", packageName)
+        val btnConnectId = resources.getIdentifier("btnConnect", "id", packageName)
+
+        tvStatus = findViewById(tvStatusId)
+        btnConnect = findViewById(btnConnectId)
+
+        btnConnect.setOnClickListener {
             bleService?.let { service ->
                 when (service.currentState) {
                     BleForegroundService.ConnectionState.DISCONNECTED -> {
@@ -86,26 +95,26 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             when (state) {
                 BleForegroundService.ConnectionState.DISCONNECTED -> {
-                    binding.tvStatus.text = "Stato: Disconnesso"
-                    binding.btnConnect.text = "Connetti"
+                    tvStatus.text = "Stato: Disconnesso"
+                    btnConnect.text = "Connetti"
                 }
                 BleForegroundService.ConnectionState.CONNECTING -> {
-                    binding.tvStatus.text = "Stato: Connessione in corso..."
-                    binding.btnConnect.text = "Annulla"
+                    tvStatus.text = "Stato: Connessione in corso..."
+                    btnConnect.text = "Annulla"
                 }
                 BleForegroundService.ConnectionState.CONNECTED -> {
-                    binding.tvStatus.text = "Stato: Connesso"
-                    binding.btnConnect.text = "Disconnetti"
+                    tvStatus.text = "Stato: Connesso"
+                    btnConnect.text = "Disconnetti"
                 }
             }
         }
     }
 
     override fun onButtonEvent(button: String, gesture: String) {
-        // Eventi tasto
+        // Eventi pressione tasto
     }
 
     override fun onBatteryUpdated(level: Int) {
-        // Eventi batteria
+        // Eventi aggiornamento batteria
     }
 }
