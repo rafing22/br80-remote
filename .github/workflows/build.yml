@@ -3,6 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ main, "feature/**" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -31,8 +32,13 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
 
-      - name: Upload APK
+      - name: Prepare APK with release naming
+        run: |
+          mkdir -p release_apk
+          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.1.apk
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: br80-remote-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: Livall-BR80-Remote-v1.1
+          path: release_apk/Livall-BR80-Remote-v1.1.apk

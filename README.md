@@ -1,23 +1,24 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.0)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.1)
 
-Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎯 Caratteristiche Principali
+## 🎯 Novità Versione 1.1
 
-- **Background & Foreground Service Persistente:** Mantiene la connessione BLE attiva anche a schermo spento con notifica di stato e zero consumo anomalo di batteria.
-- **Riconnessione Automatica Intelligente:** Memorizzazione del MAC address e riconnessione diretta con backoff esponenziale quando il telecomando si risveglia dallo standby.
-- **Indicatore Batteria in Tempo Reale:** Lettura del livello di carica tramite servizio standard Bluetooth SIG (`0x180F` / `0x2A19`).
-- **Macchina a Stati Gesti (Zero-Latency):**
-  - Singolo Tap (`SINGLE`)
-  - Doppio Tap (`DOUBLE`)
-  - Triplo Tap (`TRIPLE`)
-  - Pressione Lunga (`LONG`, >500ms)
-  - *Zero-Latency Mode:* se non sono configurati doppi o tripli tap su un tasto, il singolo tap scatta **istantaneamente** al rilascio senza attendere la finestra di 350ms.
-- **Feedback Aptico & Sonoro:** Vibrazione e/o beep di conferma alla pressione per l'uso con guanti da moto/bici.
-- **Catalogo Azioni Native:** Controllo volume, musica (Play/Pausa/Next/Prev), lancio rapido di qualsiasi app installata, navigazione Google Maps verso una meta e risposta/rifiuto chiamate.
-- **Integrazione Tasker / Automazioni:** Ogni gesto invia un broadcast Android `com.br80.remote.BUTTON_EVENT` con payload arricchito.
+- **🎮 Controller Grafico D-Pad Interattivo:** Rappresentazione grafica del BR80 con disco a 4 frecce + Home e tasti Foto/Chiamata. Cliccando a schermo o premendo il tasto fisico sul telecomando reale in mano, il tasto si illumina e si apre la scheda di configurazione dei suoi 4 gesti.
+- **🔍 Catalogo Azioni Esteso con Ricerca Testuale & Categorie:**
+  - 🎵 *Media & Volume:* Volume +, Volume -, Play/Pausa, Traccia Succ, Traccia Prec, Muto Toggle.
+  - 🧠 *Assistente & AI:* Avvia **Google Gemini / Assistente Vocale**, Registratore Vocale.
+  - 🧭 *Navigazione & Mappe:* Naviga verso Destinazione, Apri Google Maps.
+  - 📱 *Telefono & Chiamate:* Rispondi, Rifiuta, Chiamata Rapida (Speed Dial).
+  - 🛠️ *Utilità & Sistema:* Torcia ON/OFF, Schermo Sempre Acceso, Scatto Fotocamera, Apri App specifica.
+  - ⚡ *Automazione:* Broadcast Tasker, Nessuna Azione.
+  - **Barra di ricerca rapida** per filtrare all'istante le azioni digitando il nome.
+- **🔔 Notifica Persistente con Azioni Rapide:** Visualizza stato e livello batteria in tempo reale con pulsante integrato *"Connetti"* o *"Disconnetti"*.
+- **⏱️ Keep-Alive / Always-On (Anti-Standby):** Opzione per inviare un ping periodico che impedisce al telecomando di andare in deep sleep, garantendo risposta al primo tocco.
+- **📑 Bottom Navigation Bar a 3 Sezioni:** `[🎮 Controller]` | `[⚙️ Opzioni]` | `[📜 Log Eventi]`.
+- **🪄 Esportatore Progetto Tasker Preconfigurato:** Genera e condivide con un tocco il file XML con tutti i 28 trigger già pronti per Tasker.
 
 ---
 
@@ -63,10 +64,7 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
   - `battery` *(Int)*: livello percentuale della batteria (0–100)
   - `timestamp` *(Long)*: orario dell'evento in millisecondi
 
-### Configurazione su Tasker:
-1. Crea un nuovo **Profilo** $\rightarrow$ **Evento** $\rightarrow$ **Sistema** $\rightarrow$ **Intent Ricevuto** (Intent Received).
-2. Nel campo **Azione** inserisci: `com.br80.remote.BUTTON_EVENT`.
-3. Nei filtri o nelle variabili del task puoi usare `%event_id` (es. `CAMERA_SINGLE` per scattare una foto, aprire il garage o attivare la torcia).
+Dalla scheda **⚙️ Opzioni** dell'app puoi toccare **"Esporta Progetto Tasker (.xml)"** per importare istantaneamente tutti i profili e task d'esempio già configurati.
 
 ---
 
@@ -76,29 +74,24 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 Puoi scaricare l'ultima versione compilata dell'APK da **GitHub Actions**:
 1. Vai nella scheda **[Actions](https://github.com/rafing22/br80-remote/actions)** del repository.
 2. Clicca sull'ultima esecuzione del workflow **Build APK**.
-3. Nella sezione **Artifacts** in fondo alla pagina, scarica **`br80-remote-debug-apk`**.
+3. Nella sezione **Artifacts** in fondo alla pagina, scarica **`Livall-BR80-Remote-v1.1`**.
 
 ### 2. Primo Avvio
 1. Apri l'app e tocca **"Connetti"**.
-2. Concedi i permessi Bluetooth, Notifiche e Chiamate.
-3. Tocca il pulsante **"Disattiva Doze"** per escludere l'app dalle ottimizzazioni energetiche OEM e garantire la reattività a schermo spento.
+2. Concedi i permessi Bluetooth, Notifiche e Accessibilità.
+3. Nella scheda **⚙️ Opzioni**, tocca **"Disattiva Doze"** per garantire la reattività a schermo spento.
 4. Accendi il telecomando BR80: l'app si connetterà automaticamente, mostrerà la batteria e sarà pronta.
-
-### 3. Personalizzazione Mappatura
-Dall'interfaccia principale puoi toccare ciascuna combinazione di tasto e gesto per assegnare l'azione desiderata o scegliere quale app installata aprire.
 
 ---
 
 ## 🛠️ Compilazione da Sorgente
-
-Il progetto è sviluppato in **Kotlin** con target **SDK 34 (Android 14)** e supporto retrocompatibile a partire da **Android 8.0 (API 26)**.
 
 ```bash
 # Compilazione APK Debug
 ./gradlew assembleDebug
 
 # L'output sarà generato in:
-# app/build/outputs/apk/debug/app-debug.apk
+# release_apk/Livall-BR80-Remote-v1.1.apk
 ```
 
 ---

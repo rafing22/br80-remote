@@ -2,6 +2,8 @@ package com.br80.remote
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -15,7 +17,10 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
@@ -23,6 +28,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -38,16 +44,58 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     private lateinit var mappingStorage: MappingStorage
 
-    private lateinit var tvStatus: TextView
-    private lateinit var tvBattery: TextView
-    private lateinit var btnConnect: Button
-    private lateinit var cbHaptic: CheckBox
-    private lateinit var cbSound: CheckBox
-    private lateinit var btnBatteryOpt: Button
-    private lateinit var llButtonsList: LinearLayout
-    private lateinit var tvLog: TextView
-    private lateinit var svLog: ScrollView
-    private lateinit var btnLogClear: TextView
+    // Header Views
+    private lateinit var viewStatusDot: View
+    private lateinit var tvHeaderStatus: TextView
+    private lateinit var tvHeaderBattery: TextView
+    private lateinit var btnQuickConnect: Button
+
+    // Tab Containers
+    private lateinit var tabController: ScrollView
+    private lateinit var tabOptions: ScrollView
+    private lateinit var tabLog: LinearLayout
+
+    // Bottom Navigation
+    private lateinit var navBtnController: LinearLayout
+    private lateinit var navBtnOptions: LinearLayout
+    private lateinit var navBtnLog: LinearLayout
+    private lateinit var tvNavTextController: TextView
+    private lateinit var tvNavTextOptions: TextView
+    private lateinit var tvNavTextLog: TextView
+
+    // Controller Pad Buttons
+    private lateinit var btnPadUp: Button
+    private lateinit var btnPadDown: Button
+    private lateinit var btnPadLeft: Button
+    private lateinit var btnPadRight: Button
+    private lateinit var btnPadHome: Button
+    private lateinit var btnPadCamera: Button
+    private lateinit var btnPadCall: Button
+
+    // Selected Button Card
+    private var currentSelectedButton: Br80Button = Br80Button.UP
+    private lateinit var tvSelectedButtonTitle: TextView
+    private lateinit var rowGestureSingle: LinearLayout
+    private lateinit var tvActionSingle: TextView
+    private lateinit var rowGestureDouble: LinearLayout
+    private lateinit var tvActionDouble: TextView
+    private lateinit var rowGestureTriple: LinearLayout
+    private lateinit var tvActionTriple: TextView
+    private lateinit var rowGestureLong: LinearLayout
+    private lateinit var tvActionLong: TextView
+
+    // Options Tab Views
+    private lateinit var cbOptKeepAlive: CheckBox
+    private lateinit var btnOptDoze: Button
+    private lateinit var cbOptHaptic: CheckBox
+    private lateinit var cbOptSound: CheckBox
+    private lateinit var btnOptTaskerExport: Button
+
+    // Log Tab Views
+    private lateinit var tvLogFull: TextView
+    private lateinit var svLogFull: ScrollView
+    private lateinit var btnLogCopy: TextView
+    private lateinit var btnLogClearTab: TextView
 
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
@@ -84,48 +132,350 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         initViews()
         setupListeners()
-        populateMappingList()
+        setupBottomNav()
+        selectButton(Br80Button.UP)
         updateBatteryOptButtonState()
     }
 
     private fun initViews() {
-        tvStatus = findViewById(R.id.tvStatus)
-        tvBattery = findViewById(R.id.tvBattery)
-        btnConnect = findViewById(R.id.btnConnect)
-        cbHaptic = findViewById(R.id.cbHaptic)
-        cbSound = findViewById(R.id.cbSound)
-        btnBatteryOpt = findViewById(R.id.btnBatteryOpt)
-        llButtonsList = findViewById(R.id.llButtonsList)
-        tvLog = findViewById(R.id.tvLog)
-        svLog = findViewById(R.id.svLog)
-        btnLogClear = findViewById(R.id.btnLogClear)
+        // Header
+        viewStatusDot = findViewById(R.id.viewStatusDot)
+        tvHeaderStatus = findViewById(R.id.tvHeaderStatus)
+        tvHeaderBattery = findViewById(R.id.tvHeaderBattery)
+        btnQuickConnect = findViewById(R.id.btnQuickConnect)
 
-        cbHaptic.isChecked = mappingStorage.isHapticFeedbackEnabled()
-        cbSound.isChecked = mappingStorage.isSoundFeedbackEnabled()
+        // Tabs
+        tabController = findViewById(R.id.tabController)
+        tabOptions = findViewById(R.id.tabOptions)
+        tabLog = findViewById(R.id.tabLog)
+
+        // Bottom Nav
+        navBtnController = findViewById(R.id.navBtnController)
+        navBtnOptions = findViewById(R.id.navBtnOptions)
+        navBtnLog = findViewById(R.id.navBtnLog)
+        tvNavTextController = findViewById(R.id.tvNavTextController)
+        tvNavTextOptions = findViewById(R.id.tvNavTextOptions)
+        tvNavTextLog = findViewById(R.id.tvNavTextLog)
+
+        // Pad Buttons
+        btnPadUp = findViewById(R.id.btnPadUp)
+        btnPadDown = findViewById(R.id.btnPadDown)
+        btnPadLeft = findViewById(R.id.btnPadLeft)
+        btnPadRight = findViewById(R.id.btnPadRight)
+        btnPadHome = findViewById(R.id.btnPadHome)
+        btnPadCamera = findViewById(R.id.btnPadCamera)
+        btnPadCall = findViewById(R.id.btnPadCall)
+
+        // Selected Button Card
+        tvSelectedButtonTitle = findViewById(R.id.tvSelectedButtonTitle)
+        rowGestureSingle = findViewById(R.id.rowGestureSingle)
+        tvActionSingle = findViewById(R.id.tvActionSingle)
+        rowGestureDouble = findViewById(R.id.rowGestureDouble)
+        tvActionDouble = findViewById(R.id.tvActionDouble)
+        rowGestureTriple = findViewById(R.id.rowGestureTriple)
+        tvActionTriple = findViewById(R.id.tvActionTriple)
+        rowGestureLong = findViewById(R.id.rowGestureLong)
+        tvActionLong = findViewById(R.id.tvActionLong)
+
+        // Options
+        cbOptKeepAlive = findViewById(R.id.cbOptKeepAlive)
+        btnOptDoze = findViewById(R.id.btnOptDoze)
+        cbOptHaptic = findViewById(R.id.cbOptHaptic)
+        cbOptSound = findViewById(R.id.cbOptSound)
+        btnOptTaskerExport = findViewById(R.id.btnOptTaskerExport)
+
+        cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
+        cbOptHaptic.isChecked = mappingStorage.isHapticFeedbackEnabled()
+        cbOptSound.isChecked = mappingStorage.isSoundFeedbackEnabled()
+
+        // Log Tab
+        tvLogFull = findViewById(R.id.tvLogFull)
+        svLogFull = findViewById(R.id.svLogFull)
+        btnLogCopy = findViewById(R.id.btnLogCopy)
+        btnLogClearTab = findViewById(R.id.btnLogClearTab)
     }
 
     private fun setupListeners() {
-        btnConnect.setOnClickListener {
+        btnQuickConnect.setOnClickListener {
             onConnectButtonClicked()
         }
 
-        cbHaptic.setOnCheckedChangeListener { _, isChecked ->
+        // Pad Buttons Click Listeners
+        btnPadUp.setOnClickListener { selectButton(Br80Button.UP) }
+        btnPadDown.setOnClickListener { selectButton(Br80Button.DOWN) }
+        btnPadLeft.setOnClickListener { selectButton(Br80Button.LEFT) }
+        btnPadRight.setOnClickListener { selectButton(Br80Button.RIGHT) }
+        btnPadHome.setOnClickListener { selectButton(Br80Button.HOME) }
+        btnPadCamera.setOnClickListener { selectButton(Br80Button.CAMERA) }
+        btnPadCall.setOnClickListener { selectButton(Br80Button.CALL) }
+
+        // Gestures Click Listeners
+        rowGestureSingle.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.SINGLE) }
+        rowGestureDouble.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.DOUBLE) }
+        rowGestureTriple.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.TRIPLE) }
+        rowGestureLong.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.LONG) }
+
+        // Options Listeners
+        cbOptKeepAlive.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setKeepAliveEnabled(isChecked)
+            bleService?.gattManager?.startKeepAliveIfEnabled()
+            log("Keep-Alive impostato a: " + if (isChecked) "ATTIVO (Ping ogni 60s)" else "DISATTIVATO")
+        }
+
+        cbOptHaptic.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setHapticFeedbackEnabled(isChecked)
-            log("Vibrazione feedback: " + (if (isChecked) "Attiva" else "Disattivata"))
+            log("Vibrazione feedback: " + if (isChecked) "Attiva" else "Disattivata")
         }
 
-        cbSound.setOnCheckedChangeListener { _, isChecked ->
+        cbOptSound.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setSoundFeedbackEnabled(isChecked)
-            log("Beep audio feedback: " + (if (isChecked) "Attivo" else "Disattivato"))
+            log("Beep audio feedback: " + if (isChecked) "Attivo" else "Disattivato")
         }
 
-        btnBatteryOpt.setOnClickListener {
+        btnOptDoze.setOnClickListener {
             requestIgnoreBatteryOptimization()
         }
 
-        btnLogClear.setOnClickListener {
-            tvLog.text = "[LOG PULITO]"
+        btnOptTaskerExport.setOnClickListener {
+            TaskerExporter.exportAndShare(this)
+            log("Progetto Tasker XML esportato.")
         }
+
+        // Log Tab Listeners
+        btnLogCopy.setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val clip = ClipData.newPlainText("BR80 Log", tvLogFull.text)
+            clipboard?.setPrimaryClip(clip)
+            Toast.makeText(this, "Log copiato negli appunti!", Toast.LENGTH_SHORT).show()
+        }
+
+        btnLogClearTab.setOnClickListener {
+            tvLogFull.text = "[LOG PULITO]"
+        }
+    }
+
+    private fun setupBottomNav() {
+        navBtnController.setOnClickListener { switchTab(0) }
+        navBtnOptions.setOnClickListener { switchTab(1) }
+        navBtnLog.setOnClickListener { switchTab(2) }
+    }
+
+    private fun switchTab(tabIndex: Int) {
+        tabController.visibility = if (tabIndex == 0) View.VISIBLE else View.GONE
+        tabOptions.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
+        tabLog.visibility = if (tabIndex == 2) View.VISIBLE else View.GONE
+
+        tvNavTextController.setTextColor(toColorStateList(if (tabIndex == 0) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
+        tvNavTextOptions.setTextColor(toColorStateList(if (tabIndex == 1) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
+        tvNavTextLog.setTextColor(toColorStateList(if (tabIndex == 2) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
+    }
+
+    // Selezione del tasto del D-Pad
+    private fun selectButton(button: Br80Button) {
+        currentSelectedButton = button
+
+        // Reset colori di sfondo D-Pad
+        val defaultPadColor = Color.parseColor("#1E293B")
+        val defaultCenterColor = Color.parseColor("#0284C7")
+        val defaultSpecialColor = Color.parseColor("#334155")
+        val activeColor = Color.parseColor("#0EA5E9")
+
+        btnPadUp.backgroundTintList = toColorStateList(if (button == Br80Button.UP) activeColor else defaultPadColor)
+        btnPadDown.backgroundTintList = toColorStateList(if (button == Br80Button.DOWN) activeColor else defaultPadColor)
+        btnPadLeft.backgroundTintList = toColorStateList(if (button == Br80Button.LEFT) activeColor else defaultPadColor)
+        btnPadRight.backgroundTintList = toColorStateList(if (button == Br80Button.RIGHT) activeColor else defaultPadColor)
+        btnPadHome.backgroundTintList = toColorStateList(if (button == Br80Button.HOME) activeColor else defaultCenterColor)
+        btnPadCamera.backgroundTintList = toColorStateList(if (button == Br80Button.CAMERA) activeColor else defaultSpecialColor)
+        btnPadCall.backgroundTintList = toColorStateList(if (button == Br80Button.CALL) activeColor else defaultSpecialColor)
+
+        // Aggiorna scheda gesti
+        tvSelectedButtonTitle.text = "${button.displayName} (${button.name})"
+
+        val actSingle = mappingStorage.getAction(button, GestureType.SINGLE)
+        tvActionSingle.text = actSingle.getReadableDescription()
+        tvActionSingle.setTextColor(if (actSingle.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+
+        val actDouble = mappingStorage.getAction(button, GestureType.DOUBLE)
+        tvActionDouble.text = actDouble.getReadableDescription()
+        tvActionDouble.setTextColor(if (actDouble.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+
+        val actTriple = mappingStorage.getAction(button, GestureType.TRIPLE)
+        tvActionTriple.text = actTriple.getReadableDescription()
+        tvActionTriple.setTextColor(if (actTriple.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+
+        val actLong = mappingStorage.getAction(button, GestureType.LONG)
+        tvActionLong.text = actLong.getReadableDescription()
+        tvActionLong.setTextColor(if (actLong.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+    }
+
+    // Dialog Selezione Azioni con Categorie e Ricerca Testuale
+    private fun showActionPicker(button: Br80Button, gesture: GestureType) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_action_picker, null)
+        val etSearch = dialogView.findViewById<EditText>(R.id.etActionSearch)
+        val llContainer = dialogView.findViewById<LinearLayout>(R.id.llActionsContainer)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("${button.displayName} — ${gesture.displayName}")
+            .setView(dialogView)
+            .setNegativeButton("Annulla", null)
+            .create()
+
+        fun populateList(query: String) {
+            llContainer.removeAllViews()
+            val allActions = ActionType.values()
+            val filtered = if (query.isBlank()) {
+                allActions.toList()
+            } else {
+                allActions.filter {
+                    it.displayName.contains(query, ignoreCase = true) ||
+                    it.description.contains(query, ignoreCase = true) ||
+                    it.category.displayName.contains(query, ignoreCase = true)
+                }
+            }
+
+            val grouped = filtered.groupBy { it.category }
+
+            for ((category, actions) in grouped) {
+                // Header Categoria
+                val catHeader = TextView(this).apply {
+                    text = "${category.icon} ${category.displayName}"
+                    textSize = 14f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.parseColor("#0F172A"))
+                    setPadding(8, 12, 8, 4)
+                }
+                llContainer.addView(catHeader)
+
+                for (action in actions) {
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(12, 10, 12, 10)
+                        setBackgroundColor(Color.parseColor("#FFFFFF"))
+                        isClickable = true
+                        isFocusable = true
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 2, 0, 4)
+                        layoutParams = params
+
+                        setOnClickListener {
+                            dialog.dismiss()
+                            handleActionSelection(button, gesture, action)
+                        }
+                    }
+
+                    val tvTitle = TextView(this).apply {
+                        text = action.displayName
+                        textSize = 14f
+                        setTypeface(null, Typeface.BOLD)
+                        setTextColor(if (action == ActionType.NONE) Color.parseColor("#64748B") else Color.parseColor("#0284C7"))
+                    }
+
+                    val tvDesc = TextView(this).apply {
+                        text = action.description
+                        textSize = 12f
+                        setTextColor(Color.parseColor("#64748B"))
+                    }
+
+                    row.addView(tvTitle)
+                    row.addView(tvDesc)
+                    llContainer.addView(row)
+                }
+            }
+        }
+
+        populateList("")
+
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                populateList(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        dialog.show()
+    }
+
+    private fun handleActionSelection(button: Br80Button, gesture: GestureType, action: ActionType) {
+        when (action) {
+            ActionType.OPEN_APP -> showAppPicker(button, gesture)
+            ActionType.START_NAVIGATION -> showDestinationPicker(button, gesture)
+            ActionType.PHONE_SPEED_DIAL -> showSpeedDialPicker(button, gesture)
+            else -> {
+                mappingStorage.setAction(button, gesture, ButtonAction(action))
+                selectButton(button)
+                log("Mappatura: ${button.name}_${gesture.name} -> ${action.displayName}")
+            }
+        }
+    }
+
+    private fun showAppPicker(button: Br80Button, gesture: GestureType) {
+        val pm = packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val apps = pm.queryIntentActivities(intent, 0)
+            .sortedBy { it.loadLabel(pm).toString() }
+
+        val appLabels = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Seleziona Applicazione da aprire")
+            .setItems(appLabels) { _, which ->
+                val selectedApp = apps[which]
+                val pkgName = selectedApp.activityInfo.packageName
+                val appName = selectedApp.loadLabel(pm).toString()
+
+                mappingStorage.setAction(button, gesture, ButtonAction(ActionType.OPEN_APP, pkgName))
+                selectButton(button)
+                log("Mappatura: ${button.name}_${gesture.name} -> Apri $appName ($pkgName)")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showDestinationPicker(button: Br80Button, gesture: GestureType) {
+        val input = EditText(this).apply {
+            hint = "Es. Casa, Lavoro, o coordinate GPS"
+            setText(mappingStorage.getAction(button, gesture).parameter)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Destinazione Navigazione")
+            .setMessage("Inserisci l'indirizzo o punto per Google Maps:")
+            .setView(input)
+            .setPositiveButton("Salva") { _, _ ->
+                val dest = input.text.toString().trim()
+                mappingStorage.setAction(button, gesture, ButtonAction(ActionType.START_NAVIGATION, dest))
+                selectButton(button)
+                log("Mappatura: ${button.name}_${gesture.name} -> Naviga verso '$dest'")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showSpeedDialPicker(button: Br80Button, gesture: GestureType) {
+        val input = EditText(this).apply {
+            hint = "Es. +393331234567"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            setText(mappingStorage.getAction(button, gesture).parameter)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Numero Chiamata Rapida")
+            .setMessage("Inserisci il numero telefonico da chiamare direttamente:")
+            .setView(input)
+            .setPositiveButton("Salva") { _, _ ->
+                val num = input.text.toString().trim()
+                mappingStorage.setAction(button, gesture, ButtonAction(ActionType.PHONE_SPEED_DIAL, num))
+                selectButton(button)
+                log("Mappatura: ${button.name}_${gesture.name} -> Chiama '$num'")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
     }
 
     private fun onConnectButtonClicked() {
@@ -180,16 +530,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
-            val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-            if (allGranted) {
-                log("Tutti i permessi concessi.")
-                startAndBindBleService()
-                bleService?.connectDevice()
-            } else {
-                log("Alcuni permessi sono stati negati.")
-                startAndBindBleService()
-                bleService?.connectDevice()
-            }
+            startAndBindBleService()
+            bleService?.connectDevice()
         }
     }
 
@@ -228,23 +570,36 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             when (state) {
                 BleGattManager.ConnectionState.DISCONNECTED -> {
-                    tvStatus.text = "Stato: Disconnesso"
-                    tvStatus.setTextColor(Color.parseColor("#64748B"))
-                    btnConnect.text = "Connetti"
-                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
+                    tvHeaderStatus.text = "Disconnesso"
+                    tvHeaderStatus.setTextColor(Color.parseColor("#64748B"))
+                    tvHeaderBattery.text = ""
+                    btnQuickConnect.text = "Connetti"
+                    btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
                 }
                 BleGattManager.ConnectionState.CONNECTING -> {
-                    tvStatus.text = "Stato: Connessione in corso..."
-                    tvStatus.setTextColor(Color.parseColor("#EAB308"))
-                    btnConnect.text = "Annulla"
-                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#CA8A04"))
+                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#EAB308"))
+                    tvHeaderStatus.text = "Connessione..."
+                    tvHeaderStatus.setTextColor(Color.parseColor("#CA8A04"))
+                    btnQuickConnect.text = "Annulla"
+                    btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#CA8A04"))
                 }
                 BleGattManager.ConnectionState.CONNECTED -> {
-                    tvStatus.text = "Stato: Connesso"
-                    tvStatus.setTextColor(Color.parseColor("#16A34A"))
-                    btnConnect.text = "Disconnetti"
-                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
+                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
+                    tvHeaderStatus.text = "Connesso"
+                    tvHeaderStatus.setTextColor(Color.parseColor("#16A34A"))
+                    btnQuickConnect.text = "Disconnetti"
+                    btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
                 }
+            }
+        }
+    }
+
+    override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
+        runOnUiThread {
+            if (isPress) {
+                // Tasto fisico premuto sul BR80 reale: selezionalo e illuminalo sul D-Pad!
+                selectButton(button)
             }
         }
     }
@@ -258,8 +613,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     override fun onBatteryUpdated(level: Int) {
         runOnUiThread {
-            tvBattery.text = "Batteria: $level%"
-            tvBattery.setTextColor(if (level <= 20) Color.parseColor("#DC2626") else Color.parseColor("#0EA5E9"))
+            tvHeaderBattery.text = "• $level% 🔋"
+            tvHeaderBattery.setTextColor(if (level <= 20) Color.parseColor("#DC2626") else Color.parseColor("#0284C7"))
         }
     }
 
@@ -271,148 +626,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     private fun log(message: String) {
         val time = timeFormat.format(Date())
-        tvLog.append("\n[$time] $message")
-        svLog.post {
-            svLog.fullScroll(View.FOCUS_DOWN)
+        tvLogFull.append("\n[$time] $message")
+        svLogFull.post {
+            svLogFull.fullScroll(View.FOCUS_DOWN)
         }
-    }
-
-    // UI Mappatura Tasti & Gesti
-    private fun populateMappingList() {
-        llButtonsList.removeAllViews()
-
-        for (btn in Br80Button.values()) {
-            val buttonCard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(8, 8, 8, 12)
-                val params = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                params.setMargins(0, 0, 0, 8)
-                layoutParams = params
-                setBackgroundColor(Color.parseColor("#F8FAFC"))
-            }
-
-            val btnTitle = TextView(this).apply {
-                text = "${btn.displayName} (${btn.name})"
-                textSize = 14f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(Color.parseColor("#0F172A"))
-                setPadding(0, 0, 0, 4)
-            }
-            buttonCard.addView(btnTitle)
-
-            for (gesture in GestureType.values()) {
-                val action = mappingStorage.getAction(btn, gesture)
-
-                val gestureRow = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    setPadding(8, 6, 8, 6)
-                    isClickable = true
-                    isFocusable = true
-                    setBackgroundColor(Color.parseColor("#FFFFFF"))
-                    setOnClickListener {
-                        showActionPicker(btn, gesture)
-                    }
-                }
-
-                val tvGesture = TextView(this).apply {
-                    text = "• ${gesture.displayName}:"
-                    textSize = 13f
-                    setTextColor(Color.parseColor("#475569"))
-                    val params = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f)
-                    layoutParams = params
-                }
-
-                val tvAction = TextView(this).apply {
-                    text = action.getReadableDescription()
-                    textSize = 13f
-                    setTextColor(if (action.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
-                    setTypeface(null, if (action.type == ActionType.NONE) Typeface.NORMAL else Typeface.BOLD)
-                    val params = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
-                    layoutParams = params
-                    gravity = Gravity.END
-                }
-
-                gestureRow.addView(tvGesture)
-                gestureRow.addView(tvAction)
-                buttonCard.addView(gestureRow)
-            }
-
-            llButtonsList.addView(buttonCard)
-        }
-    }
-
-    private fun showActionPicker(button: Br80Button, gesture: GestureType) {
-        val actions = ActionType.values()
-        val actionNames = actions.map { it.displayName }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle("${button.displayName} — ${gesture.displayName}")
-            .setItems(actionNames) { _, which ->
-                val selectedType = actions[which]
-                when {
-                    selectedType == ActionType.OPEN_APP -> {
-                        showAppPicker(button, gesture)
-                    }
-                    selectedType == ActionType.START_NAVIGATION -> {
-                        showDestinationPicker(button, gesture)
-                    }
-                    else -> {
-                        mappingStorage.setAction(button, gesture, ButtonAction(selectedType))
-                        populateMappingList()
-                        log("Mappatura aggiornata: ${button.name}_${gesture.name} -> ${selectedType.displayName}")
-                    }
-                }
-            }
-            .setNegativeButton("Annulla", null)
-            .show()
-    }
-
-    private fun showAppPicker(button: Br80Button, gesture: GestureType) {
-        val pm = packageManager
-        val intent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val apps = pm.queryIntentActivities(intent, 0)
-            .sortedBy { it.loadLabel(pm).toString() }
-
-        val appLabels = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle("Seleziona Applicazione da aprire")
-            .setItems(appLabels) { _, which ->
-                val selectedApp = apps[which]
-                val pkgName = selectedApp.activityInfo.packageName
-                val appName = selectedApp.loadLabel(pm).toString()
-
-                mappingStorage.setAction(button, gesture, ButtonAction(ActionType.OPEN_APP, pkgName))
-                populateMappingList()
-                log("Mappatura aggiornata: ${button.name}_${gesture.name} -> Apri $appName ($pkgName)")
-            }
-            .setNegativeButton("Annulla", null)
-            .show()
-    }
-
-    private fun showDestinationPicker(button: Br80Button, gesture: GestureType) {
-        val input = EditText(this).apply {
-            hint = "Es. Casa, Roma Termini, o coordinate GPS"
-            setText(mappingStorage.getAction(button, gesture).parameter)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Destinazione Navigazione")
-            .setMessage("Inserisci l'indirizzo o destinazione per Google Maps:")
-            .setView(input)
-            .setPositiveButton("Salva") { _, _ ->
-                val dest = input.text.toString().trim()
-                mappingStorage.setAction(button, gesture, ButtonAction(ActionType.START_NAVIGATION, dest))
-                populateMappingList()
-                log("Mappatura aggiornata: ${button.name}_${gesture.name} -> Naviga verso '$dest'")
-            }
-            .setNegativeButton("Annulla", null)
-            .show()
     }
 
     private fun updateBatteryOptButtonState() {
@@ -420,13 +637,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
             val isIgnoring = pm?.isIgnoringBatteryOptimizations(packageName) == true
             if (isIgnoring) {
-                btnBatteryOpt.text = "Doze: Escluso ✓"
-                btnBatteryOpt.isEnabled = false
-                btnBatteryOpt.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
+                btnOptDoze.text = "Doze: Escluso con Successo ✓"
+                btnOptDoze.isEnabled = false
+                btnOptDoze.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
             } else {
-                btnBatteryOpt.text = "Disattiva Doze"
-                btnBatteryOpt.isEnabled = true
-                btnBatteryOpt.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                btnOptDoze.text = "Disattiva Ottimizzazione Batteria (Doze)"
+                btnOptDoze.isEnabled = true
+                btnOptDoze.backgroundTintList = toColorStateList(Color.parseColor("#475569"))
             }
         }
     }

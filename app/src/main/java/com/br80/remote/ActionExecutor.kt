@@ -5,13 +5,18 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.MediaStore
+import android.speech.RecognizerIntent
 import android.telecom.TelecomManager
 import android.util.Log
 import android.view.KeyEvent
@@ -23,6 +28,9 @@ class ActionExecutor(
 ) {
 
     private val tag = "ActionExecutor"
+
+    private var isTorchOn = false
+    private var wakeLock: PowerManager.WakeLock? = null
 
     fun execute(button: Br80Button, gesture: GestureType, batteryLevel: Int) {
         val action = mappingStorage.getAction(button, gesture)
@@ -57,17 +65,41 @@ class ActionExecutor(
                 ActionType.MEDIA_PREV -> {
                     sendMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
                 }
-                ActionType.OPEN_APP -> {
-                    openApp(action.parameter)
+                ActionType.MUTE_TOGGLE -> {
+                    toggleMute()
+                }
+                ActionType.VOICE_ASSISTANT_GEMINI -> {
+                    launchVoiceAssistantGemini()
+                }
+                ActionType.VOICE_RECORD_MEMO -> {
+                    launchVoiceRecorder()
                 }
                 ActionType.START_NAVIGATION -> {
                     startNavigation(action.parameter)
+                }
+                ActionType.OPEN_MAPS -> {
+                    openMaps()
                 }
                 ActionType.PHONE_ACCEPT -> {
                     acceptPhoneCall()
                 }
                 ActionType.PHONE_REJECT -> {
                     rejectPhoneCall()
+                }
+                ActionType.PHONE_SPEED_DIAL -> {
+                    speedDial(action.parameter)
+                }
+                ActionType.FLASHLIGHT_TOGGLE -> {
+                    toggleFlashlight()
+                }
+                ActionType.CAMERA_SHUTTER -> {
+                    triggerCameraShutter()
+                }
+                ActionType.KEEP_SCREEN_ON_TOGGLE -> {
+                    toggleKeepScreenOn()
+                }
+                ActionType.OPEN_APP -> {
+                    openApp(action.parameter)
                 }
             }
         } catch (e: Exception) {
@@ -104,14 +136,81 @@ class ActionExecutor(
         }
     }
 
-    private fun openApp(packageName: String) {
-        if (packageName.isBlank()) return
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(launchIntent)
+    private fun toggleMute() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audioManager != null) {
+            val currentMode = audioManager.ringerMode
+            if (currentMode == AudioManager.RINGER_MODE_NORMAL) {
+                audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                onLog("Audio: Modalità Vibrazione attivata")
+            } else {
+                audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                onLog("Audio: Modalità Normale (Suoneria) attivata")
+            }
+        }
+    }
+
+    private fun launchVoiceAssistantGemini() {
+        try {
+            val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            onLog("Assistente Vocale / Gemini avviato.")
+            return
+        } catch (e: Exception) {
+            Log.w(tag, "ACTION_VOICE_COMMAND failed: ${e.message}")
+        }
+
+        try {
+            val intent = Intent(RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            onLog("Voice search avviato.")
+            return
+        } catch (e: Exception) {
+            Log.w(tag, "ACTION_VOICE_SEARCH_HANDS_FREE failed: ${e.message}")
+        }
+
+        // Fallback su Gemini app o Google Search
+        val bardIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.bard")
+        if (bardIntent != null) {
+            bardIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(bardIntent)
+            onLog("App Gemini avviata.")
         } else {
-            onLog("Applicazione $packageName non trovata.")
+            sendMediaKeyEvent(KeyEvent.KEYCODE_VOICE_ASSIST)
+            onLog("Inviato evento KEYCODE_VOICE_ASSIST.")
+        }
+    }
+
+    private fun launchVoiceRecorder() {
+        val pm = context.packageManager
+        val intent = Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (intent.resolveActivity(pm) != null) {
+            context.startActivity(intent)
+            onLog("Registratore vocale aperto.")
+        } else {
+            onLog("Nessuna app registratore trovata.")
+        }
+    }
+
+    private fun openMaps() {
+        val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0")).apply {
+            setPackage("com.google.android.apps.maps")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(mapIntent)
+            onLog("Google Maps aperto.")
+        } catch (e: Exception) {
+            val genericIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(genericIntent)
         }
     }
 
@@ -124,11 +223,34 @@ class ActionExecutor(
         }
         try {
             context.startActivity(mapIntent)
+            onLog("Navigazione avviata verso '$target'.")
         } catch (e: Exception) {
             val geoIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(target))).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(geoIntent)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun speedDial(number: String) {
+        if (number.isBlank()) {
+            onLog("Nessun numero impostato per Chiamata Rapida.")
+            return
+        }
+        val cleanNumber = number.trim()
+        if (context.checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+            val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$cleanNumber")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(callIntent)
+            onLog("Chiamata avviata verso $cleanNumber.")
+        } else {
+            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$cleanNumber")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(dialIntent)
+            onLog("Compositore aperto per $cleanNumber (permesso CALL_PHONE non concesso).")
         }
     }
 
@@ -155,6 +277,64 @@ class ActionExecutor(
             } else {
                 onLog("Permesso ANSWER_PHONE_CALLS non concesso.")
             }
+        }
+    }
+
+    private fun toggleFlashlight() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+                val cameraId = cameraManager?.cameraIdList?.firstOrNull { id ->
+                    val chars = cameraManager.getCameraCharacteristics(id)
+                    chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                }
+                if (cameraManager != null && cameraId != null) {
+                    isTorchOn = !isTorchOn
+                    cameraManager.setTorchMode(cameraId, isTorchOn)
+                    onLog("Torcia: " + if (isTorchOn) "ACCESA 🔦" else "SPENTA")
+                } else {
+                    onLog("Flash torcia non disponibile su questo dispositivo.")
+                }
+            } catch (e: Exception) {
+                onLog("Errore controllo torcia: ${e.message}")
+            }
+        }
+    }
+
+    private fun triggerCameraShutter() {
+        // La pressione di KEYCODE_CAMERA o KEYCODE_VOLUME_DOWN scatta la foto in tutte le app fotocamera
+        sendMediaKeyEvent(KeyEvent.KEYCODE_CAMERA)
+        sendMediaKeyEvent(KeyEvent.KEYCODE_VOLUME_DOWN)
+        onLog("Scatto Fotocamera inviato.")
+    }
+
+    @Suppress("DEPRECATION")
+    private fun toggleKeepScreenOn() {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (wakeLock != null && wakeLock?.isHeld == true) {
+            wakeLock?.release()
+            wakeLock = null
+            onLog("Schermo sempre acceso: DISATTIVATO")
+        } else if (powerManager != null) {
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
+                "br80:keep_screen_on"
+            ).apply {
+                acquire(30 * 60 * 1000L) // Timeout sicurezza 30 minuti
+            }
+            onLog("Schermo sempre acceso: ATTIVATO (per 30 min o fino a nuovo tocco)")
+        }
+    }
+
+    private fun openApp(packageName: String) {
+        if (packageName.isBlank()) return
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launchIntent)
+            onLog("Applicazione $packageName avviata.")
+        } else {
+            onLog("Applicazione $packageName non trovata.")
         }
     }
 

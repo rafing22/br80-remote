@@ -17,7 +17,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelUuid
 import android.util.Log
 import java.util.UUID
 
@@ -61,6 +60,8 @@ class BleGattManager(
     private val reconnectDelays = listOf(2000L, 5000L, 10000L, 30000L)
     private var reconnectRunnable: Runnable? = null
     private var scanTimeoutRunnable: Runnable? = null
+    private var keepAliveRunnable: Runnable? = null
+    private val keepAliveIntervalMs = 60_000L
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -136,7 +137,6 @@ class BleGattManager(
             .build()
 
         val filters = mutableListOf<ScanFilter>()
-        // Non forziamo filtri rigidi nel builder per compatibilità, filtriamo in onScanResult
 
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -227,6 +227,7 @@ class BleGattManager(
     @SuppressLint("MissingPermission")
     fun disconnect() {
         userRequestedDisconnect = true
+        stopKeepAlive()
         cancelPendingReconnect()
         stopLeScan()
 
@@ -238,6 +239,7 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     private fun closeGatt() {
+        stopKeepAlive()
         bluetoothGatt?.let {
             try {
                 it.close()
@@ -251,6 +253,7 @@ class BleGattManager(
     private fun scheduleAutoReconnect() {
         if (userRequestedDisconnect) return
 
+        stopKeepAlive()
         cancelPendingReconnect()
         val delay = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
         reconnectAttempts++
@@ -269,6 +272,28 @@ class BleGattManager(
         reconnectRunnable = null
     }
 
+    fun startKeepAliveIfEnabled() {
+        stopKeepAlive()
+        if (mappingStorage.isKeepAliveEnabled() && currentState == ConnectionState.CONNECTED) {
+            log("Keep-Alive attivo: ping periodico impostato ogni 60s.")
+            keepAliveRunnable = object : Runnable {
+                override fun run() {
+                    if (currentState == ConnectionState.CONNECTED && bluetoothGatt != null) {
+                        log("Keep-Alive: ping di lettura batteria per mantenere il canale attivo...")
+                        readBatteryLevel()
+                        handler.postDelayed(this, keepAliveIntervalMs)
+                    }
+                }
+            }
+            handler.postDelayed(keepAliveRunnable!!, keepAliveIntervalMs)
+        }
+    }
+
+    fun stopKeepAlive() {
+        keepAliveRunnable?.let { handler.removeCallbacks(it) }
+        keepAliveRunnable = null
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
 
         @SuppressLint("MissingPermission")
@@ -277,12 +302,14 @@ class BleGattManager(
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 reconnectAttempts = 0
                 updateState(ConnectionState.CONNECTED)
+                startKeepAliveIfEnabled()
                 log("Connesso al BR80. Scoperta servizi GATT in corso...")
                 handler.postDelayed({
                     gatt.discoverServices()
                 }, 400L)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 log("Disconnesso dal dispositivo.")
+                stopKeepAlive()
                 closeGatt()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
@@ -363,7 +390,6 @@ class BleGattManager(
             }
         }
 
-        // Supporto Android 13+ (API 33+)
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
             if (characteristic.uuid == batteryLevelUuid && status == BluetoothGatt.GATT_SUCCESS) {
                 val level = value.getOrNull(0)?.toInt()?.and(0xFF) ?: -1
@@ -375,7 +401,6 @@ class BleGattManager(
             }
         }
 
-        // Legacy onCharacteristicChanged (Android < 13)
         @Suppress("DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == buttonUuid) {
@@ -383,7 +408,6 @@ class BleGattManager(
             }
         }
 
-        // Modern onCharacteristicChanged (Android 13+, API 33+)
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             if (characteristic.uuid == buttonUuid) {
                 handleButtonPayload(value)
@@ -443,7 +467,6 @@ class BleGattManager(
         val batteryService = g.getService(batteryServiceUuid)
         val batteryChar = batteryService?.getCharacteristic(batteryLevelUuid)
         if (batteryChar != null) {
-            log("Lettura livello batteria da servizio 0x180F...")
             g.readCharacteristic(batteryChar)
         }
     }

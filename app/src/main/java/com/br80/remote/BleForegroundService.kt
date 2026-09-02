@@ -36,6 +36,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
 
     interface BleServiceListener {
         fun onStateChanged(state: BleGattManager.ConnectionState)
+        fun onButtonRawEvent(button: Br80Button, isPress: Boolean)
         fun onGestureExecuted(button: Br80Button, gesture: GestureType)
         fun onBatteryUpdated(level: Int)
         fun onLog(message: String)
@@ -63,21 +64,30 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification("Servizio BR80 attivo in background")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        when (intent?.action) {
+            ACTION_CONNECT -> {
+                connectDevice()
+            }
+            ACTION_DISCONNECT -> {
+                disconnectDevice()
+            }
+            else -> {
+                val notification = createNotification(getNotificationContentText())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceCompat.startForeground(
+                        this,
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
 
-        // Se avviato con richiesta di connect
-        if (intent?.getBooleanExtra(EXTRA_CONNECT_NOW, false) == true) {
-            connectDevice()
+                if (intent?.getBooleanExtra(EXTRA_CONNECT_NOW, false) == true) {
+                    connectDevice()
+                }
+            }
         }
 
         return START_STICKY
@@ -90,31 +100,22 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
     fun disconnectDevice() {
         gattManager.disconnect()
         gestureDetector.reset()
-        updateNotification("Disconnesso")
+        updateNotification()
     }
 
     // Callbacks da BleGattManager
     override fun onStateChanged(state: BleGattManager.ConnectionState) {
-        val statusText = when (state) {
-            BleGattManager.ConnectionState.DISCONNECTED -> "Disconnesso"
-            BleGattManager.ConnectionState.CONNECTING -> "Connessione in corso..."
-            BleGattManager.ConnectionState.CONNECTED -> {
-                val battStr = if (batteryLevel >= 0) " (Batt: $batteryLevel%)" else ""
-                "Connesso al telecomando BR80$battStr"
-            }
-        }
-        updateNotification(statusText)
+        updateNotification()
         listener?.onStateChanged(state)
     }
 
     override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
+        listener?.onButtonRawEvent(button, isPress)
         gestureDetector.onButtonRawEvent(button, isPress)
     }
 
     override fun onBatteryUpdated(level: Int) {
-        if (currentState == BleGattManager.ConnectionState.CONNECTED) {
-            updateNotification("Connesso al telecomando BR80 (Batt: $level%)")
-        }
+        updateNotification()
         listener?.onBatteryUpdated(level)
     }
 
@@ -122,40 +123,64 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
         listener?.onLog(message)
     }
 
+    private fun getNotificationContentText(): String {
+        return when (currentState) {
+            BleGattManager.ConnectionState.DISCONNECTED -> "Stato: Disconnesso"
+            BleGattManager.ConnectionState.CONNECTING -> "Stato: Connessione in corso..."
+            BleGattManager.ConnectionState.CONNECTED -> {
+                val battStr = if (batteryLevel >= 0) " • Batteria: $batteryLevel%" else ""
+                "Stato: Connesso$battStr"
+            }
+        }
+    }
+
     private fun createNotification(contentText: String): Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-        )
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val pendingOpen = PendingIntent.getActivity(this, 0, openIntent, flags)
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Livall BR80 Remote")
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentIntent(pendingIntent)
+            .setSmallIcon(R.drawable.ic_launcher)
+            .setContentIntent(pendingOpen)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+
+        // Aggiunta pulsante d'azione rapida
+        if (currentState == BleGattManager.ConnectionState.DISCONNECTED) {
+            val connectIntent = Intent(this, BleForegroundService::class.java).apply {
+                action = ACTION_CONNECT
+            }
+            val pendingConnect = PendingIntent.getService(this, 1, connectIntent, flags)
+            builder.addAction(android.R.drawable.ic_media_play, "Connetti", pendingConnect)
+        } else {
+            val disconnectIntent = Intent(this, BleForegroundService::class.java).apply {
+                action = ACTION_DISCONNECT
+            }
+            val pendingDisconnect = PendingIntent.getService(this, 2, disconnectIntent, flags)
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnetti", pendingDisconnect)
+        }
+
+        return builder.build()
     }
 
-    private fun updateNotification(contentText: String) {
+    private fun updateNotification() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        manager?.notify(NOTIFICATION_ID, createNotification(contentText))
+        manager?.notify(NOTIFICATION_ID, createNotification(getNotificationContentText()))
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "BR80 Remote Foreground Service",
+                "Livall BR80 Remote Service",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Mantiene la connessione attiva con il telecomando BR80 in background"
+                description = "Mantiene attiva la connessione con il telecomando BR80 in background"
                 setShowBadge(false)
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
@@ -173,5 +198,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
         const val CHANNEL_ID = "br80_ble_service_channel"
         const val NOTIFICATION_ID = 1001
         const val EXTRA_CONNECT_NOW = "extra_connect_now"
+        const val ACTION_CONNECT = "com.br80.remote.ACTION_CONNECT"
+        const val ACTION_DISCONNECT = "com.br80.remote.ACTION_DISCONNECT"
     }
 }

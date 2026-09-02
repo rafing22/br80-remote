@@ -3,188 +3,693 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#F5F7FB">
+    android:background="#F8FAFC">
 
-    <!-- Header & Status Card -->
+    <!-- Top App Header & Quick Connection Status -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:background="#FFFFFF"
-        android:padding="16dp"
-        android:layout_marginBottom="12dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Livall BR80 Remote"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#1E293B"
-            android:layout_marginBottom="8dp" />
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:elevation="2dp"
+        android:gravity="center_vertical">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Stato: Disconnesso"
-                android:textSize="15sp"
-                android:textColor="#64748B" />
-
-            <TextView
-                android:id="@+id/tvBattery"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Batteria: --"
-                android:textSize="15sp"
+                android:text="Livall BR80 Remote"
+                android:textSize="17sp"
                 android:textStyle="bold"
-                android:textColor="#0EA5E9" />
+                android:textColor="#0F172A" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="2dp">
+
+                <View
+                    android:id="@+id/viewStatusDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="#DC2626"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Disconnesso"
+                    android:textSize="13sp"
+                    android:textColor="#64748B" />
+
+                <TextView
+                    android:id="@+id/tvHeaderBattery"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#0284C7"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
         </LinearLayout>
 
         <Button
-            android:id="@+id/btnConnect"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:id="@+id/btnQuickConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
             android:text="Connetti"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:paddingHorizontal="14dp"
             android:backgroundTint="#0284C7"
             android:textColor="#FFFFFF" />
 
     </LinearLayout>
 
-    <!-- Quick Settings Card -->
+    <!-- Main Content Area (3 Tabs) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ================= TAB 1: CONTROLLER ================= -->
+        <ScrollView
+            android:id="@+id/tabController"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tocca un tasto o premilo sul telecomando per configurarlo:"
+                    android:textSize="12sp"
+                    android:textColor="#64748B"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Controller BR80 Grafico Interattivo -->
+                <LinearLayout
+                    android:layout_width="260dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#0F172A"
+                    android:padding="16dp"
+                    android:gravity="center_horizontal"
+                    android:elevation="4dp"
+                    android:layout_marginBottom="16dp">
+
+                    <!-- Tasto UP -->
+                    <Button
+                        android:id="@+id/btnPadUp"
+                        android:layout_width="72dp"
+                        android:layout_height="52dp"
+                        android:text="▲\nSU"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="#1E293B"
+                        android:textColor="#38BDF8"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp" />
+
+                    <!-- RIGA CENTRALE: LEFT | HOME | RIGHT -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginVertical="4dp">
+
+                        <Button
+                            android:id="@+id/btnPadLeft"
+                            android:layout_width="64dp"
+                            android:layout_height="56dp"
+                            android:text="◀\nSX"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#1E293B"
+                            android:textColor="#38BDF8"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/btnPadHome"
+                            android:layout_width="68dp"
+                            android:layout_height="68dp"
+                            android:text="●\nHOME"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#0284C7"
+                            android:textColor="#FFFFFF" />
+
+                        <Button
+                            android:id="@+id/btnPadRight"
+                            android:layout_width="64dp"
+                            android:layout_height="56dp"
+                            android:text="▶\nDX"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#1E293B"
+                            android:textColor="#38BDF8"
+                            android:layout_marginStart="6dp" />
+
+                    </LinearLayout>
+
+                    <!-- Tasto DOWN -->
+                    <Button
+                        android:id="@+id/btnPadDown"
+                        android:layout_width="72dp"
+                        android:layout_height="52dp"
+                        android:text="▼\nGIÙ"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="#1E293B"
+                        android:textColor="#38BDF8"
+                        android:layout_marginBottom="12dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp" />
+
+                    <!-- TASTI INFERIORI: FOTO & CHIAMATA -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <Button
+                            android:id="@+id/btnPadCamera"
+                            android:layout_width="0dp"
+                            android:layout_height="46dp"
+                            android:layout_weight="1"
+                            android:text="📷 FOTO"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#334155"
+                            android:textColor="#F8FAFC"
+                            android:layout_marginEnd="4dp" />
+
+                        <Button
+                            android:id="@+id/btnPadCall"
+                            android:layout_width="0dp"
+                            android:layout_height="46dp"
+                            android:layout_weight="1"
+                            android:text="📞 CALL"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#334155"
+                            android:textColor="#F8FAFC"
+                            android:layout_marginStart="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Scheda Gesti per il Tasto Selezionato -->
+                <LinearLayout
+                    android:id="@+id/cardSelectedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:id="@+id/tvSelectedButtonTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Freccia Su (UP)"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#0F172A" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tocca per cambiare"
+                            android:textSize="12sp"
+                            android:textColor="#0284C7" />
+                    </LinearLayout>
+
+                    <!-- 4 Righe Gesti -->
+                    <LinearLayout
+                        android:id="@+id/rowGestureSingle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="10dp"
+                        android:background="#F8FAFC"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.2"
+                            android:text="👆 Singolo Tap (1x)"
+                            android:textSize="13sp"
+                            android:textColor="#334155" />
+
+                        <TextView
+                            android:id="@+id/tvActionSingle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Volume +"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#0284C7"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowGestureDouble"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="10dp"
+                        android:background="#F8FAFC"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.2"
+                            android:text="✌️ Doppio Tap (2x)"
+                            android:textSize="13sp"
+                            android:textColor="#334155" />
+
+                        <TextView
+                            android:id="@+id/tvActionDouble"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Nessuna azione"
+                            android:textSize="13sp"
+                            android:textColor="#94A3B8"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowGestureTriple"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="10dp"
+                        android:background="#F8FAFC"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.2"
+                            android:text="👌 Triplo Tap (3x)"
+                            android:textSize="13sp"
+                            android:textColor="#334155" />
+
+                        <TextView
+                            android:id="@+id/tvActionTriple"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Nessuna azione"
+                            android:textSize="13sp"
+                            android:textColor="#94A3B8"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowGestureLong"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="10dp"
+                        android:background="#F8FAFC"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.2"
+                            android:text="⏱️ Pressione Lunga (>500ms)"
+                            android:textSize="13sp"
+                            android:textColor="#334155" />
+
+                        <TextView
+                            android:id="@+id/tvActionLong"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Google Gemini"
+                            android:textSize="13sp"
+                            android:textColor="#94A3B8"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ================= TAB 2: OPZIONI ================= -->
+        <ScrollView
+            android:id="@+id/tabOptions"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Card Connessione -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Connessione &amp; Reattività"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="12dp" />
+
+                    <CheckBox
+                        android:id="@+id/cbOptKeepAlive"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Keep-Alive / Always-On (Anti-Standby)"
+                        android:textSize="14sp"
+                        android:textColor="#1E293B" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Invia un ping periodico per evitare che il telecomando vada in deep sleep. Garantisce risposta istantanea al primo tocco ma consuma leggermente più batteria sul telecomando."
+                        android:textSize="12sp"
+                        android:textColor="#64748B"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <Button
+                        android:id="@+id/btnOptDoze"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Disattiva Ottimizzazione Batteria (Doze)"
+                        android:textSize="13sp"
+                        android:backgroundTint="#475569"
+                        android:textColor="#FFFFFF" />
+
+                </LinearLayout>
+
+                <!-- Card Feedback -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Feedback alla Pressione (Guanti)"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="12dp" />
+
+                    <CheckBox
+                        android:id="@+id/cbOptHaptic"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Vibrazione breve di conferma"
+                        android:textSize="14sp"
+                        android:checked="true"
+                        android:textColor="#1E293B"
+                        android:layout_marginBottom="8dp" />
+
+                    <CheckBox
+                        android:id="@+id/cbOptSound"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Beep audio di conferma"
+                        android:textSize="14sp"
+                        android:checked="false"
+                        android:textColor="#1E293B" />
+
+                </LinearLayout>
+
+                <!-- Card Automazione -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Integrazione Tasker / Macro"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="L'app invia sempre il broadcast 'com.br80.remote.BUTTON_EVENT' con extra button, gesture ed event_id."
+                        android:textSize="12sp"
+                        android:textColor="#64748B"
+                        android:layout_marginBottom="12dp" />
+
+                    <Button
+                        android:id="@+id/btnOptTaskerExport"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Esporta Progetto Tasker Preconfigurato (.xml)"
+                        android:textSize="13sp"
+                        android:backgroundTint="#0284C7"
+                        android:textColor="#FFFFFF" />
+
+                </LinearLayout>
+
+                <!-- Info Versione -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Livall BR80 Remote v1.1 • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+                    android:textSize="12sp"
+                    android:textColor="#94A3B8"
+                    android:gravity="center"
+                    android:paddingVertical="8dp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ================= TAB 3: LOG ================= -->
+        <LinearLayout
+            android:id="@+id/tabLog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#0F172A"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#1E293B"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Log Eventi Real-Time"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#F8FAFC" />
+
+                <TextView
+                    android:id="@+id/btnLogCopy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Copia"
+                    android:textSize="13sp"
+                    android:textColor="#38BDF8"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/btnLogClearTab"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pulisci"
+                    android:textSize="13sp"
+                    android:textColor="#EF4444"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/svLogFull"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tvLogFull"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#CBD5E1"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:text="[READY] Registro eventi inizializzato..." />
+            </ScrollView>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- Bottom Navigation Bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
         android:background="#FFFFFF"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
+        android:elevation="8dp">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:id="@+id/navBtnController"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
 
-            <CheckBox
-                android:id="@+id/cbHaptic"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Vibrazione"
-                android:checked="true"
-                android:textColor="#334155" />
-
-            <CheckBox
-                android:id="@+id/cbSound"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Beep Audio"
-                android:checked="false"
-                android:textColor="#334155" />
-
-            <Button
-                android:id="@+id/btnBatteryOpt"
+            <TextView
+                android:id="@+id/tvNavIconController"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No Doze"
-                android:textSize="12sp"
-                android:backgroundTint="#64748B"
-                android:textColor="#FFFFFF" />
+                android:text="🎮"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvNavTextController"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Controller"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#0284C7" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navBtnOptions"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tvNavIconOptions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚙️"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvNavTextOptions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Opzioni"
+                android:textSize="11sp"
+                android:textColor="#64748B" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navBtnLog"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tvNavIconLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📜"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvNavTextLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Log"
+                android:textSize="11sp"
+                android:textColor="#64748B" />
         </LinearLayout>
 
     </LinearLayout>
-
-    <!-- Mapping Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Mappatura Tasti &amp; Gesti"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#1E293B" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="(Tocca per modificare)"
-            android:textSize="12sp"
-            android:textColor="#94A3B8" />
-    </LinearLayout>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="170dp"
-        android:background="#FFFFFF"
-        android:padding="8dp"
-        android:layout_marginBottom="12dp">
-
-        <LinearLayout
-            android:id="@+id/llButtonsList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-    </ScrollView>
-
-    <!-- Live Event Log -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Log Eventi Real-Time"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#1E293B" />
-
-        <TextView
-            android:id="@+id/btnLogClear"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pulisci"
-            android:textSize="13sp"
-            android:textColor="#0284C7"
-            android:clickable="true"
-            android:focusable="true" />
-    </LinearLayout>
-
-    <ScrollView
-        android:id="@+id/svLog"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#1E293B"
-        android:padding="8dp">
-
-        <TextView
-            android:id="@+id/tvLog"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#E2E8F0"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
-            android:text="[READY] In attesa di connessione..." />
-    </ScrollView>
 
 </LinearLayout>

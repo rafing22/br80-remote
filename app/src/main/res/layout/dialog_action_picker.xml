@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Search Input -->
+    <EditText
+        android:id="@+id/etActionSearch"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:hint="🔍 Cerca azione (es. gemini, volume, torcia)..."
+        android:textSize="14sp"
+        android:paddingHorizontal="12dp"
+        android:background="#F1F5F9"
+        android:inputType="text"
+        android:singleLine="true"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Action List Container -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="360dp">
+
+        <LinearLayout
+            android:id="@+id/llActionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+</LinearLayout>
