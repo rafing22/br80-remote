@@ -7,18 +7,14 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.widget.Button
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.br80.remote.R
+import com.br80.remote.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListener {
 
+    private lateinit var binding: ActivityMainBinding
     private var bleService: BleForegroundService? = null
     private var isBound = false
-
-    private lateinit var tvStatus: TextView
-    private lateinit var btnConnect: Button
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -38,12 +34,12 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        
+        // Inflate del layout tramite View Binding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        tvStatus = findViewById(R.id.tvStatus)
-        btnConnect = findViewById(R.id.btnConnect)
-
-        btnConnect.setOnClickListener {
+        binding.btnConnect.setOnClickListener {
             bleService?.let { service ->
                 when (service.currentState) {
                     BleForegroundService.ConnectionState.DISCONNECTED -> {
@@ -90,16 +86,16 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             when (state) {
                 BleForegroundService.ConnectionState.DISCONNECTED -> {
-                    tvStatus.text = "Stato: Disconnesso"
-                    btnConnect.text = "Connetti"
+                    binding.tvStatus.text = "Stato: Disconnesso"
+                    binding.btnConnect.text = "Connetti"
                 }
                 BleForegroundService.ConnectionState.CONNECTING -> {
-                    tvStatus.text = "Stato: Connessione in corso..."
-                    btnConnect.text = "Annulla"
+                    binding.tvStatus.text = "Stato: Connessione in corso..."
+                    binding.btnConnect.text = "Annulla"
                 }
                 BleForegroundService.ConnectionState.CONNECTED -> {
-                    tvStatus.text = "Stato: Connesso"
-                    btnConnect.text = "Disconnetti"
+                    binding.tvStatus.text = "Stato: Connesso"
+                    binding.btnConnect.text = "Disconnetti"
                 }
             }
         }
