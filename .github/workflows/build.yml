@@ -37,27 +37,36 @@ jobs:
       - name: Prepare APK with release naming
         run: |
           mkdir -p release_apk
-          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.4.apk
+          TAG_OR_BRANCH="${{ github.ref_name }}"
+          VERSION="${TAG_OR_BRANCH#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
+            VERSION="1.5"
+          fi
+          cp app/build/outputs/apk/debug/*.apk "release_apk/Livall-BR80-Remote-v${VERSION}.apk"
+          echo "APK_NAME=Livall-BR80-Remote-v${VERSION}.apk" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Livall-BR80-Remote-v1.4
-          path: release_apk/Livall-BR80-Remote-v1.4.apk
+          name: ${{ env.APK_NAME }}
+          path: release_apk/${{ env.APK_NAME }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release_apk/Livall-BR80-Remote-v1.4.apk
+          files: release_apk/${{ env.APK_NAME }}
           name: Release ${{ github.ref_name }}
           body: |
             ## Livall BR80 Remote ${{ github.ref_name }}
-            - 🛡️ **Standby Listener & Riconnessione Istantanea**: Risolta la disconnessione in standby dello smartphone e del telecomando.
-            - 📱 **Scansione a Schermo Spento (ScanFilter)**: Filtri dedicati compatibili con le restrizioni di background di Android 8–14+.
-            - ⚡ **Riconnessione a 1-Click (Fix Errore GATT 133)**: Eliminato il bisogno di fare doppio connetti/disconnetti grazie alla pulizia cache GATT con refresh e rilascio ritardato.
-            - 💓 **Keep-Alive Attivo di Default**: Ping periodico a 35s per prevenire lo spegnimento per inattività del telecomando durante i percorsi.
-            - 🔋 **WakeLock Ottimizzato**: Esecuzione istantanea e senza lag delle azioni anche con telefono in tasca / schermo bloccato.
+            - 🤖 **Gemini / Assistente in Background**: Avvio di Gemini e Voice Search da qualsiasi app o a schermo spento (tramite `KEYCODE_VOICE_ASSIST` e autorizzazione overlay).
+            - ⚡ **Auto-Ascolto all'Avvio**: Avvio immediato dello scanner BLE senza dover premere "Connetti".
+            - 📱 **Scansione Bilanciata (BALANCED)**: Zero latenza e cattura immediata del segnale del telecomando.
+            - 🛡️ **Standby Listener & Riconnessione Istantanea**: Risolta la perdita di connessione quando il BR80 va in standby.
+            - ⚡ **Riconnessione a 1-Click (Fix Errore GATT 133)**: Riconnessione fluida con pulizia cache Bluetooth GATT.
+            - 💓 **Keep-Alive 35s Attivo**: Ping periodico anti-sleep per reattività istantanea ai pulsanti.
+            - 🔋 **WakeLock & Overlay**: Risveglio dello schermo per azioni e notifiche durante la guida.
           draft: false
           prerelease: false
         env:

@@ -1,23 +1,23 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.4)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.5)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎯 Novità Versione 1.4
+## 🎯 Novità Versione 1.5
 
+- **🤖 Google Gemini & Voice Assistant in Background:**
+  - Avvio immediato dell'assistente vocale o di Google Gemini da qualsiasi app o a schermo spento/bloccato tramite dispatch nativo `KEYCODE_VOICE_ASSIST` e autorizzazione di visualizzazione su altre app (`SYSTEM_ALERT_WINDOW`).
+- **⚡ Auto-Ascolto all'Avvio:**
+  - Non appena apri l'app, il motore di scansione BLE si attiva automaticamente se un telecomando era già stato associato in precedenza (nessun click manuale necessario).
+- **📱 Scansione Bilanciata ad Alta Reattività (BALANCED):**
+  - Cattura istantanea (< 30ms) dei pacchetti BLE inviati dal telecomando Livall BR80 quando premi un tasto, evitando perdite di segnale.
 - **🛡️ Modalità Standby Listener & Riconnessione Istantanea:**
   - Risolto il problema di disconnessione quando lo smartphone o il telecomando entrano in standby.
-  - Non appena premi un tasto sul BR80 a schermo spento, l'app lo rileva e si riconnette in meno di 200ms.
-- **📱 Scansione a Schermo Spento con `ScanFilter` Dedicati:**
-  - Implementati filtri hardware e software per MAC, Service UUID `0000a2a0-...` e nomi dispositivo, compatibili con le restrizioni di background e Doze mode da Android 8 ad Android 14+.
 - **⚡ Riconnessione a 1-Click (Fix Errore GATT 133):**
-  - Eliminata la necessità di premere due volte connetti/disconnetti per ripristinare il collegamento.
-  - Pulizia automatica della cache GATT con reflection (`refresh()`) e rilascio controllato dello stack Bluetooth.
-- **💓 Keep-Alive Attivo di Default:**
-  - Ping periodico ogni 35s per prevenire la disconnessione per inattività del telecomando durante i percorsi in bici o moto.
-- **🔋 WakeLock Ottimizzato:**
-  - Acquisizione temporanea di un Partial WakeLock alla ricezione dei tasti, garantendo l'esecuzione istantanea delle azioni a schermo bloccato.
+  - Eliminata la necessità di premere connetti/disconnetti ripetutamente grazie alla pulizia cache GATT con reflection (`refresh()`).
+- **💓 Keep-Alive 35s Attivo di Default:**
+  - Ping periodico a 35s per prevenire lo spegnimento per inattività del telecomando durante i percorsi.
 
 ---
 
@@ -69,11 +69,11 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 
 ### 1. Download Diretto
 Puoi scaricare l'APK da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)**
-- **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)** (Artefatto **`Livall-BR80-Remote-v1.4`**)
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v1.5.apk`**)
+- **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
 
 ### 2. Aggiornamenti In-App
-Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"**: l'app rileva le nuove versioni e installa l'aggiornamento.
+Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"**: l'app rileva le nuove versioni e installa l'aggiornamento automaticamente.
 
 ---
 
@@ -84,7 +84,7 @@ Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"
 ./gradlew assembleDebug
 
 # L'output sarà generato in:
-# release_apk/Livall-BR80-Remote-v1.4.apk
+# release_apk/Livall-BR80-Remote-v1.5.apk
 ```
 
 ---
