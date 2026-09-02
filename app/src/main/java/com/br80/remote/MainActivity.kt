@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.br80.remote.R
 
 class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListener {
 
@@ -36,7 +37,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate()
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         tvStatus = findViewById(R.id.tvStatus)
@@ -105,10 +106,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     }
 
     override fun onButtonEvent(button: String, gesture: String) {
-        // Log degli eventi
+        // Eventi tasto
     }
 
     override fun onBatteryUpdated(level: Int) {
-        // Aggiornamento batteria
+        // Eventi batteria
     }
 }
