@@ -48,6 +48,21 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
+    private var cpuWakeLock: PowerManager.WakeLock? = null
+
+    private fun acquireWakeLock(timeoutMs: Long = 3000L) {
+        try {
+            if (cpuWakeLock == null) {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                cpuWakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "br80:service_wakelock")
+                cpuWakeLock?.setReferenceCounted(false)
+            }
+            cpuWakeLock?.acquire(timeoutMs)
+        } catch (e: Exception) {
+            // Ignora eccezioni di acquisizione
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         mappingStorage = MappingStorage(this)
@@ -55,6 +70,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
             listener?.onLog(logMsg)
         }
         gestureDetector = GestureDetector(mappingStorage) { button, gesture ->
+            acquireWakeLock(3000L)
             actionExecutor.execute(button, gesture, batteryLevel)
             listener?.onGestureExecuted(button, gesture)
         }
@@ -110,6 +126,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
     }
 
     override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
+        acquireWakeLock(3000L)
         listener?.onButtonRawEvent(button, isPress)
         gestureDetector.onButtonRawEvent(button, isPress)
     }
@@ -125,7 +142,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
 
     private fun getNotificationContentText(): String {
         return when (currentState) {
-            BleGattManager.ConnectionState.DISCONNECTED -> "Stato: Disconnesso"
+            BleGattManager.ConnectionState.DISCONNECTED -> "Stato: Disconnesso (In ascolto)"
             BleGattManager.ConnectionState.CONNECTING -> "Stato: Connessione in corso..."
             BleGattManager.ConnectionState.CONNECTED -> {
                 val battStr = if (batteryLevel >= 0) " • Batteria: $batteryLevel%" else ""
@@ -192,6 +209,13 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
         super.onDestroy()
         gattManager.disconnect()
         gestureDetector.reset()
+        try {
+            if (cpuWakeLock?.isHeld == true) {
+                cpuWakeLock?.release()
+            }
+        } catch (e: Exception) {
+            // Ignora eccezioni
+        }
     }
 
     companion object {

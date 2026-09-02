@@ -37,26 +37,27 @@ jobs:
       - name: Prepare APK with release naming
         run: |
           mkdir -p release_apk
-          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.3.apk
+          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.4.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Livall-BR80-Remote-v1.3
-          path: release_apk/Livall-BR80-Remote-v1.3.apk
+          name: Livall-BR80-Remote-v1.4
+          path: release_apk/Livall-BR80-Remote-v1.4.apk
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release_apk/Livall-BR80-Remote-v1.3.apk
+          files: release_apk/Livall-BR80-Remote-v1.4.apk
           name: Release ${{ github.ref_name }}
           body: |
             ## Livall BR80 Remote ${{ github.ref_name }}
-            - 🎯 Sistema di Calibrazione e Auto-Apprendimento del ritmo doppio/triplo tap (3 tentativi).
-            - ⏱️ Profili rapidi di velocità di risposta (Sportivo 280ms, Standard 420ms, Guanti 550ms, Lento 700ms).
-            - 🔄 Aggiornamento in-app migliorato con gestione redirect AWS S3 e User-Agent.
-            - 🚀 Ricevitore Boot per avvio automatico del servizio in background all'accensione dello smartphone.
+            - 🛡️ **Standby Listener & Riconnessione Istantanea**: Risolta la disconnessione in standby dello smartphone e del telecomando.
+            - 📱 **Scansione a Schermo Spento (ScanFilter)**: Filtri dedicati compatibili con le restrizioni di background di Android 8–14+.
+            - ⚡ **Riconnessione a 1-Click (Fix Errore GATT 133)**: Eliminato il bisogno di fare doppio connetti/disconnetti grazie alla pulizia cache GATT con refresh e rilascio ritardato.
+            - 💓 **Keep-Alive Attivo di Default**: Ping periodico a 35s per prevenire lo spegnimento per inattività del telecomando durante i percorsi.
+            - 🔋 **WakeLock Ottimizzato**: Esecuzione istantanea e senza lag delle azioni anche con telefono in tasca / schermo bloccato.
           draft: false
           prerelease: false
         env:

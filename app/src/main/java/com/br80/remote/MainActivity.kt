@@ -759,8 +759,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             when (state) {
                 BleGattManager.ConnectionState.DISCONNECTED -> {
-                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
-                    tvHeaderStatus.text = "Disconnesso"
+                    viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#94A3B8"))
+                    val hasSaved = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
+                    tvHeaderStatus.text = if (hasSaved) "Standby (In ascolto)" else "Disconnesso"
                     tvHeaderStatus.setTextColor(Color.parseColor("#64748B"))
                     tvHeaderBattery.text = ""
                     btnQuickConnect.text = "Connetti"
