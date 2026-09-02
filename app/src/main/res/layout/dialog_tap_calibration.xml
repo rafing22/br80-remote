@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Esegui un DOPPIO TAP naturale premendo qualsiasi tasto sul tuo BR80 oppure toccando il pulsante qui sotto:"
+        android:textSize="13sp"
+        android:textColor="#334155"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Box Stato Tentativo -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#F1F5F9"
+        android:padding="14dp"
+        android:gravity="center"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tvCalibAttemptHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tentativo 1 di 3"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#0284C7" />
+
+        <TextView
+            android:id="@+id/tvCalibAttemptStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="In attesa del 1° tocco..."
+            android:textSize="13sp"
+            android:textColor="#64748B"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/tvCalibHistory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="12sp"
+            android:textColor="#16A34A"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <!-- Pulsante Target Tap a Schermo -->
+    <Button
+        android:id="@+id/btnCalibTapArea"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:text="👆 TOCCA DUE VOLTE QUI"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:backgroundTint="#EF4444"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>

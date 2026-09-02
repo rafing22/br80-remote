@@ -16,6 +16,7 @@ import androidx.core.content.FileProvider
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -23,6 +24,7 @@ object AppUpdateManager {
 
     private const val TAG = "AppUpdateManager"
     private const val RELEASES_API_URL = "https://api.github.com/repos/rafing22/br80-remote/releases/latest"
+    private const val USER_AGENT = "Livall-BR80-Remote-App"
     private val handler = Handler(Looper.getMainLooper())
 
     fun checkForUpdates(activity: Activity, isManualCheck: Boolean = false) {
@@ -31,16 +33,18 @@ object AppUpdateManager {
                 val url = URL(RELEASES_API_URL)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
+                conn.setRequestProperty("User-Agent", USER_AGENT)
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
+                conn.connectTimeout = 10000
+                conn.readTimeout = 10000
 
-                if (conn.responseCode == 200) {
+                val code = conn.responseCode
+                if (code == 200) {
                     val response = conn.inputStream.bufferedReader().use { it.readText() }
                     val json = JSONObject(response)
 
                     val tagName = json.optString("tag_name", "").removePrefix("v").trim()
-                    val body = json.optString("body", "Miglioramenti e correzioni.")
+                    val body = json.optString("body", "Miglioramenti e nuove funzionalità.")
                     val assets = json.optJSONArray("assets")
 
                     var apkDownloadUrl: String? = null
@@ -69,9 +73,18 @@ object AppUpdateManager {
                             Toast.makeText(activity, "L'app è già aggiornata all'ultima versione (v$currentVersion).", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } else if (isManualCheck) {
-                    handler.post {
-                        Toast.makeText(activity, "Nessun rilascio trovato su GitHub (Codice ${conn.responseCode}).", Toast.LENGTH_SHORT).show()
+                } else {
+                    val errorText = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    Log.w(TAG, "GitHub API HTTP $code: $errorText")
+                    if (isManualCheck) {
+                        handler.post {
+                            val msg = when (code) {
+                                404 -> "Nessuna release trovata su GitHub."
+                                403 -> "Limite richieste GitHub superato o repository privata. Riprova più tardi."
+                                else -> "Errore verifica aggiornamenti (Codice $code)."
+                            }
+                            Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -155,30 +168,50 @@ object AppUpdateManager {
 
         Thread {
             try {
-                val url = URL(downloadUrl)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 15000
-                conn.readTimeout = 15000
-                conn.connect()
+                var currentUrl = downloadUrl
+                var conn: HttpURLConnection
+                var redirectCount = 0
+
+                // Gestione robusta dei redirect 301/302/307/308 fino ad AWS S3
+                while (true) {
+                    val url = URL(currentUrl)
+                    conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.setRequestProperty("User-Agent", USER_AGENT)
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 15000
+                    conn.instanceFollowRedirects = true
+
+                    val code = conn.responseCode
+                    if (code in 300..399 && redirectCount < 5) {
+                        val loc = conn.getHeaderField("Location")
+                        if (!loc.isNullOrEmpty()) {
+                            currentUrl = loc
+                            redirectCount++
+                            continue
+                        }
+                    }
+                    break
+                }
 
                 val fileLength = conn.contentLength
                 val outputFile = File(activity.cacheDir, apkName)
 
-                conn.inputStream.use { input ->
-                    FileOutputStream(outputFile).use { output ->
-                        val data = ByteArray(4096)
-                        var total = 0L
-                        var count: Int
-                        while (input.read(data).also { count = it } != -1) {
-                            total += count
-                            if (fileLength > 0) {
-                                val progress = (total * 100 / fileLength).toInt()
-                                handler.post { progressDialog.progress = progress }
-                            }
-                            output.write(data, 0, count)
+                val input: InputStream = conn.inputStream
+                FileOutputStream(outputFile).use { output ->
+                    val data = ByteArray(4096)
+                    var total = 0L
+                    var count: Int
+                    while (input.read(data).also { count = it } != -1) {
+                        total += count
+                        if (fileLength > 0) {
+                            val progress = (total * 100 / fileLength).toInt()
+                            handler.post { progressDialog.progress = progress }
                         }
+                        output.write(data, 0, count)
                     }
                 }
+                input.close()
 
                 handler.post {
                     progressDialog.dismiss()

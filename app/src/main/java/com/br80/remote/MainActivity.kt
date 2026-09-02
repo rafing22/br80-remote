@@ -16,6 +16,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
@@ -85,12 +86,22 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var tvActionLong: TextView
 
     // Options Tab Views
+    private lateinit var tvCurrentTapSpeed: TextView
+    private lateinit var btnAutoCalibrate: Button
+    private lateinit var btnPresetFast: Button
+    private lateinit var btnPresetStd: Button
+    private lateinit var btnPresetGloves: Button
+    private lateinit var btnPresetSlow: Button
+    private lateinit var cbOptBoot: CheckBox
     private lateinit var cbOptKeepAlive: CheckBox
     private lateinit var btnOptDoze: Button
     private lateinit var cbOptHaptic: CheckBox
     private lateinit var cbOptSound: CheckBox
     private lateinit var btnCheckUpdate: Button
     private lateinit var btnOptTaskerExport: Button
+
+    // Calibration Dialog State Callback
+    private var activeCalibrationCallback: (() -> Unit)? = null
 
     // Log Tab Views
     private lateinit var tvLogFull: TextView
@@ -136,8 +147,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         setupBottomNav()
         selectButton(Br80Button.UP)
         updateBatteryOptButtonState()
+        updateTapSpeedText()
 
-        // Controllo aggiornamenti silenzioso all'avvio
+        // Controllo aggiornamenti all'avvio
         AppUpdateManager.checkForUpdates(this, isManualCheck = false)
     }
 
@@ -182,6 +194,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         tvActionLong = findViewById(R.id.tvActionLong)
 
         // Options
+        tvCurrentTapSpeed = findViewById(R.id.tvCurrentTapSpeed)
+        btnAutoCalibrate = findViewById(R.id.btnAutoCalibrate)
+        btnPresetFast = findViewById(R.id.btnPresetFast)
+        btnPresetStd = findViewById(R.id.btnPresetStd)
+        btnPresetGloves = findViewById(R.id.btnPresetGloves)
+        btnPresetSlow = findViewById(R.id.btnPresetSlow)
+        cbOptBoot = findViewById(R.id.cbOptBoot)
         cbOptKeepAlive = findViewById(R.id.cbOptKeepAlive)
         btnOptDoze = findViewById(R.id.btnOptDoze)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
@@ -189,6 +208,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate)
         btnOptTaskerExport = findViewById(R.id.btnOptTaskerExport)
 
+        cbOptBoot.isChecked = mappingStorage.isAutoStartOnBootEnabled()
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
         cbOptHaptic.isChecked = mappingStorage.isHapticFeedbackEnabled()
         cbOptSound.isChecked = mappingStorage.isSoundFeedbackEnabled()
@@ -220,7 +240,22 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         rowGestureTriple.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.TRIPLE) }
         rowGestureLong.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.LONG) }
 
+        // Calibration & Presets
+        btnAutoCalibrate.setOnClickListener {
+            showAutoCalibrationDialog()
+        }
+
+        btnPresetFast.setOnClickListener { setTapSpeedPreset(280L, "Sportivo (280ms)") }
+        btnPresetStd.setOnClickListener { setTapSpeedPreset(420L, "Standard (420ms)") }
+        btnPresetGloves.setOnClickListener { setTapSpeedPreset(550L, "Guanti (550ms)") }
+        btnPresetSlow.setOnClickListener { setTapSpeedPreset(700L, "Lento (700ms)") }
+
         // Options Listeners
+        cbOptBoot.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setAutoStartOnBootEnabled(isChecked)
+            log("Avvio automatico al boot: " + if (isChecked) "ATTIVO" else "DISATTIVATO")
+        }
+
         cbOptKeepAlive.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setKeepAliveEnabled(isChecked)
             bleService?.gattManager?.startKeepAliveIfEnabled()
@@ -261,6 +296,102 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnLogClearTab.setOnClickListener {
             tvLogFull.text = "[LOG PULITO]"
         }
+    }
+
+    private fun setTapSpeedPreset(ms: Long, name: String) {
+        mappingStorage.setMultiTapWindowMs(ms)
+        updateTapSpeedText()
+        Toast.makeText(this, "Profilo impostato: $name", Toast.LENGTH_SHORT).show()
+        log("Velocità multi-tap impostata a $ms ms ($name)")
+    }
+
+    private fun updateTapSpeedText() {
+        val current = mappingStorage.getMultiTapWindowMs()
+        val desc = when {
+            current <= 300L -> "Sportivo"
+            current <= 450L -> "Standard"
+            current <= 600L -> "Guanti"
+            else -> "Personalizzato"
+        }
+        tvCurrentTapSpeed.text = "Finestra Doppio Tap: $current ms ($desc)"
+    }
+
+    // Dialog Auto-Apprendimento Ritmo Tap a 3 tentativi
+    private fun showAutoCalibrationDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tap_calibration, null)
+        val tvHeader = dialogView.findViewById<TextView>(R.id.tvCalibAttemptHeader)
+        val tvStatus = dialogView.findViewById<TextView>(R.id.tvCalibAttemptStatus)
+        val tvHistory = dialogView.findViewById<TextView>(R.id.tvCalibHistory)
+        val btnTap = dialogView.findViewById<Button>(R.id.btnCalibTapArea)
+
+        var currentAttempt = 1
+        val measuredIntervals = mutableListOf<Long>()
+        var firstTapTime = 0L
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("🎯 Calibrazione Ritmo Personale")
+            .setView(dialogView)
+            .setNegativeButton("Annulla") { _, _ ->
+                activeCalibrationCallback = null
+            }
+            .setCancelable(false)
+            .create()
+
+        fun handleTapEvent() {
+            val now = SystemClock.uptimeMillis()
+            if (firstTapTime == 0L) {
+                firstTapTime = now
+                tvStatus.text = "1° tocco registrato! Fai subito il 2° tocco..."
+                tvStatus.setTextColor(Color.parseColor("#0284C7"))
+            } else {
+                val interval = now - firstTapTime
+                firstTapTime = 0L
+
+                if (interval in 100L..1500L) {
+                    measuredIntervals.add(interval)
+                    val historyText = measuredIntervals.mapIndexed { idx, ms -> "Tentativo ${idx + 1}: ${ms}ms ✓" }.joinToString("\n")
+                    tvHistory.text = historyText
+
+                    if (currentAttempt < 3) {
+                        currentAttempt++
+                        tvHeader.text = "Tentativo $currentAttempt di 3"
+                        tvStatus.text = "Ottimo! Ora fai il Tentativo $currentAttempt..."
+                        tvStatus.setTextColor(Color.parseColor("#16A34A"))
+                    } else {
+                        // Calibrazione completata!
+                        activeCalibrationCallback = null
+                        val avg = measuredIntervals.average().toLong()
+                        val optimal = (avg + 70L).coerceIn(250L, 850L)
+                        mappingStorage.setMultiTapWindowMs(optimal)
+                        updateTapSpeedText()
+                        dialog.dismiss()
+
+                        AlertDialog.Builder(this)
+                            .setTitle("✅ Calibrazione Riuscita!")
+                            .setMessage("Media misurata: $avg ms\nFinestra ideale impostata: $optimal ms (con margine confortevole).\n\nOra i doppi e tripli tap saranno perfettamente calibrati sulla tua velocità!")
+                            .setPositiveButton("Perfetto", null)
+                            .show()
+
+                        log("Auto-apprendimento completato: media $avg ms -> impostato $optimal ms")
+                    }
+                } else {
+                    tvStatus.text = "Troppo lento (>1.5s). Riprova il 1° tocco..."
+                    tvStatus.setTextColor(Color.parseColor("#DC2626"))
+                }
+            }
+        }
+
+        btnTap.setOnClickListener {
+            handleTapEvent()
+        }
+
+        activeCalibrationCallback = {
+            runOnUiThread {
+                handleTapEvent()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun setupBottomNav() {
@@ -330,7 +461,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             .setNegativeButton("Annulla", null)
             .create()
 
-        // Mappa per tracciare stato espansione categorie (default: tutte chiuse)
         val expandedCategories = mutableMapOf<ActionCategory, Boolean>()
 
         fun populateList(query: String) {
@@ -351,10 +481,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             val grouped = filtered.groupBy { it.category }
 
             for ((category, actions) in grouped) {
-                // Se si sta cercando, espandi automaticamente le categorie corrispondenti; altrimenti usa lo stato salvato (default false)
                 val isExpanded = if (isSearching) true else (expandedCategories[category] == true)
 
-                // Layout Intestazione Categoria Accordion
                 val headerLayout = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -389,7 +517,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 headerLayout.addView(arrowIcon)
                 headerLayout.addView(catTitle)
 
-                // Contenitore Figli Azioni
                 val actionsContainer = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     visibility = if (isExpanded) View.VISIBLE else View.GONE
@@ -434,7 +561,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     actionsContainer.addView(row)
                 }
 
-                // Click Header per Espandere / Collassare
                 headerLayout.setOnClickListener {
                     val currentlyExpanded = actionsContainer.visibility == View.VISIBLE
                     val nextState = !currentlyExpanded
@@ -625,6 +751,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onResume() {
         super.onResume()
         updateBatteryOptButtonState()
+        updateTapSpeedText()
     }
 
     // Callbacks del Service
@@ -660,6 +787,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
         runOnUiThread {
             if (isPress) {
+                activeCalibrationCallback?.invoke()
                 selectButton(button)
             }
         }

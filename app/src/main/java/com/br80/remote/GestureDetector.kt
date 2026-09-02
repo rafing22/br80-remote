@@ -25,6 +25,8 @@ class GestureDetector(
 
     fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
         val state = getState(button)
+        val longPressThreshold = mappingStorage.getLongPressThresholdMs()
+        val multiTapWindow = mappingStorage.getMultiTapWindowMs()
 
         if (isPress) {
             state.pressTimestamp = SystemClock.uptimeMillis()
@@ -36,7 +38,7 @@ class GestureDetector(
         } else {
             val duration = SystemClock.uptimeMillis() - state.pressTimestamp
 
-            if (duration >= LONG_PRESS_THRESHOLD_MS) {
+            if (duration >= longPressThreshold) {
                 // Pressione lunga scatta immediatamente
                 state.tapCount = 0
                 state.pendingRunnable?.let {
@@ -53,7 +55,7 @@ class GestureDetector(
                     state.tapCount = 0
                     onGestureDetected(button, GestureType.SINGLE)
                 } else {
-                    // C'è un doppio o triplo tap configurato: accumuliamo il tap e apriamo la finestra
+                    // C'è un doppio o triplo tap configurato: accumuliamo il tap e apriamo la finestra dinamica
                     state.tapCount++
                     val currentTaps = state.tapCount
 
@@ -69,7 +71,7 @@ class GestureDetector(
                     }
 
                     state.pendingRunnable = runnable
-                    handler.postDelayed(runnable, MULTI_TAP_WINDOW_MS)
+                    handler.postDelayed(runnable, multiTapWindow)
                 }
             }
         }
@@ -81,10 +83,5 @@ class GestureDetector(
             state.pendingRunnable = null
             state.tapCount = 0
         }
-    }
-
-    companion object {
-        const val LONG_PRESS_THRESHOLD_MS = 500L
-        const val MULTI_TAP_WINDOW_MS = 350L
     }
 }

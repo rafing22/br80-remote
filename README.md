@@ -1,20 +1,21 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.2)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.3)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎯 Novità Versione 1.2
+## 🎯 Novità Versione 1.3
 
-- **🔄 Aggiornamenti In-App Diretti da GitHub:** L'app controlla automaticamente le nuove versioni pubblicate su GitHub Releases e permette di scaricare e installare l'aggiornamento con un tocco.
-- **🎨 Design & Icona Fedele al Controller Reale:**
-  - Icona dell'applicazione e layout D-Pad interattivo ridisegnati ispirandosi alla sagoma reale del Livall BR80 (Pulsante **FOTO** in alto, disco centrale con frecce **▲**, **L**, **R**, **▼** e pulsante **STOP ROSSO** centrale, pulsante **🗣️ VOCE** in basso).
-  - Toccando il telecomando a schermo o premendo il tasto sul BR80 fisico, il tasto si illumina all'istante aprendo la configurazione.
-- **📂 Categorie Azioni Collassabili ad Accordion:**
-  - Nel menu di configurazione dei gesti, le categorie appaiono **chiuse all'avvio** per una navigazione ordinata e si aprono al tocco.
-  - Se digiti nella barra di ricerca testuale rapida, le categorie con risultati si aprono **automaticamente**.
-- **🛡️ Connessione Auto-Healing & Watchdog Timeout (15s):**
-  - Se la connessione GATT o la scansione BLE si bloccano a metà (es. errori GATT 133), il watchdog interviene automaticamente entro 15 secondi, resetta la connessione e ritenta senza che l'utente debba mai ripremere "Connetti".
+- **🎯 Sistema di Calibrazione e Auto-Apprendimento del Ritmo Tap (3 Tentativi):**
+  - Consente di calibrare con precisione la finestra temporale per il doppio e triplo tap su misura per la tua velocità naturale o per l'uso con guanti invernali.
+  - Procedura interattiva a 3 step che misura i tuoi tap sul BR80 (o a schermo), calcola la media e imposta il margine ideale.
+  - Profili rapidi a 1 tocco: *Sportivo (280ms)*, *Standard (420ms)*, *Guanti (550ms)*, *Lento (700ms)*.
+- **🚀 Avvio Automatico all'Accensione dello Smartphone (Boot Receiver):**
+  - Il servizio di ascolto BLE in background si avvia automaticamente all'avvio del telefono (`BOOT_COMPLETED`), garantendo che il telecomando sia sempre riconosciuto senza dover aprire l'app.
+- **🔄 Aggiornamenti In-App Migliorati:**
+  - Risolto il supporto per il download diretto degli APK da GitHub Releases e AWS S3 con gestione completa dei redirect.
+- **🎨 Design Fedele al Livall BR80 Reale:**
+  - Layout e icona fedeli al dispositivo fisico (Pulsante **FOTO** in alto, frecce **▲**, **L**, **R**, **▼**, tasto centrale **STOP ROSSO**, pulsante **🗣️ VOCE** in basso).
 
 ---
 
@@ -60,19 +61,17 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
   - `battery` *(Int)*: livello percentuale della batteria (0–100)
   - `timestamp` *(Long)*: orario dell'evento in millisecondi
 
-Dalla scheda **⚙️ Opzioni** dell'app puoi toccare **"Esporta Progetto Tasker (.xml)"** per importare istantaneamente tutti i profili e task d'esempio già configurati.
-
 ---
 
 ## 📲 Installazione e Aggiornamento
 
 ### 1. Download Diretto
-Puoi scaricare l'ultima versione compilata dell'APK da:
+Puoi scaricare l'APK da:
 - **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)**
-- **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)** (Artefatto **`Livall-BR80-Remote-v1.2`**)
+- **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)** (Artefatto **`Livall-BR80-Remote-v1.3`**)
 
-### 2. Aggiornamenti Futuri
-Dalla scheda **⚙️ Opzioni**, tocca semplicemente **"🔄 Verifica Aggiornamenti su GitHub"**: l'app scaricherà e installerà autonomamente ogni nuova versione.
+### 2. Aggiornamenti In-App
+Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"**: l'app rileva le nuove versioni e installa l'aggiornamento.
 
 ---
 
@@ -83,7 +82,7 @@ Dalla scheda **⚙️ Opzioni**, tocca semplicemente **"🔄 Verifica Aggiorname
 ./gradlew assembleDebug
 
 # L'output sarà generato in:
-# release_apk/Livall-BR80-Remote-v1.2.apk
+# release_apk/Livall-BR80-Remote-v1.3.apk
 ```
 
 ---

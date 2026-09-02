@@ -364,7 +364,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1.2"
-                            android:text="⏱️ Pressione Lunga (>500ms)"
+                            android:text="⏱️ Pressione Lunga"
                             android:textSize="13sp"
                             android:textColor="#334155" />
 
@@ -397,7 +397,7 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- Card Connessione -->
+                <!-- Card Reattività & Calibrazione Ritmo Tap -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -410,24 +410,143 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Connessione &amp; Reattività"
+                        android:text="⏱️ Reattività &amp; Calibrazione Tap"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/tvCurrentTapSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Finestra Doppio Tap: 420 ms (Standard)"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#0284C7"
+                        android:layout_marginBottom="10dp" />
+
+                    <!-- Pulsante Auto-Apprendimento -->
+                    <Button
+                        android:id="@+id/btnAutoCalibrate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🎯 Auto-Apprendimento Ritmo (3 Tentativi)"
+                        android:textSize="13sp"
+                        android:backgroundTint="#0284C7"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginBottom="12dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Oppure scegli un profilo rapido:"
+                        android:textSize="12sp"
+                        android:textColor="#64748B"
+                        android:layout_marginBottom="6dp" />
+
+                    <!-- Presets Rapidi -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnPresetFast"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_weight="1"
+                            android:text="280ms\nSport"
+                            android:textSize="10sp"
+                            android:backgroundTint="#F1F5F9"
+                            android:textColor="#0F172A"
+                            android:layout_marginEnd="4dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetStd"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_weight="1"
+                            android:text="420ms\nNormale"
+                            android:textSize="10sp"
+                            android:backgroundTint="#F1F5F9"
+                            android:textColor="#0F172A"
+                            android:layout_marginEnd="4dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetGloves"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_weight="1"
+                            android:text="550ms\nGuanti"
+                            android:textSize="10sp"
+                            android:backgroundTint="#F1F5F9"
+                            android:textColor="#0F172A"
+                            android:layout_marginEnd="4dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetSlow"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_weight="1"
+                            android:text="700ms\nLento"
+                            android:textSize="10sp"
+                            android:backgroundTint="#F1F5F9"
+                            android:textColor="#0F172A"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Card Connessione & Avvio -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Connessione &amp; Background"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="#0F172A"
                         android:layout_marginBottom="12dp" />
 
                     <CheckBox
+                        android:id="@+id/cbOptBoot"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Avvio automatico all'accensione del telefono"
+                        android:textSize="14sp"
+                        android:checked="true"
+                        android:textColor="#1E293B"
+                        android:layout_marginBottom="8dp" />
+
+                    <CheckBox
                         android:id="@+id/cbOptKeepAlive"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Keep-Alive / Always-On (Anti-Standby)"
+                        android:text="Keep-Alive / Always-On (Anti-Standby BR80)"
                         android:textSize="14sp"
                         android:textColor="#1E293B" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Invia un ping periodico per evitare che il telecomando vada in deep sleep. Garantisce risposta istantanea al primo tocco ma consuma leggermente più batteria sul telecomando."
+                        android:text="Invia un ping periodico ogni 60s per evitare il deep sleep del BR80. Consente risposta istantanea al primissimo tocco senza attesa di risveglio."
                         android:textSize="12sp"
                         android:textColor="#64748B"
                         android:layout_marginStart="32dp"
@@ -528,7 +647,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Livall BR80 Remote v1.1 • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+                    android:text="Livall BR80 Remote v1.3 • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
                     android:textSize="12sp"
                     android:textColor="#94A3B8"
                     android:gravity="center"

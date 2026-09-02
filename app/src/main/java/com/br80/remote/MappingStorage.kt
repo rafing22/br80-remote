@@ -6,11 +6,11 @@ import android.content.SharedPreferences
 enum class Br80Button(val displayName: String, val shortName: String, val pressCode: Int, val releaseCode: Int) {
     UP("Freccia Su", "UP", 6, 38),
     DOWN("Freccia Giù", "DOWN", 5, 37),
-    LEFT("Freccia Sinistra", "LEFT", 7, 39),
-    RIGHT("Freccia Destra", "RIGHT", 8, 40),
-    HOME("Home / Conferma", "HOME", 9, 41),
-    CAMERA("Fotocamera", "CAMERA", 2, 34),
-    CALL("Telefono / Intercom", "CALL", 29, 45);
+    LEFT("Sinistra (L)", "LEFT", 7, 39),
+    RIGHT("Destra (R)", "RIGHT", 8, 40),
+    HOME("Stop / Conferma (Rosso)", "HOME", 9, 41),
+    CAMERA("Fotocamera (Alto)", "CAMERA", 2, 34),
+    CALL("Voce / Intercom (Basso)", "CALL", 29, 45);
 
     companion object {
         private val codeMap = mutableMapOf<Int, Pair<Br80Button, Boolean>>()
@@ -32,7 +32,7 @@ enum class GestureType(val displayName: String, val tag: String) {
     SINGLE("Singolo Tap", "1x"),
     DOUBLE("Doppio Tap", "2x"),
     TRIPLE("Triplo Tap", "3x"),
-    LONG("Pressione Lunga (>500ms)", "LONG")
+    LONG("Pressione Lunga", "LONG")
 }
 
 enum class ActionCategory(val displayName: String, val icon: String) {
@@ -61,7 +61,7 @@ enum class ActionType(
     MUTE_TOGGLE("mute_toggle", "Muto / Suoneria", "Attiva o disattiva la modalità silenziosa", ActionCategory.MEDIA),
 
     // Voice
-    VOICE_ASSISTANT_GEMINI("voice_gemini", "Google Gemini / Assistente", "Avvia l'ascolto vocale di Gemini / Assistente Vocale", ActionCategory.VOICE),
+    VOICE_ASSISTANT_GEMINI("voice_gemini", "Google Gemini / Assistente", "Avvia l'ascolto vocale immediato di Gemini / Google", ActionCategory.VOICE),
     VOICE_RECORD_MEMO("voice_memo", "Registratore Vocale", "Apre il registratore vocale per un memo audio", ActionCategory.VOICE),
 
     // Navigation
@@ -143,6 +143,34 @@ class MappingStorage(context: Context) {
         return doubleAction.type != ActionType.NONE || tripleAction.type != ActionType.NONE
     }
 
+    // Tempo di attesa finestra Multi-Tap in millisecondi (default 420ms)
+    fun getMultiTapWindowMs(): Long {
+        return prefs.getLong(KEY_MULTI_TAP_WINDOW, 420L)
+    }
+
+    fun setMultiTapWindowMs(ms: Long) {
+        val clamped = ms.coerceIn(200L, 900L)
+        prefs.edit().putLong(KEY_MULTI_TAP_WINDOW, clamped).apply()
+    }
+
+    // Soglia minima pressione lunga in millisecondi (default 550ms)
+    fun getLongPressThresholdMs(): Long {
+        return prefs.getLong(KEY_LONG_PRESS_THRESHOLD, 550L)
+    }
+
+    fun setLongPressThresholdMs(ms: Long) {
+        val clamped = ms.coerceIn(300L, 1500L)
+        prefs.edit().putLong(KEY_LONG_PRESS_THRESHOLD, clamped).apply()
+    }
+
+    fun isAutoStartOnBootEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_BOOT, true)
+    }
+
+    fun setAutoStartOnBootEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_BOOT, enabled).apply()
+    }
+
     fun isHapticFeedbackEnabled(): Boolean {
         return prefs.getBoolean(KEY_HAPTIC_FEEDBACK, true)
     }
@@ -209,5 +237,8 @@ class MappingStorage(context: Context) {
         private const val KEY_HAPTIC_FEEDBACK = "pref_haptic_feedback"
         private const val KEY_SOUND_FEEDBACK = "pref_sound_feedback"
         private const val KEY_KEEP_ALIVE = "pref_keep_alive"
+        private const val KEY_MULTI_TAP_WINDOW = "pref_multi_tap_window_ms"
+        private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
+        private const val KEY_AUTO_BOOT = "pref_auto_boot"
     }
 }
