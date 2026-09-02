@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var cbOptBoot: CheckBox
     private lateinit var cbOptKeepAlive: CheckBox
     private lateinit var btnOptDoze: Button
+    private lateinit var btnOptOverlay: Button
     private lateinit var cbOptHaptic: CheckBox
     private lateinit var cbOptSound: CheckBox
     private lateinit var btnCheckUpdate: Button
@@ -210,6 +211,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptBoot = findViewById(R.id.cbOptBoot)
         cbOptKeepAlive = findViewById(R.id.cbOptKeepAlive)
         btnOptDoze = findViewById(R.id.btnOptDoze)
+        btnOptOverlay = findViewById(R.id.btnOptOverlay)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
         cbOptSound = findViewById(R.id.cbOptSound)
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate)
@@ -266,7 +268,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptKeepAlive.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setKeepAliveEnabled(isChecked)
             bleService?.gattManager?.startKeepAliveIfEnabled()
-            log("Keep-Alive impostato a: " + if (isChecked) "ATTIVO (Ping ogni 60s)" else "DISATTIVATO")
+            log("Keep-Alive impostato a: " + if (isChecked) "ATTIVO (Ping ogni 35s)" else "DISATTIVATO")
         }
 
         cbOptHaptic.setOnCheckedChangeListener { _, isChecked ->
@@ -281,6 +283,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         btnOptDoze.setOnClickListener {
             requestIgnoreBatteryOptimization()
+        }
+
+        btnOptOverlay.setOnClickListener {
+            requestOverlayPermission()
         }
 
         btnCheckUpdate.setOnClickListener {
@@ -758,6 +764,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onResume() {
         super.onResume()
         updateBatteryOptButtonState()
+        updateOverlayButtonState()
         updateTapSpeedText()
     }
 
@@ -850,6 +857,36 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 btnOptDoze.text = "Disattiva Ottimizzazione Batteria (Doze)"
                 btnOptDoze.isEnabled = true
                 btnOptDoze.backgroundTintList = toColorStateList(Color.parseColor("#475569"))
+            }
+        }
+    }
+
+    private fun updateOverlayButtonState() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val canDraw = Settings.canDrawOverlays(this)
+            if (canDraw) {
+                btnOptOverlay.text = "Avvio su Altre App: Autorizzato ✓"
+                btnOptOverlay.isEnabled = false
+                btnOptOverlay.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
+            } else {
+                btnOptOverlay.text = "Consenti Avvio su Altre App (Gemini / Mappe)"
+                btnOptOverlay.isEnabled = true
+                btnOptOverlay.backgroundTintList = toColorStateList(Color.parseColor("#475569"))
+            }
+        }
+    }
+
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    log("Impossibile aprire impostazioni overlay: ${e.message}")
+                }
             }
         }
     }

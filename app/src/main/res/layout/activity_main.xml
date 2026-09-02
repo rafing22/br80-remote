@@ -561,6 +561,16 @@
                         android:backgroundTint="#475569"
                         android:textColor="#FFFFFF" />
 
+                    <Button
+                        android:id="@+id/btnOptOverlay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Consenti Avvio su Altre App (Gemini / Mappe)"
+                        android:textSize="13sp"
+                        android:backgroundTint="#475569"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginTop="8dp" />
+
                 </LinearLayout>
 
                 <!-- Card Feedback -->

@@ -2,6 +2,8 @@ package com.br80.remote
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityOptions
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -150,38 +152,57 @@ class ActionExecutor(
         }
     }
 
-    private fun launchVoiceAssistantGemini() {
+    @Suppress("DEPRECATION")
+    private fun wakeUpScreenBriefly() {
         try {
-            val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            val wakeLock = powerManager?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "br80:screen_wake"
+            )
+            wakeLock?.acquire(3000L)
+        } catch (e: Exception) {
+            // Ignora
+        }
+    }
+
+    private fun launchVoiceAssistantGemini() {
+        wakeUpScreenBriefly()
+
+        // 1. Invio evento KEYCODE_VOICE_ASSIST hardware (il metodo nativo Android che attiva Gemini/Google Assistant in overlay anche da background)
+        sendMediaKeyEvent(KeyEvent.KEYCODE_VOICE_ASSIST)
+
+        // 2. Invio Intent ACTION_VOICE_COMMAND tramite PendingIntent per aggirare le restrizioni di background su Android 10-14+
+        try {
+            val voiceIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-            context.startActivity(intent)
-            onLog("Assistente Vocale / Gemini avviato.")
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            val pendingIntent = PendingIntent.getActivity(context, 99, voiceIntent, flags)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val options = ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                ).toBundle()
+                pendingIntent.send(context, 0, null, null, null, null, options)
+            } else {
+                pendingIntent.send()
+            }
+            onLog("Gemini / Assistente Vocale attivato in background.")
             return
         } catch (e: Exception) {
-            Log.w(tag, "ACTION_VOICE_COMMAND failed: ${e.message}")
+            Log.w(tag, "PendingIntent ACTION_VOICE_COMMAND: ${e.message}")
         }
 
+        // 3. Fallback con RecognizerIntent o app diretta
         try {
             val intent = Intent(RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
             onLog("Voice search avviato.")
-            return
         } catch (e: Exception) {
-            Log.w(tag, "ACTION_VOICE_SEARCH_HANDS_FREE failed: ${e.message}")
-        }
-
-        // Fallback su Gemini app o Google Search
-        val bardIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.bard")
-        if (bardIntent != null) {
-            bardIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(bardIntent)
-            onLog("App Gemini avviata.")
-        } else {
-            sendMediaKeyEvent(KeyEvent.KEYCODE_VOICE_ASSIST)
-            onLog("Inviato evento KEYCODE_VOICE_ASSIST.")
+            onLog("Assistente attivato tramite tasto multimediale.")
         }
     }
 
