@@ -3,42 +3,188 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="#F5F7FB">
 
-    <TextView
-        android:id="@+id/tvStatus"
+    <!-- Header & Status Card -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:paddingBottom="12dp"
-        android:text="Stato: Disconnesso" />
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp">
 
-    <TextView
-        android:id="@+id/tvBattery"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Livall BR80 Remote"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Stato: Disconnesso"
+                android:textSize="15sp"
+                android:textColor="#64748B" />
+
+            <TextView
+                android:id="@+id/tvBattery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Batteria: --"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#0EA5E9" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Connetti"
+            android:textSize="16sp"
+            android:backgroundTint="#0284C7"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Quick Settings Card -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:paddingBottom="12dp"
-        android:text="Batteria: --" />
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp">
 
-    <Button
-        android:id="@+id/btnConnect"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <CheckBox
+                android:id="@+id/cbHaptic"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Vibrazione"
+                android:checked="true"
+                android:textColor="#334155" />
+
+            <CheckBox
+                android:id="@+id/cbSound"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Beep Audio"
+                android:checked="false"
+                android:textColor="#334155" />
+
+            <Button
+                android:id="@+id/btnBatteryOpt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Doze"
+                android:textSize="12sp"
+                android:backgroundTint="#64748B"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Mapping Section -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Connetti" />
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Mappatura Tasti &amp; Gesti"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="(Tocca per modificare)"
+            android:textSize="12sp"
+            android:textColor="#94A3B8" />
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
+        android:layout_height="170dp"
+        android:background="#FFFFFF"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout
+            android:id="@+id/llButtonsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- Live Event Log -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Log Eventi Real-Time"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B" />
+
+        <TextView
+            android:id="@+id/btnLogClear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pulisci"
+            android:textSize="13sp"
+            android:textColor="#0284C7"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/svLog"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="16dp">
+        android:background="#1E293B"
+        android:padding="8dp">
 
         <TextView
             android:id="@+id/tvLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Pronto." />
-
+            android:textColor="#E2E8F0"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:text="[READY] In attesa di connessione..." />
     </ScrollView>
 
 </LinearLayout>
