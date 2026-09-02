@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0284C7</color>
+    <color name="primary_dark">#0369A1</color>
+    <color name="accent">#0EA5E9</color>
+    <color name="bg_dark">#0F172A</color>
+    <color name="bg_light">#F5F7FB</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="text_primary">#1E293B</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="status_connected">#16A34A</color>
+    <color name="status_connecting">#EAB308</color>
+    <color name="status_disconnected">#DC2626</color>
+</resources>
