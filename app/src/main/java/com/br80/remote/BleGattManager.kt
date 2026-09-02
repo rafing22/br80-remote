@@ -57,9 +57,12 @@ class BleGattManager(
     private val wakeRetryDelayMillis = 1000L
 
     private var reconnectAttempts = 0
-    private val reconnectDelays = listOf(2000L, 5000L, 10000L, 30000L)
+    private val reconnectDelays = listOf(1500L, 3000L, 6000L, 12000L)
     private var reconnectRunnable: Runnable? = null
     private var scanTimeoutRunnable: Runnable? = null
+    private var connectionWatchdogRunnable: Runnable? = null
+    private val connectionWatchdogTimeoutMs = 15_000L
+
     private var keepAliveRunnable: Runnable? = null
     private val keepAliveIntervalMs = 60_000L
 
@@ -88,15 +91,36 @@ class BleGattManager(
         return bluetoothManager?.adapter
     }
 
+    private fun startConnectionWatchdog() {
+        stopConnectionWatchdog()
+        connectionWatchdogRunnable = Runnable {
+            if (currentState == ConnectionState.CONNECTING) {
+                log("Watchdog: timeout di connessione (15s superati). Reset GATT e nuovo tentativo automatico...")
+                closeGatt()
+                stopLeScan()
+                updateState(ConnectionState.DISCONNECTED)
+                scheduleAutoReconnect()
+            }
+        }
+        handler.postDelayed(connectionWatchdogRunnable!!, connectionWatchdogTimeoutMs)
+    }
+
+    private fun stopConnectionWatchdog() {
+        connectionWatchdogRunnable?.let { handler.removeCallbacks(it) }
+        connectionWatchdogRunnable = null
+    }
+
     @SuppressLint("MissingPermission")
     fun connect() {
         userRequestedDisconnect = false
         cancelPendingReconnect()
+        startConnectionWatchdog()
         updateState(ConnectionState.CONNECTING)
 
         val adapter = getBluetoothAdapter()
         if (adapter == null || !adapter.isEnabled) {
             log("Bluetooth spento o non disponibile.")
+            stopConnectionWatchdog()
             updateState(ConnectionState.DISCONNECTED)
             return
         }
@@ -123,7 +147,9 @@ class BleGattManager(
         val scanner = adapter.bluetoothLeScanner
         if (scanner == null) {
             log("BLE Scanner non disponibile.")
+            stopConnectionWatchdog()
             updateState(ConnectionState.DISCONNECTED)
+            scheduleAutoReconnect()
             return
         }
 
@@ -165,6 +191,7 @@ class BleGattManager(
             override fun onScanFailed(errorCode: Int) {
                 log("Scansione BLE fallita con codice: $errorCode")
                 isScanning = false
+                stopConnectionWatchdog()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
             }
@@ -173,16 +200,16 @@ class BleGattManager(
         scanCallback = callback
         scanner.startScan(filters, settings, callback)
 
-        // Timeout scansione a 12 secondi
+        // Timeout scansione a 10 secondi
         scanTimeoutRunnable = Runnable {
             if (isScanning) {
-                log("Timeout scansione: nessun BR80 trovato.")
+                log("Timeout scansione: nessun BR80 trovato. Riprovo automaticamente...")
                 stopLeScan()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
             }
         }
-        handler.postDelayed(scanTimeoutRunnable!!, 12000L)
+        handler.postDelayed(scanTimeoutRunnable!!, 10000L)
     }
 
     private fun isMatchingName(name: String): Boolean {
@@ -218,15 +245,17 @@ class BleGattManager(
                 bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             } catch (e: Exception) {
                 log("Eccezione connectGatt: ${e.message}")
+                stopConnectionWatchdog()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
             }
-        }, 300L)
+        }, 200L)
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
         userRequestedDisconnect = true
+        stopConnectionWatchdog()
         stopKeepAlive()
         cancelPendingReconnect()
         stopLeScan()
@@ -239,6 +268,7 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     private fun closeGatt() {
+        stopConnectionWatchdog()
         stopKeepAlive()
         bluetoothGatt?.let {
             try {
@@ -253,11 +283,12 @@ class BleGattManager(
     private fun scheduleAutoReconnect() {
         if (userRequestedDisconnect) return
 
+        stopConnectionWatchdog()
         stopKeepAlive()
         cancelPendingReconnect()
         val delay = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
         reconnectAttempts++
-        log("Riconnessione automatica tra ${delay / 1000}s (tentativo $reconnectAttempts)...")
+        log("Auto-Healing: tentativo di riconnessione automatica tra ${delay / 1000}s (tentativo $reconnectAttempts)...")
 
         reconnectRunnable = Runnable {
             if (!userRequestedDisconnect && currentState == ConnectionState.DISCONNECTED) {
@@ -299,8 +330,18 @@ class BleGattManager(
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             log("Stato connessione: status=$status, newState=$newState")
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                log("Errore GATT rilevato (status $status). Auto-healing in corso...")
+                stopConnectionWatchdog()
+                closeGatt()
+                updateState(ConnectionState.DISCONNECTED)
+                scheduleAutoReconnect()
+                return
+            }
+
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 reconnectAttempts = 0
+                stopConnectionWatchdog()
                 updateState(ConnectionState.CONNECTED)
                 startKeepAliveIfEnabled()
                 log("Connesso al BR80. Scoperta servizi GATT in corso...")
@@ -309,6 +350,7 @@ class BleGattManager(
                 }, 400L)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 log("Disconnesso dal dispositivo.")
+                stopConnectionWatchdog()
                 stopKeepAlive()
                 closeGatt()
                 updateState(ConnectionState.DISCONNECTED)
@@ -319,7 +361,10 @@ class BleGattManager(
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                log("Scoperta servizi fallita: status $status")
+                log("Scoperta servizi fallita: status $status. Riavvio auto-healing...")
+                closeGatt()
+                updateState(ConnectionState.DISCONNECTED)
+                scheduleAutoReconnect()
                 return
             }
 
@@ -356,7 +401,10 @@ class BleGattManager(
                         writeWakeCharacteristic(gatt, characteristic)
                     }, wakeRetryDelayMillis)
                 } else {
-                    log("Wake fallito dopo $maxWakeRetries tentativi.")
+                    log("Wake fallito dopo $maxWakeRetries tentativi. Reset auto-healing...")
+                    closeGatt()
+                    updateState(ConnectionState.DISCONNECTED)
+                    scheduleAutoReconnect()
                 }
             }
         }

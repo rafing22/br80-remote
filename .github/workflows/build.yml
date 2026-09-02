@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,10 +37,27 @@ jobs:
       - name: Prepare APK with release naming
         run: |
           mkdir -p release_apk
-          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.1.apk
+          cp app/build/outputs/apk/debug/*.apk release_apk/Livall-BR80-Remote-v1.2.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Livall-BR80-Remote-v1.1
-          path: release_apk/Livall-BR80-Remote-v1.1.apk
+          name: Livall-BR80-Remote-v1.2
+          path: release_apk/Livall-BR80-Remote-v1.2.apk
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_apk/Livall-BR80-Remote-v1.2.apk
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Livall BR80 Remote ${{ github.ref_name }}
+            - Aggiornamento in-app automatico da GitHub Releases.
+            - Nuovo controller D-Pad e icona fedele al dispositivo Livall BR80 reale (tasto centrale STOP rosso, frecce L/R, Foto e Voce).
+            - Categorie azioni collassabili ad accordion (chiuse all'avvio) con ricerca dinamica.
+            - Auto-healing con Watchdog a 15 secondi per riconnessione automatica senza blocchi.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -89,6 +89,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var btnOptDoze: Button
     private lateinit var cbOptHaptic: CheckBox
     private lateinit var cbOptSound: CheckBox
+    private lateinit var btnCheckUpdate: Button
     private lateinit var btnOptTaskerExport: Button
 
     // Log Tab Views
@@ -135,6 +136,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         setupBottomNav()
         selectButton(Br80Button.UP)
         updateBatteryOptButtonState()
+
+        // Controllo aggiornamenti silenzioso all'avvio
+        AppUpdateManager.checkForUpdates(this, isManualCheck = false)
     }
 
     private fun initViews() {
@@ -182,6 +186,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnOptDoze = findViewById(R.id.btnOptDoze)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
         cbOptSound = findViewById(R.id.cbOptSound)
+        btnCheckUpdate = findViewById(R.id.btnCheckUpdate)
         btnOptTaskerExport = findViewById(R.id.btnOptTaskerExport)
 
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
@@ -236,6 +241,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             requestIgnoreBatteryOptimization()
         }
 
+        btnCheckUpdate.setOnClickListener {
+            AppUpdateManager.checkForUpdates(this, isManualCheck = true)
+        }
+
         btnOptTaskerExport.setOnClickListener {
             TaskerExporter.exportAndShare(this)
             log("Progetto Tasker XML esportato.")
@@ -276,17 +285,18 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         // Reset colori di sfondo D-Pad
         val defaultPadColor = Color.parseColor("#1E293B")
-        val defaultCenterColor = Color.parseColor("#0284C7")
+        val defaultCenterColor = Color.parseColor("#EF4444")
         val defaultSpecialColor = Color.parseColor("#334155")
-        val activeColor = Color.parseColor("#0EA5E9")
+        val activePadColor = Color.parseColor("#0EA5E9")
+        val activeCenterColor = Color.parseColor("#B91C1C")
 
-        btnPadUp.backgroundTintList = toColorStateList(if (button == Br80Button.UP) activeColor else defaultPadColor)
-        btnPadDown.backgroundTintList = toColorStateList(if (button == Br80Button.DOWN) activeColor else defaultPadColor)
-        btnPadLeft.backgroundTintList = toColorStateList(if (button == Br80Button.LEFT) activeColor else defaultPadColor)
-        btnPadRight.backgroundTintList = toColorStateList(if (button == Br80Button.RIGHT) activeColor else defaultPadColor)
-        btnPadHome.backgroundTintList = toColorStateList(if (button == Br80Button.HOME) activeColor else defaultCenterColor)
-        btnPadCamera.backgroundTintList = toColorStateList(if (button == Br80Button.CAMERA) activeColor else defaultSpecialColor)
-        btnPadCall.backgroundTintList = toColorStateList(if (button == Br80Button.CALL) activeColor else defaultSpecialColor)
+        btnPadUp.backgroundTintList = toColorStateList(if (button == Br80Button.UP) activePadColor else defaultPadColor)
+        btnPadDown.backgroundTintList = toColorStateList(if (button == Br80Button.DOWN) activePadColor else defaultPadColor)
+        btnPadLeft.backgroundTintList = toColorStateList(if (button == Br80Button.LEFT) activePadColor else defaultPadColor)
+        btnPadRight.backgroundTintList = toColorStateList(if (button == Br80Button.RIGHT) activePadColor else defaultPadColor)
+        btnPadHome.backgroundTintList = toColorStateList(if (button == Br80Button.HOME) activeCenterColor else defaultCenterColor)
+        btnPadCamera.backgroundTintList = toColorStateList(if (button == Br80Button.CAMERA) activePadColor else defaultSpecialColor)
+        btnPadCall.backgroundTintList = toColorStateList(if (button == Br80Button.CALL) activePadColor else defaultSpecialColor)
 
         // Aggiorna scheda gesti
         tvSelectedButtonTitle.text = "${button.displayName} (${button.name})"
@@ -308,7 +318,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         tvActionLong.setTextColor(if (actLong.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
     }
 
-    // Dialog Selezione Azioni con Categorie e Ricerca Testuale
+    // Dialog Selezione Azioni con Categorie Collassabili (chiuse all'avvio) e Ricerca Testuale
     private fun showActionPicker(button: Br80Button, gesture: GestureType) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_action_picker, null)
         val etSearch = dialogView.findViewById<EditText>(R.id.etActionSearch)
@@ -320,10 +330,15 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             .setNegativeButton("Annulla", null)
             .create()
 
+        // Mappa per tracciare stato espansione categorie (default: tutte chiuse)
+        val expandedCategories = mutableMapOf<ActionCategory, Boolean>()
+
         fun populateList(query: String) {
             llContainer.removeAllViews()
             val allActions = ActionType.values()
-            val filtered = if (query.isBlank()) {
+            val isSearching = query.isNotBlank()
+
+            val filtered = if (!isSearching) {
                 allActions.toList()
             } else {
                 allActions.filter {
@@ -336,20 +351,55 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             val grouped = filtered.groupBy { it.category }
 
             for ((category, actions) in grouped) {
-                // Header Categoria
-                val catHeader = TextView(this).apply {
-                    text = "${category.icon} ${category.displayName}"
+                // Se si sta cercando, espandi automaticamente le categorie corrispondenti; altrimenti usa lo stato salvato (default false)
+                val isExpanded = if (isSearching) true else (expandedCategories[category] == true)
+
+                // Layout Intestazione Categoria Accordion
+                val headerLayout = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(12, 12, 12, 12)
+                    setBackgroundColor(Color.parseColor("#E2E8F0"))
+                    isClickable = true
+                    isFocusable = true
+                    val params = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    params.setMargins(0, 4, 0, 2)
+                    layoutParams = params
+                }
+
+                val arrowIcon = TextView(this).apply {
+                    text = if (isExpanded) "▼" else "▶"
+                    textSize = 12f
+                    setTextColor(Color.parseColor("#475569"))
+                    setPadding(0, 0, 8, 0)
+                }
+
+                val catTitle = TextView(this).apply {
+                    text = "${category.icon} ${category.displayName} (${actions.size})"
                     textSize = 14f
                     setTypeface(null, Typeface.BOLD)
                     setTextColor(Color.parseColor("#0F172A"))
-                    setPadding(8, 12, 8, 4)
+                    val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    layoutParams = p
                 }
-                llContainer.addView(catHeader)
+
+                headerLayout.addView(arrowIcon)
+                headerLayout.addView(catTitle)
+
+                // Contenitore Figli Azioni
+                val actionsContainer = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    visibility = if (isExpanded) View.VISIBLE else View.GONE
+                    setPadding(8, 0, 0, 4)
+                }
 
                 for (action in actions) {
                     val row = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        setPadding(12, 10, 12, 10)
+                        setPadding(12, 8, 12, 8)
                         setBackgroundColor(Color.parseColor("#FFFFFF"))
                         isClickable = true
                         isFocusable = true
@@ -357,7 +407,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                         )
-                        params.setMargins(0, 2, 0, 4)
+                        params.setMargins(0, 1, 0, 2)
                         layoutParams = params
 
                         setOnClickListener {
@@ -368,7 +418,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
                     val tvTitle = TextView(this).apply {
                         text = action.displayName
-                        textSize = 14f
+                        textSize = 13.5f
                         setTypeface(null, Typeface.BOLD)
                         setTextColor(if (action == ActionType.NONE) Color.parseColor("#64748B") else Color.parseColor("#0284C7"))
                     }
@@ -381,8 +431,20 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
                     row.addView(tvTitle)
                     row.addView(tvDesc)
-                    llContainer.addView(row)
+                    actionsContainer.addView(row)
                 }
+
+                // Click Header per Espandere / Collassare
+                headerLayout.setOnClickListener {
+                    val currentlyExpanded = actionsContainer.visibility == View.VISIBLE
+                    val nextState = !currentlyExpanded
+                    expandedCategories[category] = nextState
+                    actionsContainer.visibility = if (nextState) View.VISIBLE else View.GONE
+                    arrowIcon.text = if (nextState) "▼" else "▶"
+                }
+
+                llContainer.addView(headerLayout)
+                llContainer.addView(actionsContainer)
             }
         }
 
@@ -598,7 +660,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
         runOnUiThread {
             if (isPress) {
-                // Tasto fisico premuto sul BR80 reale: selezionalo e illuminalo sul D-Pad!
                 selectButton(button)
             }
         }

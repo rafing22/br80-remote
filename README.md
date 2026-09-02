@@ -1,24 +1,20 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.1)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.2)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎯 Novità Versione 1.1
+## 🎯 Novità Versione 1.2
 
-- **🎮 Controller Grafico D-Pad Interattivo:** Rappresentazione grafica del BR80 con disco a 4 frecce + Home e tasti Foto/Chiamata. Cliccando a schermo o premendo il tasto fisico sul telecomando reale in mano, il tasto si illumina e si apre la scheda di configurazione dei suoi 4 gesti.
-- **🔍 Catalogo Azioni Esteso con Ricerca Testuale & Categorie:**
-  - 🎵 *Media & Volume:* Volume +, Volume -, Play/Pausa, Traccia Succ, Traccia Prec, Muto Toggle.
-  - 🧠 *Assistente & AI:* Avvia **Google Gemini / Assistente Vocale**, Registratore Vocale.
-  - 🧭 *Navigazione & Mappe:* Naviga verso Destinazione, Apri Google Maps.
-  - 📱 *Telefono & Chiamate:* Rispondi, Rifiuta, Chiamata Rapida (Speed Dial).
-  - 🛠️ *Utilità & Sistema:* Torcia ON/OFF, Schermo Sempre Acceso, Scatto Fotocamera, Apri App specifica.
-  - ⚡ *Automazione:* Broadcast Tasker, Nessuna Azione.
-  - **Barra di ricerca rapida** per filtrare all'istante le azioni digitando il nome.
-- **🔔 Notifica Persistente con Azioni Rapide:** Visualizza stato e livello batteria in tempo reale con pulsante integrato *"Connetti"* o *"Disconnetti"*.
-- **⏱️ Keep-Alive / Always-On (Anti-Standby):** Opzione per inviare un ping periodico che impedisce al telecomando di andare in deep sleep, garantendo risposta al primo tocco.
-- **📑 Bottom Navigation Bar a 3 Sezioni:** `[🎮 Controller]` | `[⚙️ Opzioni]` | `[📜 Log Eventi]`.
-- **🪄 Esportatore Progetto Tasker Preconfigurato:** Genera e condivide con un tocco il file XML con tutti i 28 trigger già pronti per Tasker.
+- **🔄 Aggiornamenti In-App Diretti da GitHub:** L'app controlla automaticamente le nuove versioni pubblicate su GitHub Releases e permette di scaricare e installare l'aggiornamento con un tocco.
+- **🎨 Design & Icona Fedele al Controller Reale:**
+  - Icona dell'applicazione e layout D-Pad interattivo ridisegnati ispirandosi alla sagoma reale del Livall BR80 (Pulsante **FOTO** in alto, disco centrale con frecce **▲**, **L**, **R**, **▼** e pulsante **STOP ROSSO** centrale, pulsante **🗣️ VOCE** in basso).
+  - Toccando il telecomando a schermo o premendo il tasto sul BR80 fisico, il tasto si illumina all'istante aprendo la configurazione.
+- **📂 Categorie Azioni Collassabili ad Accordion:**
+  - Nel menu di configurazione dei gesti, le categorie appaiono **chiuse all'avvio** per una navigazione ordinata e si aprono al tocco.
+  - Se digiti nella barra di ricerca testuale rapida, le categorie con risultati si aprono **automaticamente**.
+- **🛡️ Connessione Auto-Healing & Watchdog Timeout (15s):**
+  - Se la connessione GATT o la scansione BLE si bloccano a metà (es. errori GATT 133), il watchdog interviene automaticamente entro 15 secondi, resetta la connessione e ritenta senza che l'utente debba mai ripremere "Connetti".
 
 ---
 
@@ -44,11 +40,11 @@ Ogni pressione e rilascio genera un codice esadecimale a 1 byte sulla caratteris
 |---|---|:---:|:---:|:---:|:---:|
 | ⬆️ **Freccia Su** | `UP` | `0x06` | 6 | `0x26` | 38 |
 | ⬇️ **Freccia Giù** | `DOWN` | `0x05` | 5 | `0x25` | 37 |
-| ⬅️ **Freccia Sinistra** | `LEFT` | `0x07` | 7 | `0x27` | 39 |
-| ➡️ **Freccia Destra** | `RIGHT` | `0x08` | 8 | `0x28` | 40 |
-| 🔘 **Home / Conferma** | `HOME` | `0x09` | 9 | `0x29` | 41 |
+| ⬅️ **Sinistra (L)** | `LEFT` | `0x07` | 7 | `0x27` | 39 |
+| ➡️ **Destra (R)** | `RIGHT` | `0x08` | 8 | `0x28` | 40 |
+| ⏹ **Stop / Conferma (Rosso)** | `HOME` | `0x09` | 9 | `0x29` | 41 |
 | 📷 **Foto / Fotocamera** | `CAMERA` | `0x02` | 2 | `0x22` | 34 |
-| 📞 **Chiamata / PTT** | `CALL` | `0x1D` | 29 | `0x2D` | 45 |
+| 🗣️ **Voce / Intercom / Call** | `CALL` | `0x1D` | 29 | `0x2D` | 45 |
 
 ---
 
@@ -68,19 +64,15 @@ Dalla scheda **⚙️ Opzioni** dell'app puoi toccare **"Esporta Progetto Tasker
 
 ---
 
-## 📲 Installazione e Uso
+## 📲 Installazione e Aggiornamento
 
-### 1. Download dell'APK
-Puoi scaricare l'ultima versione compilata dell'APK da **GitHub Actions**:
-1. Vai nella scheda **[Actions](https://github.com/rafing22/br80-remote/actions)** del repository.
-2. Clicca sull'ultima esecuzione del workflow **Build APK**.
-3. Nella sezione **Artifacts** in fondo alla pagina, scarica **`Livall-BR80-Remote-v1.1`**.
+### 1. Download Diretto
+Puoi scaricare l'ultima versione compilata dell'APK da:
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)**
+- **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)** (Artefatto **`Livall-BR80-Remote-v1.2`**)
 
-### 2. Primo Avvio
-1. Apri l'app e tocca **"Connetti"**.
-2. Concedi i permessi Bluetooth, Notifiche e Accessibilità.
-3. Nella scheda **⚙️ Opzioni**, tocca **"Disattiva Doze"** per garantire la reattività a schermo spento.
-4. Accendi il telecomando BR80: l'app si connetterà automaticamente, mostrerà la batteria e sarà pronta.
+### 2. Aggiornamenti Futuri
+Dalla scheda **⚙️ Opzioni**, tocca semplicemente **"🔄 Verifica Aggiornamenti su GitHub"**: l'app scaricherà e installerà autonomamente ogni nuova versione.
 
 ---
 
@@ -91,7 +83,7 @@ Puoi scaricare l'ultima versione compilata dell'APK da **GitHub Actions**:
 ./gradlew assembleDebug
 
 # L'output sarà generato in:
-# release_apk/Livall-BR80-Remote-v1.1.apk
+# release_apk/Livall-BR80-Remote-v1.2.apk
 ```
 
 ---
