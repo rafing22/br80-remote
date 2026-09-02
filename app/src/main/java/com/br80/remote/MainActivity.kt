@@ -231,19 +231,19 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     tvStatus.text = "Stato: Disconnesso"
                     tvStatus.setTextColor(Color.parseColor("#64748B"))
                     btnConnect.text = "Connetti"
-                    btnConnect.backgroundTintList = getColorStateList(Color.parseColor("#0284C7"))
+                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
                 }
                 BleGattManager.ConnectionState.CONNECTING -> {
                     tvStatus.text = "Stato: Connessione in corso..."
                     tvStatus.setTextColor(Color.parseColor("#EAB308"))
                     btnConnect.text = "Annulla"
-                    btnConnect.backgroundTintList = getColorStateList(Color.parseColor("#CA8A04"))
+                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#CA8A04"))
                 }
                 BleGattManager.ConnectionState.CONNECTED -> {
                     tvStatus.text = "Stato: Connesso"
                     tvStatus.setTextColor(Color.parseColor("#16A34A"))
                     btnConnect.text = "Disconnetti"
-                    btnConnect.backgroundTintList = getColorStateList(Color.parseColor("#DC2626"))
+                    btnConnect.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
                 }
             }
         }
@@ -422,11 +422,11 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             if (isIgnoring) {
                 btnBatteryOpt.text = "Doze: Escluso ✓"
                 btnBatteryOpt.isEnabled = false
-                btnBatteryOpt.backgroundTintList = getColorStateList(Color.parseColor("#16A34A"))
+                btnBatteryOpt.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
             } else {
                 btnBatteryOpt.text = "Disattiva Doze"
                 btnBatteryOpt.isEnabled = true
-                btnBatteryOpt.backgroundTintList = getColorStateList(Color.parseColor("#0284C7"))
+                btnBatteryOpt.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
             }
         }
     }
@@ -448,7 +448,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
     }
 
-    private fun getColorStateList(color: Int) = android.content.res.ColorStateList.valueOf(color)
+    private fun toColorStateList(color: Int) = android.content.res.ColorStateList.valueOf(color)
 
     companion object {
         private const val PERMISSIONS_REQUEST_CODE = 100
