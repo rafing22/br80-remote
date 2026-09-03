@@ -1,7 +1,6 @@
 package com.br80.remote
 
 import android.content.Context
-import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import java.util.Locale
@@ -60,13 +59,11 @@ class TtsFeedbackManager(
             return
         }
 
+        // Il TTS di conferma azione usa sempre il canale audio predefinito (A2DP stereo):
+        // il canale voce SCO (mono) serve solo quando serve catturare il microfono (Gemini),
+        // non per la sola riproduzione di un annuncio.
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "br80_action_${System.currentTimeMillis()}")
-            } else {
-                @Suppress("DEPRECATION")
-                tts?.speak(text, TextToSpeech.QUEUE_ADD, null)
-            }
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "br80_action_${System.currentTimeMillis()}")
         } catch (e: Exception) {
             Log.e(tag, "Errore pronuncia TTS: ${e.message}")
         }

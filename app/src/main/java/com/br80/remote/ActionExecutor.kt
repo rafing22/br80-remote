@@ -44,9 +44,11 @@ class ActionExecutor(
         // 1. Emette sempre il broadcast per Tasker e altre app di automazione
         sendTaskerBroadcast(button, gesture, eventId, batteryLevel)
 
-        // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione")
+        // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione").
+        // Per Gemini niente TTS: l'apertura del canale SCO subito dopo taglierebbe la frase
+        // a metà mentre il canale passa da A2DP a SCO; resta solo vibrazione/beep immediati.
         if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY) {
-            triggerFeedback(action.getReadableDescription())
+            triggerFeedback(action.getReadableDescription(), allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
         }
 
         // 3. Esegue l'azione nativa corrispondente
@@ -172,6 +174,27 @@ class ActionExecutor(
     private fun launchVoiceAssistantGemini() {
         wakeUpScreenBriefly()
 
+        val shouldUseScoGateway = mappingStorage.isAudioBtRoutingEnabled() &&
+            ScoAudioGateway.isTargetAudioDeviceConnected(context, mappingStorage)
+
+        if (shouldUseScoGateway) {
+            ScoAudioGateway.openScoAndAwait(context) { connected ->
+                if (connected) {
+                    onLog("Canale voce interfono aperto. Attivo Gemini...")
+                } else {
+                    onLog("Canale voce interfono non disponibile: attivo Gemini sul percorso audio predefinito.")
+                }
+                fireGeminiIntents()
+                if (connected) {
+                    ScoAudioGateway.releaseScoWhenGeminiFinishes(context)
+                }
+            }
+        } else {
+            fireGeminiIntents()
+        }
+    }
+
+    private fun fireGeminiIntents() {
         // 1. Invio evento KEYCODE_VOICE_ASSIST hardware (il metodo nativo Android che attiva Gemini/Google Assistant in overlay anche da background)
         sendMediaKeyEvent(KeyEvent.KEYCODE_VOICE_ASSIST)
 
@@ -362,7 +385,7 @@ class ActionExecutor(
         }
     }
 
-    private fun triggerFeedback(actionDescription: String) {
+    private fun triggerFeedback(actionDescription: String, allowTts: Boolean = true) {
         if (mappingStorage.isHapticFeedbackEnabled()) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -392,7 +415,7 @@ class ActionExecutor(
             }
         }
 
-        if (mappingStorage.isTtsFeedbackEnabled()) {
+        if (allowTts && mappingStorage.isTtsFeedbackEnabled()) {
             ttsFeedbackManager?.speak(actionDescription)
         }
     }

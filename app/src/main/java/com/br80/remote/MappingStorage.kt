@@ -227,6 +227,30 @@ class MappingStorage(context: Context) {
             .apply()
     }
 
+    // Dispositivo Audio BT per TTS / Comandi Vocali (es. Interfono/Casco), indipendente dal Keep-Alive condizionale
+    fun isAudioBtRoutingEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUDIO_BT_ENABLED, false)
+    }
+
+    fun setAudioBtRoutingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUDIO_BT_ENABLED, enabled).apply()
+    }
+
+    fun getAudioBtMac(): String? {
+        return prefs.getString(KEY_AUDIO_BT_MAC, null)
+    }
+
+    fun getAudioBtName(): String? {
+        return prefs.getString(KEY_AUDIO_BT_NAME, null)
+    }
+
+    fun setAudioBtDevice(mac: String?, name: String?) {
+        prefs.edit()
+            .putString(KEY_AUDIO_BT_MAC, mac)
+            .putString(KEY_AUDIO_BT_NAME, name)
+            .apply()
+    }
+
     // Gestione Profili di Mappatura
     fun getActiveProfileName(): String {
         return prefs.getString(KEY_ACTIVE_PROFILE_NAME, "Standard") ?: "Standard"
@@ -325,6 +349,9 @@ class MappingStorage(context: Context) {
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
         private const val KEY_CONDITIONAL_BT_MAC = "pref_conditional_bt_mac"
         private const val KEY_CONDITIONAL_BT_NAME = "pref_conditional_bt_name"
+        private const val KEY_AUDIO_BT_ENABLED = "pref_audio_bt_enabled"
+        private const val KEY_AUDIO_BT_MAC = "pref_audio_bt_mac"
+        private const val KEY_AUDIO_BT_NAME = "pref_audio_bt_name"
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
         private const val KEY_PROFILE_NAMES = "pref_profile_names"
     }

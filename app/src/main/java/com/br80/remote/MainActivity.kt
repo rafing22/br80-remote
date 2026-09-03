@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var cbOptConditionalBt: CheckBox
     private lateinit var tvConditionalBtDevice: TextView
     private lateinit var btnOptChooseBtDevice: Button
+    private lateinit var cbOptAudioBtRouting: CheckBox
+    private lateinit var tvAudioBtDevice: TextView
+    private lateinit var btnOptChooseAudioBtDevice: Button
     private lateinit var btnOptDoze: Button
     private lateinit var btnOptOverlay: Button
     private lateinit var cbOptHaptic: CheckBox
@@ -224,6 +227,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptConditionalBt = findViewById(R.id.cbOptConditionalBt)
         tvConditionalBtDevice = findViewById(R.id.tvConditionalBtDevice)
         btnOptChooseBtDevice = findViewById(R.id.btnOptChooseBtDevice)
+        cbOptAudioBtRouting = findViewById(R.id.cbOptAudioBtRouting)
+        tvAudioBtDevice = findViewById(R.id.tvAudioBtDevice)
+        btnOptChooseAudioBtDevice = findViewById(R.id.btnOptChooseAudioBtDevice)
         btnOptDoze = findViewById(R.id.btnOptDoze)
         btnOptOverlay = findViewById(R.id.btnOptOverlay)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
@@ -244,6 +250,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
         cbOptConditionalBt.isChecked = mappingStorage.isConditionalBtEnabled()
         updateConditionalBtDeviceLabel()
+        cbOptAudioBtRouting.isChecked = mappingStorage.isAudioBtRoutingEnabled()
+        updateAudioBtDeviceLabel()
         cbOptHaptic.isChecked = mappingStorage.isHapticFeedbackEnabled()
         cbOptSound.isChecked = mappingStorage.isSoundFeedbackEnabled()
         cbOptTts.isChecked = mappingStorage.isTtsFeedbackEnabled()
@@ -319,7 +327,29 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         btnOptChooseBtDevice.setOnClickListener {
-            showBondedDevicePickerDialog()
+            showBondedDevicePickerDialog { device ->
+                mappingStorage.setConditionalBtDevice(device.address, device.name)
+                updateConditionalBtDeviceLabel()
+                log("Dispositivo BT condizionale impostato: ${device.name} [${device.address}]")
+            }
+        }
+
+        cbOptAudioBtRouting.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && mappingStorage.getAudioBtMac().isNullOrEmpty()) {
+                Toast.makeText(this, "Seleziona prima un dispositivo audio dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
+                cbOptAudioBtRouting.isChecked = false
+                return@setOnCheckedChangeListener
+            }
+            mappingStorage.setAudioBtRoutingEnabled(isChecked)
+            log("Canale voce garantito verso interfono: " + if (isChecked) "ATTIVO" else "DISATTIVATO")
+        }
+
+        btnOptChooseAudioBtDevice.setOnClickListener {
+            showBondedDevicePickerDialog { device ->
+                mappingStorage.setAudioBtDevice(device.address, device.name)
+                updateAudioBtDeviceLabel()
+                log("Dispositivo audio per TTS/Comandi impostato: ${device.name} [${device.address}]")
+            }
         }
 
         cbOptHaptic.setOnCheckedChangeListener { _, isChecked ->
@@ -945,7 +975,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     }
 
     @SuppressLint("MissingPermission")
-    private fun showBondedDevicePickerDialog() {
+    private fun showBondedDevicePickerDialog(onDeviceChosen: (android.bluetooth.BluetoothDevice) -> Unit) {
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
         } else {
@@ -970,13 +1000,20 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         AlertDialog.Builder(this)
             .setTitle("Scegli Dispositivo BT")
             .setItems(labels) { _, which ->
-                val device = bondedDevices[which]
-                mappingStorage.setConditionalBtDevice(device.address, device.name)
-                updateConditionalBtDeviceLabel()
-                log("Dispositivo BT condizionale impostato: ${device.name} [${device.address}]")
+                onDeviceChosen(bondedDevices[which])
             }
             .setNegativeButton("Annulla", null)
             .show()
+    }
+
+    private fun updateAudioBtDeviceLabel() {
+        val name = mappingStorage.getAudioBtName()
+        val mac = mappingStorage.getAudioBtMac()
+        tvAudioBtDevice.text = if (!name.isNullOrEmpty() && !mac.isNullOrEmpty()) {
+            "Dispositivo selezionato: $name [$mac]"
+        } else {
+            "Nessun dispositivo selezionato"
+        }
     }
 
     private fun exitApplication() {

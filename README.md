@@ -1,23 +1,35 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v1.5)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v2.3)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎯 Novità Versione 1.5
+## 🎯 Novità Versione 2.x
 
-- **🤖 Google Gemini & Voice Assistant in Background:**
-  - Avvio immediato dell'assistente vocale o di Google Gemini da qualsiasi app o a schermo spento/bloccato tramite dispatch nativo `KEYCODE_VOICE_ASSIST` e autorizzazione di visualizzazione su altre app (`SYSTEM_ALERT_WINDOW`).
-- **⚡ Auto-Ascolto all'Avvio:**
-  - Non appena apri l'app, il motore di scansione BLE si attiva automaticamente se un telecomando era già stato associato in precedenza (nessun click manuale necessario).
-- **📱 Scansione Bilanciata ad Alta Reattività (BALANCED):**
-  - Cattura istantanea (< 30ms) dei pacchetti BLE inviati dal telecomando Livall BR80 quando premi un tasto, evitando perdite di segnale.
-- **🛡️ Modalità Standby Listener & Riconnessione Istantanea:**
-  - Risolto il problema di disconnessione quando lo smartphone o il telecomando entrano in standby.
-- **⚡ Riconnessione a 1-Click (Fix Errore GATT 133):**
-  - Eliminata la necessità di premere connetti/disconnetti ripetutamente grazie alla pulizia cache GATT con reflection (`refresh()`).
-- **💓 Keep-Alive 35s Attivo di Default:**
-  - Ping periodico a 35s per prevenire lo spegnimento per inattività del telecomando durante i percorsi.
+### Stabilità BLE per uso motociclistico
+- **Coda FIFO per le operazioni GATT:** scritture/letture/descrittori vengono serializzate invece di essere concorrenti, prevenendo errori GATT 133 in caso di comandi ravvicinati.
+- **`connect()` idempotente:** richieste di connessione duplicate (es. per race tra `onCreate`/`onStart` dell'activity) vengono ignorate se una connessione è già in corso o attiva, eliminando le connessioni GATT concorrenti che causavano blocchi.
+- **Backoff esponenziale** sulla riconnessione automatica (1s, 2.5s, 5s, 10s) e watchdog di standby per il risveglio del telecomando.
+- **Ripristino automatico del Bluetooth di sistema:** se l'utente spegne/riaccende il Bluetooth del telefono durante la guida, l'ascolto riparte da solo.
+
+### Keep-Alive condizionale e chiusura pulita
+- **Keep-Alive condizionale a dispositivo BT specifico** (es. interfono/casco): il ping anti-standby e l'ascolto reattivo si attivano/disattivano automaticamente in base alla connessione del dispositivo scelto — mutuamente esclusivo con il Keep-Alive Always-On.
+- **"Disconnetti"** ora mette il telecomando in ascolto passivo reale: premendo un tasto fisico, l'app si riconnette da sola senza dover toccare "Connetti".
+- **Pulsante "Esci"** per l'arresto completo e pulito di app, servizio e connessione GATT.
+
+### Canale voce garantito per l'interfono (SCO Gateway)
+- Prima di attivare **Google Gemini**, l'app apre esplicitamente il canale voce Bluetooth (SCO) verso l'interfono e attende la conferma di sistema prima di procedere, evitando che il comando parta a vuoto o venga perso perché il canale non era ancora pronto.
+- Il canale viene rilasciato automaticamente a fine ascolto (monitor di sistema + timeout di sicurezza), senza tenere il microfono attivo inutilmente.
+- Il TTS di conferma azione continua a usare il canale audio stereo (A2DP) normale, per non degradarne la qualità né interferire con l'apertura del canale voce.
+
+### Feedback vocale (TTS) e profili
+- **Annuncio vocale (TTS)** configurabile per ogni azione eseguita, con soppressione di annunci duplicati ravvicinati e nessun annuncio per "Nessuna Azione".
+- **Profili di mappatura multipli:** crea, cambia ed elimina profili di mappatura direttamente dall'app.
+- **Esportazione log diagnostico** in `.txt` condivisibile per supporto/debug.
+
+### Aggiornamenti
+- Verifica e installazione degli aggiornamenti in-app corretta (permesso `INTERNET` e `REQUEST_INSTALL_PACKAGES` dichiarati correttamente).
+- **Keystore di debug condiviso** committato nel repository: build locali e build CI producono APK firmati in modo identico, così gli aggiornamenti in-app funzionano sempre senza conflitti di firma.
 
 ---
 
@@ -69,7 +81,7 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 
 ### 1. Download Diretto
 Puoi scaricare l'APK da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v1.5.apk`**)
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v2.3.apk`**)
 - **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
 
 ### 2. Aggiornamenti In-App
@@ -79,12 +91,14 @@ Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"
 
 ## 🛠️ Compilazione da Sorgente
 
+Il repository include il wrapper Gradle e un keystore di debug condiviso, per build riproducibili identiche tra CI e macchine locali.
+
 ```bash
 # Compilazione APK Debug
 ./gradlew assembleDebug
 
 # L'output sarà generato in:
-# release_apk/Livall-BR80-Remote-v1.5.apk
+# app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ---
