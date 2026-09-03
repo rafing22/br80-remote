@@ -60,13 +60,13 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: |
             ## Livall BR80 Remote ${{ github.ref_name }}
-            - 🤖 **Gemini / Assistente in Background**: Avvio di Gemini e Voice Search da qualsiasi app o a schermo spento (tramite `KEYCODE_VOICE_ASSIST` e autorizzazione overlay).
-            - ⚡ **Auto-Ascolto all'Avvio**: Avvio immediato dello scanner BLE senza dover premere "Connetti".
-            - 📱 **Scansione Bilanciata (BALANCED)**: Zero latenza e cattura immediata del segnale del telecomando.
-            - 🛡️ **Standby Listener & Riconnessione Istantanea**: Risolta la perdita di connessione quando il BR80 va in standby.
-            - ⚡ **Riconnessione a 1-Click (Fix Errore GATT 133)**: Riconnessione fluida con pulizia cache Bluetooth GATT.
-            - 💓 **Keep-Alive 35s Attivo**: Ping periodico anti-sleep per reattività istantanea ai pulsanti.
-            - 🔋 **WakeLock & Overlay**: Risveglio dello schermo per azioni e notifiche durante la guida.
+            - 🎛️ **Redesign "Cruscotto" scuro**: tema scuro su tutta l'app, D-pad a sagoma reale del telecomando, gauge analogici batteria/RSSI, card "ultima azione eseguita".
+            - 🌑 **Dialog coerenti**: tutti i popup (dispositivi BT/Audio, profili, scegli azione, testi TTS) ritemati in stile scuro, niente più popup bianchi di sistema.
+            - 🔊 **Testi TTS riorganizzati**: raggruppati per tasto fisico con badge, tag di gesto in monospace e indicatore "personalizzato" solo dove serve.
+            - 🧹 **Rimosso Auto-Apprendimento Ritmo**: restano i 4 preset rapidi (Sportivo/Standard/Guanti/Lento) per la finestra doppio/triplo tap.
+            - 📡 **Priorità BLE adattiva**: priorità di connessione regolata in base all'RSSI per maggiore stabilità con segnale debole.
+
+            Changelog completo nel [README](https://github.com/rafing22/br80-remote#-novità-versione-3x).
           draft: false
           prerelease: false
         env:
