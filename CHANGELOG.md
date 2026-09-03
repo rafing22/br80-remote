@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.3.0](https://github.com/rafing22/br80-remote/compare/v3.2.2...v3.3.0) (2026-09-03)
+
+
+### Features
+
+* bugfix BLE confermati dal vivo + 6 nuove azioni mappabili ([3ed4ac5](https://github.com/rafing22/br80-remote/commit/3ed4ac5f57fadc70407d5506edcdc77804d72339))
+
+
+### Bug Fixes
+
+* cancella il testo TTS personalizzato quando cambia l'azione mappata ([011b930](https://github.com/rafing22/br80-remote/commit/011b930d693ff82b45a7519d6d946e4eb6d77454))
+* **ci:** evita crash del naming APK su build di pull_request ([281aa13](https://github.com/rafing22/br80-remote/commit/281aa138e97e285c7d9a5f31bd8fb819cd7e88f9))
+
 ## [3.2.2](https://github.com/rafing22/br80-remote/compare/v3.2.1...v3.2.2) (2026-09-03)
 
 
