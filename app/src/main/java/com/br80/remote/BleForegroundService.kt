@@ -19,6 +19,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     private val binder = LocalBinder()
     var listener: BleServiceListener? = null
+    private var isStopping = false
 
     lateinit var mappingStorage: MappingStorage
         private set
@@ -137,6 +138,9 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     }
 
     fun stopServiceCompletely() {
+        // Impedisce a callback BLE tardivi e asincroni (es. onStateChanged di disconnect())
+        // di far ripubblicare la notifica dopo che l'abbiamo già rimossa qui sotto.
+        isStopping = true
         gattManager.disconnect(enterPassiveListening = false)
         gestureDetector.reset()
         btDeviceMonitor.stopMonitoring()
@@ -149,6 +153,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
             // Ignora
         }
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        manager?.cancel(NOTIFICATION_ID)
         stopSelf()
     }
 
@@ -255,6 +261,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     }
 
     private fun updateNotification() {
+        if (isStopping) return
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         manager?.notify(NOTIFICATION_ID, createNotification(getNotificationContentText()))
     }
