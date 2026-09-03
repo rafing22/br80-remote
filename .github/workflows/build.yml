@@ -84,9 +84,12 @@ jobs:
       # si limita ad allegare l'APK compilato alla release già esistente con
       # lo stesso tag: niente "name"/"body" qui, per non sovrascrivere il
       # changelog che release-please ha già scritto.
+      # Usa lo STESSO token (PAT) con cui release-please ha creato la release:
+      # il GITHUB_TOKEN di default non riesce a modificare una release creata
+      # da un'identità diversa ("Resource not accessible by integration").
       - name: Attach APK to existing Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: release_apk/${{ env.APK_NAME }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
