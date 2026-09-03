@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
@@ -14,6 +16,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 
 class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDeviceMonitor.BtDeviceMonitorListener {
 
@@ -57,6 +60,35 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     private var cpuWakeLock: PowerManager.WakeLock? = null
 
+    // Gancio di test SOLO per build di debug: permette di iniettare via
+    // `adb shell am broadcast` una pressione/rilascio tasto come se arrivasse
+    // dal telecomando reale via BLE, per test automatici (es. gesti su Gemini)
+    // senza dover premere fisicamente il telecomando. Mai presente in release.
+    private var debugSimulatorReceiver: BroadcastReceiver? = null
+
+    private fun registerDebugButtonSimulator() {
+        if (!BuildConfig.DEBUG) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val buttonName = intent?.getStringExtra("button") ?: return
+                val isPress = intent.getBooleanExtra("press", true)
+                val button = try {
+                    Br80Button.valueOf(buttonName.uppercase())
+                } catch (e: IllegalArgumentException) {
+                    null
+                } ?: return
+                onButtonRawEvent(button, isPress)
+            }
+        }
+        val filter = IntentFilter(ACTION_DEBUG_SIMULATE_BUTTON)
+        // Esportato (non RECEIVER_NOT_EXPORTED): `adb shell am broadcast` invia come
+        // utente "shell", un UID diverso dalla nostra app, quindi un receiver non
+        // esportato non lo riceverebbe mai. Accettabile qui solo perché l'intero
+        // gancio esiste esclusivamente nelle build di debug.
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
+        debugSimulatorReceiver = receiver
+    }
+
     private fun acquireWakeLock(timeoutMs: Long = 3000L) {
         try {
             if (cpuWakeLock == null) {
@@ -87,6 +119,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         btDeviceMonitor.startMonitoring()
 
         createNotificationChannel()
+        registerDebugButtonSimulator()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -283,6 +316,13 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     override fun onDestroy() {
         super.onDestroy()
+        debugSimulatorReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: Exception) {
+                // Già deregistrato, ignora
+            }
+        }
         gattManager.disconnect(enterPassiveListening = false)
         gestureDetector.reset()
         btDeviceMonitor.stopMonitoring()
@@ -303,5 +343,9 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         const val ACTION_CONNECT = "com.br80.remote.ACTION_CONNECT"
         const val ACTION_DISCONNECT = "com.br80.remote.ACTION_DISCONNECT"
         const val ACTION_STOP_SERVICE = "com.br80.remote.ACTION_STOP_SERVICE"
+
+        // Solo debug: `adb shell am broadcast -a com.br80.remote.debug.SIMULATE_BUTTON
+        // --es button UP --ez press true`
+        const val ACTION_DEBUG_SIMULATE_BUTTON = "com.br80.remote.debug.SIMULATE_BUTTON"
     }
 }

@@ -134,7 +134,18 @@ class MappingStorage(context: Context) {
 
     fun setAction(button: Br80Button, gesture: GestureType, action: ButtonAction) {
         val key = getMappingKey(button, gesture)
-        prefs.edit().putString(key, action.serialize()).apply()
+        val serialized = action.serialize()
+        val previousSerialized = prefs.getString(key, null)
+        val editor = prefs.edit().putString(key, serialized)
+        // Un testo TTS personalizzato descrive l'azione precedente: se l'azione cambia
+        // davvero, il testo vecchio resterebbe a descrivere qualcosa di sbagliato. Lo
+        // rimuoviamo, così torna alla descrizione automatica della nuova azione finché
+        // l'utente non ne imposta uno nuovo. Se l'azione è la stessa di prima (rise-
+        // lezione accidentale), non tocchiamo il testo personalizzato.
+        if (previousSerialized != serialized) {
+            editor.remove("tts_label_$key")
+        }
+        editor.apply()
     }
 
     fun hasMultiTapGestures(button: Br80Button): Boolean {
