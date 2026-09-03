@@ -257,14 +257,18 @@ class ActionExecutor(
     }
 
     private fun launchVoiceRecorder() {
-        val pm = context.packageManager
+        // Niente resolveActivity(): su Android 11+ le restrizioni di visibilità dei
+        // pacchetti lo fanno fallire sempre per un'app di terze parti senza una
+        // dichiarazione <queries>, anche quando un registratore è installato e
+        // funzionante. Si tenta direttamente l'avvio e si gestisce solo il caso
+        // (raro) in cui nessuna app risponda.
         val intent = Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        if (intent.resolveActivity(pm) != null) {
+        try {
             context.startActivity(intent)
             onLog("Registratore vocale aperto.")
-        } else {
+        } catch (e: android.content.ActivityNotFoundException) {
             onLog("Nessuna app registratore trovata.")
         }
     }

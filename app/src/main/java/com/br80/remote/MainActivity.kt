@@ -991,6 +991,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         needed.add(Manifest.permission.READ_CALL_LOG)
+        needed.add(Manifest.permission.CALL_PHONE)
 
         val missing = needed.filter {
             ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
