@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.core.content.IntentCompat
 
 class BtDeviceMonitor(
     private val context: Context,
@@ -30,7 +31,7 @@ class BtDeviceMonitor(
 
             when (action) {
                 BluetoothDevice.ACTION_ACL_CONNECTED, BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
                     val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
 
                     if (device != null && isTargetDevice(device, targetMacs)) {

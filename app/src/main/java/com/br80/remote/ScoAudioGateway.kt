@@ -67,7 +67,14 @@ object ScoAudioGateway {
             return
         }
 
-        cleanupScoWait(context)
+        // Evita sessioni SCO sovrapposte (es. due gesti mappati su Gemini premuti a raffica):
+        // una seconda richiesta mentre una è già aperta/in attesa clobbererebbe previousAudioMode,
+        // impedendo poi il ripristino della modalità audio originale del telefono.
+        if (scoReceiver != null || previousAudioMode != null) {
+            Log.w(TAG, "Richiesta apertura SCO ignorata: una sessione è già in corso.")
+            onResult(false)
+            return
+        }
 
         val appContext = context.applicationContext
         var resolved = false
@@ -76,6 +83,21 @@ object ScoAudioGateway {
             if (resolved) return
             resolved = true
             cleanupScoWait(appContext)
+            if (!success) {
+                // Il chiamante non aprirà mai una sessione da rilasciare in caso di fallimento
+                // (ActionExecutor procede solo su successo): ripristiniamo qui lo stato audio
+                // che avevamo alterato per il tentativo, altrimenti resta bloccato su
+                // MODE_IN_COMMUNICATION indefinitamente.
+                try {
+                    audioManager.isBluetoothScoOn = false
+                    @Suppress("DEPRECATION")
+                    audioManager.stopBluetoothSco()
+                    audioManager.mode = previousAudioMode ?: AudioManager.MODE_NORMAL
+                } catch (e: Exception) {
+                    Log.w(TAG, "Errore ripristino audio dopo fallimento SCO: ${e.message}")
+                }
+                previousAudioMode = null
+            }
             onResult(success)
         }
 

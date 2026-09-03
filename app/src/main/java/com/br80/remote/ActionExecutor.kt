@@ -303,6 +303,7 @@ class ActionExecutor(
     }
 
     @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION") // Nessuna alternativa pubblica senza diventare l'app Dialer di default (InCallService)
     private fun acceptPhoneCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
@@ -316,6 +317,7 @@ class ActionExecutor(
     }
 
     @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION") // Nessuna alternativa pubblica senza diventare l'app Dialer di default (InCallService)
     private fun rejectPhoneCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager

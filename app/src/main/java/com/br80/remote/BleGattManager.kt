@@ -17,7 +17,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelUuid
 import android.util.Log
 import java.util.UUID
 
@@ -53,6 +52,9 @@ class BleGattManager(
     private var isConnectingGatt = false
     private var lastKnownRssi: Int? = null
     private val weakSignalRssiThreshold = -75 // Sotto questa soglia il segnale è considerato marginale
+    private var connectionPriorityIsHigh = false
+    private var priorityDowngradeRunnable: Runnable? = null
+    private val priorityDowngradeDelayMs = 2000L // Tempo sufficiente per wake + scoperta servizi + notifiche
     private var userRequestedDisconnect = false
     private var isScanning = false
     private var scanCallback: ScanCallback? = null
@@ -183,8 +185,12 @@ class BleGattManager(
         log(if (isBackgroundStandby) "Ascolto Standby attivo (premi un tasto sul telecomando)..." else "Scansione rapida attiva per Livall BR80...")
         isScanning = true
 
+        // SCAN_MODE_LOW_POWER (duty cycle ~512ms ogni 4.9s) per l'ascolto standby di lunga
+        // durata: qui il telecomando resta per la maggior parte del tempo tra una pressione e
+        // l'altra, e qualche secondo di latenza in più nel rilevarlo è accettabile a fronte di
+        // un consumo radio 3-5 volte inferiore rispetto a BALANCED/LOW_LATENCY.
         val scanMode = if (isBackgroundStandby) {
-            ScanSettings.SCAN_MODE_BALANCED
+            ScanSettings.SCAN_MODE_LOW_POWER
         } else {
             ScanSettings.SCAN_MODE_LOW_LATENCY
         }
@@ -198,10 +204,16 @@ class BleGattManager(
         val filters = mutableListOf<ScanFilter>()
         val savedMac = mappingStorage.getLastConnectedMac()
         if (!savedMac.isNullOrEmpty() && BluetoothAdapter.checkBluetoothAddress(savedMac)) {
+            // Il telecomando è già stato associato: filtra SOLO sul suo MAC, così l'hardware
+            // Bluetooth può scartare in autonomia (offload) ogni altro dispositivo nei paraggi
+            // senza svegliare la CPU. Un filtro generico aggiuntivo qui annullerebbe il filtro
+            // MAC (i filtri sono in OR), facendo risalire all'app ogni dispositivo BLE intorno.
             filters.add(ScanFilter.Builder().setDeviceAddress(savedMac).build())
+        } else {
+            // Nessun MAC salvato (primo abbinamento): serve un filtro generico per riconoscere
+            // il telecomando dal nome/servizio nel callback, non avendo ancora nulla di più specifico.
+            filters.add(ScanFilter.Builder().build())
         }
-        // Filtro generico per garantire la compatibilità con tutti i firmware BR80/BlingRemote a schermo spento
-        filters.add(ScanFilter.Builder().build())
 
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -299,6 +311,12 @@ class BleGattManager(
         wakeRetries = 0
         stopLeScan()
         handler.postDelayed({
+            // Se nel frattempo l'utente ha premuto "Disconnetti" (closeGatt ha già azzerato
+            // isConnectingGatt), non aprire comunque la connessione che aveva annullato.
+            if (!isConnectingGatt) {
+                log("Connessione GATT annullata prima dell'avvio (disconnessione richiesta nel frattempo).")
+                return@postDelayed
+            }
             try {
                 log("Connessione GATT ad alta velocità a ${device.address}...")
                 bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
@@ -373,6 +391,9 @@ class BleGattManager(
         stopKeepAlive()
         clearGattOperationQueue()
         isConnectingGatt = false
+        priorityDowngradeRunnable?.let { handler.removeCallbacks(it) }
+        priorityDowngradeRunnable = null
+        connectionPriorityIsHigh = false
         val gatt = bluetoothGatt
         bluetoothGatt = null
         if (gatt != null) {
@@ -479,14 +500,21 @@ class BleGattManager(
                     // Richiede priorità di connessione adattiva: HIGH su segnale buono (7.5-15ms
                     // di latenza), BALANCED su segnale debole per non stressare un link marginale
                     // e ridurre i CONN_TIMEOUT/GATT_ERROR 133 tipici delle connessioni instabili.
+                    // HIGH viene poi riportata a BALANCED non appena l'handshake iniziale (wake +
+                    // scoperta servizi + notifiche) è completo: mantenerla per l'intera sessione
+                    // costringerebbe anche il telecomando (non solo il telefono) a "svegliarsi"
+                    // ogni 7.5-15ms per controllare dati, sprecando la sua batteria durante i
+                    // lunghi intervalli di inattività tra una pressione e l'altra.
                     try {
                         val rssi = lastKnownRssi
                         if (rssi != null && rssi < weakSignalRssiThreshold) {
                             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+                            connectionPriorityIsHigh = false
                             log("Segnale debole (RSSI $rssi): priorità connessione BALANCED per maggiore stabilità.")
                         } else {
                             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                            log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH).")
+                            connectionPriorityIsHigh = true
+                            log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH) per l'handshake iniziale.")
                         }
                     } catch (e: Exception) {
                         Log.w(tag, "Impossibile impostare priorità elevata: ${e.message}")
@@ -578,6 +606,21 @@ class BleGattManager(
                         handler.postDelayed({
                             readBatteryLevel(gatt)
                         }, 400L)
+
+                        if (connectionPriorityIsHigh) {
+                            priorityDowngradeRunnable?.let { handler.removeCallbacks(it) }
+                            val downgrade = Runnable {
+                                try {
+                                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+                                    connectionPriorityIsHigh = false
+                                    log("Handshake completato: priorità connessione riportata a BALANCED per risparmiare batteria (telefono e telecomando).")
+                                } catch (e: Exception) {
+                                    Log.w(tag, "Impossibile riportare la priorità a BALANCED: ${e.message}")
+                                }
+                            }
+                            priorityDowngradeRunnable = downgrade
+                            handler.postDelayed(downgrade, priorityDowngradeDelayMs)
+                        }
                     } else {
                         log("Abilitazione descrittore notifiche fallita: status $status")
                     }
@@ -587,6 +630,7 @@ class BleGattManager(
         }
 
         @SuppressLint("MissingPermission")
+        @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (characteristic.uuid == batteryLevelUuid && status == BluetoothGatt.GATT_SUCCESS) {
                 @Suppress("DEPRECATION")
@@ -617,7 +661,7 @@ class BleGattManager(
             handler.post { processNextGattOperation() }
         }
 
-        @Suppress("DEPRECATION")
+        @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == buttonUuid) {
                 handleButtonPayload(characteristic.value)

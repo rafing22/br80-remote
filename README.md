@@ -1,6 +1,24 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.1)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.2)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+
+---
+
+## 🔋 Novità Versione 3.2 — Ottimizzazioni batteria BLE, fix di stabilità, pulizia codice
+
+### Consumo batteria (telefono e telecomando)
+- **Filtro di scansione corretto**: dopo il primo abbinamento, la scansione filtra ora esclusivamente sul MAC del telecomando — prima un filtro generico residuo affiancato annullava di fatto il filtro MAC, facendo risalire alla CPU ogni dispositivo BLE nei paraggi invece di lasciar scartare in autonomia dall'hardware.
+- **Ascolto standby più leggero**: la scansione passiva di lunga durata (in attesa che tu prema un tasto) ora usa `SCAN_MODE_LOW_POWER` invece di `BALANCED`, riducendo il consumo radio di 3-5 volte a fronte di una latenza di rilevamento comunque nell'ordine dei secondi.
+- **Priorità di connessione adattiva nel tempo**: la modalità ad alta velocità (`CONNECTION_PRIORITY_HIGH`) usata per l'handshake iniziale viene ora riportata automaticamente a `BALANCED` non appena il telecomando è pronto, invece di restare attiva per l'intera sessione — beneficio diretto anche per la batteria del telecomando stesso, non solo del telefono.
+
+### Fix di stabilità
+- **Audio non più bloccato dopo Gemini**: se l'apertura del canale voce SCO verso l'interfono falliva o andava in timeout, il telefono restava con l'audio bloccato in modalità chiamata. Corretto, insieme a un guard contro sessioni Gemini sovrapposte.
+- **Gesti più affidabili**: un click fisico molto rapido non viene più scambiato per un glitch hardware e "perso", evitando falsi scatti di pressione lunga.
+- **"Disconnetti" sempre rispettato**: annullare la connessione nella finestra di avvio (150ms) ora impedisce davvero l'apertura del canale GATT, invece di procedere comunque.
+- **Esportazione Tasker**: rimosso un tag XML duplicato nel progetto esportato.
+
+### Pulizia
+- Rimosso codice morto (import, stringhe e id XML inutilizzati) e risolti tutti i warning di compilazione residui (API deprecate sostituite con le controparti moderne dove disponibile un'alternativa).
 
 ---
 

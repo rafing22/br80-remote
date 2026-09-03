@@ -19,6 +19,7 @@ class GestureDetector(
     private data class ButtonState(
         var isPressed: Boolean = false,
         var lastEventTimestamp: Long = 0L,
+        var lastEventWasPress: Boolean? = null,
         var tapCount: Int = 0,
         var windowRunnable: Runnable? = null,
         var longPressRunnable: Runnable? = null,
@@ -35,10 +36,14 @@ class GestureDetector(
         val state = getState(button)
         val now = SystemClock.uptimeMillis()
 
-        if (now - state.lastEventTimestamp < debounceMs) {
+        // Il debounce scarta solo duplicati dello stesso tipo (due PRESS o due RELEASE) troppo
+        // ravvicinati (glitch hardware): una transizione reale PRESS->RELEASE va sempre processata,
+        // anche se rapidissima, altrimenti un click veloce lascia il tasto "bloccato premuto".
+        if (state.lastEventWasPress == isPress && now - state.lastEventTimestamp < debounceMs) {
             return
         }
         state.lastEventTimestamp = now
+        state.lastEventWasPress = isPress
 
         if (isPress) {
             if (state.isPressed) return // press duplicato senza release intermedio: glitch, ignora
@@ -120,6 +125,7 @@ class GestureDetector(
             state.tapCount = 0
             state.isPressed = false
             state.longPressFired = false
+            state.lastEventWasPress = null
         }
     }
 }

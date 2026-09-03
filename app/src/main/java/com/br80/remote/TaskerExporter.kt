@@ -16,7 +16,6 @@ object TaskerExporter {
         sb.append("    <name>Livall BR80 Remote</name>\n")
         sb.append("    <scenes></scenes>\n")
         sb.append("    <tasks>100,101,102</tasks>\n")
-        sb.append("    <scenes></scenes>\n")
         sb.append("  </Project>\n")
 
         // Task 100: Esempio Foto

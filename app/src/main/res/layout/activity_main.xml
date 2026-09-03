@@ -203,7 +203,6 @@
 
                     <!-- Aletta superiore: FOTO -->
                     <FrameLayout
-                        android:id="@+id/wingCamera"
                         android:layout_width="92dp"
                         android:layout_height="62dp"
                         android:layout_alignParentTop="true"
@@ -224,7 +223,6 @@
 
                     <!-- Aletta inferiore: VOCE / INTERCOM -->
                     <FrameLayout
-                        android:id="@+id/wingCall"
                         android:layout_width="92dp"
                         android:layout_height="62dp"
                         android:layout_alignParentBottom="true"
@@ -245,7 +243,6 @@
 
                     <!-- Ghiera / Hub Centrale -->
                     <FrameLayout
-                        android:id="@+id/remoteHub"
                         android:layout_width="156dp"
                         android:layout_height="156dp"
                         android:layout_centerInParent="true"
@@ -362,7 +359,6 @@
 
                 <!-- Scheda Gesti per il Tasto Selezionato -->
                 <LinearLayout
-                    android:id="@+id/cardSelectedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -1127,7 +1123,6 @@
             android:focusable="true">
 
             <TextView
-                android:id="@+id/tvNavIconController"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🎮"
@@ -1154,7 +1149,6 @@
             android:focusable="true">
 
             <TextView
-                android:id="@+id/tvNavIconOptions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⚙️"
@@ -1180,7 +1174,6 @@
             android:focusable="true">
 
             <TextView
-                android:id="@+id/tvNavIconLog"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="📜"

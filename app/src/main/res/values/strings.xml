@@ -1,6 +1,3 @@
 <resources>
     <string name="app_name">Livall BR80 Remote</string>
-    <string name="app_description">Controller e bridge Bluetooth LE per telecomando Livall BR80 / BlingRemote</string>
-    <string name="notification_channel_name">Livall BR80 Remote Service</string>
-    <string name="notification_channel_desc">Mantiene attiva la connessione con il telecomando BR80 in background</string>
 </resources>

@@ -1,15 +1,18 @@
 package com.br80.remote
 
 import android.app.Activity
-import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
@@ -154,17 +157,33 @@ object AppUpdateManager {
         downloadAndInstall(activity, downloadUrl, apkName)
     }
 
-    @Suppress("DEPRECATION")
     private fun downloadAndInstall(activity: Activity, downloadUrl: String, apkName: String) {
-        val progressDialog = ProgressDialog(activity).apply {
-            setTitle("Download Aggiornamento")
-            setMessage("Download in corso da GitHub...")
-            setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
+        val density = activity.resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        val progressText = TextView(activity).apply {
+            text = "Download in corso da GitHub..."
+            setTextColor(Color.parseColor("#F2E6D4"))
+            setPadding(0, 0, 0, dp(12))
+        }
+        val progressBar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
-            setCancelable(false)
-            show()
+            progress = 0
         }
+        val progressContainer = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(20), dp(24), dp(8))
+            addView(progressText)
+            addView(progressBar)
+        }
+
+        val progressDialog = AlertDialog.Builder(activity, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Download Aggiornamento")
+            .setView(progressContainer)
+            .setCancelable(false)
+            .create()
+        progressDialog.show()
 
         Thread {
             try {
@@ -206,7 +225,7 @@ object AppUpdateManager {
                         total += count
                         if (fileLength > 0) {
                             val progress = (total * 100 / fileLength).toInt()
-                            handler.post { progressDialog.progress = progress }
+                            handler.post { progressBar.progress = progress }
                         }
                         output.write(data, 0, count)
                     }
