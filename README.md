@@ -155,6 +155,19 @@ Il repository include il wrapper Gradle e un keystore di debug condiviso, per bu
 
 ---
 
+## 🚀 Processo di Rilascio
+
+Versione e changelog meccanico (`CHANGELOG.md`) sono generati automaticamente da [release-please](https://github.com/googleapis/release-please) a partire dai messaggi di commit, che devono seguire [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `fix: ...` → nuova versione patch
+- `feat: ...` → nuova versione minor
+- `feat!: ...` o `BREAKING CHANGE:` nel footer → nuova versione major
+- `chore:`, `docs:`, `ci:`, `refactor:` → nessun bump di versione, compaiono comunque nel changelog
+
+Ad ogni push su `main` con commit di questo tipo, si apre/aggiorna automaticamente una Release PR con versione e changelog già pronti. Mergiandola parte da sola la pubblicazione: tag, GitHub Release e build dell'APK allegato. Le sezioni "Novità Versione X.Y" qui sopra restano scritte a mano per le release principali, come vetrina più discorsiva accanto al changelog meccanico.
+
+---
+
 ## 📄 Licenza
 
 Rilasciato sotto licenza MIT.

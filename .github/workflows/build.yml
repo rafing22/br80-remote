@@ -8,17 +8,20 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # necessario solo per lo step finale che allega l'APK alla Release
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: '17'
@@ -27,7 +30,7 @@ jobs:
         run: yes | sdkmanager --licenses || true
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           gradle-version: 8.7
 
@@ -40,34 +43,27 @@ jobs:
           TAG_OR_BRANCH="${{ github.ref_name }}"
           VERSION="${TAG_OR_BRANCH#v}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="1.5"
+            VERSION="dev"
           fi
           cp app/build/outputs/apk/debug/*.apk "release_apk/Livall-BR80-Remote-v${VERSION}.apk"
           echo "APK_NAME=Livall-BR80-Remote-v${VERSION}.apk" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ env.APK_NAME }}
           path: release_apk/${{ env.APK_NAME }}
 
-      - name: Create GitHub Release
+      # La Release con tag/nome/changelog è già stata creata da release-please
+      # (workflow release.yml) quando hai mergiato la Release PR. Questo step
+      # si limita ad allegare l'APK compilato alla release già esistente con
+      # lo stesso tag: niente "name"/"body" qui, per non sovrascrivere il
+      # changelog che release-please ha già scritto.
+      - name: Attach APK to existing Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: release_apk/${{ env.APK_NAME }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ## Livall BR80 Remote ${{ github.ref_name }}
-            - 🎛️ **Redesign "Cruscotto" scuro**: tema scuro su tutta l'app, D-pad a sagoma reale del telecomando, gauge analogici batteria/RSSI, card "ultima azione eseguita".
-            - 🌑 **Dialog coerenti**: tutti i popup (dispositivi BT/Audio, profili, scegli azione, testi TTS) ritemati in stile scuro, niente più popup bianchi di sistema.
-            - 🔊 **Testi TTS riorganizzati**: raggruppati per tasto fisico con badge, tag di gesto in monospace e indicatore "personalizzato" solo dove serve.
-            - 🧹 **Rimosso Auto-Apprendimento Ritmo**: restano i 4 preset rapidi (Sportivo/Standard/Guanti/Lento) per la finestra doppio/triplo tap.
-            - 📡 **Priorità BLE adattiva**: priorità di connessione regolata in base all'RSSI per maggiore stabilità con segnale debole.
-
-            Changelog completo nel [README](https://github.com/rafing22/br80-remote#-novità-versione-3x).
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,55 @@
+name: Release Please
+# Gira ad ogni push su main: legge i commit Conventional Commits e mantiene
+# aperta/aggiornata una "Release PR" con versionName (in build.gradle.kts) e
+# CHANGELOG.md già aggiornati. Quando la mergi, crea da sola tag + Release.
+# Il build/attach dell'APK resta in build.yml, triggerato dal tag risultante.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.release.outputs.pr }}
+    steps:
+      - id: release
+        name: release-please
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # release-please aggiorna solo versionName (semver) via il marker
+  # x-release-please-version. versionCode (l'intero Android che deve solo
+  # crescere ad ogni release, scollegato dal semver) viene incrementato qui
+  # con un commit aggiuntivo sulla stessa Release PR, prima che tu la mergi.
+  bump-version-code:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.pr != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch della Release PR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+
+      - name: Incrementa versionCode
+        run: |
+          set -euo pipefail
+          current=$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | grep -oE '[0-9]+')
+          next=$((current + 1))
+          sed -i "s/versionCode = $current \/\/ x-release-please-versionCode/versionCode = $next \/\/ x-release-please-versionCode/" app/build.gradle.kts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump versionCode to $next"
+            git push
+          fi

@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Apre una PR che aggiorna sia il tag in chiaro sia lo SHA pinnato quando
+    # esce una nuova versione di un'action usata nei workflow.
