@@ -33,6 +33,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,12 +95,21 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var btnPresetSlow: Button
     private lateinit var cbOptBoot: CheckBox
     private lateinit var cbOptKeepAlive: CheckBox
+    private lateinit var cbOptConditionalBt: CheckBox
+    private lateinit var tvConditionalBtDevice: TextView
+    private lateinit var btnOptChooseBtDevice: Button
     private lateinit var btnOptDoze: Button
     private lateinit var btnOptOverlay: Button
     private lateinit var cbOptHaptic: CheckBox
     private lateinit var cbOptSound: CheckBox
+    private lateinit var cbOptTts: CheckBox
     private lateinit var btnCheckUpdate: Button
     private lateinit var btnOptTaskerExport: Button
+    private lateinit var btnExitApp: Button
+    private lateinit var tvActiveProfile: TextView
+    private lateinit var btnChooseProfile: Button
+    private lateinit var btnNewProfile: Button
+    private lateinit var btnDeleteProfile: Button
 
     // Calibration Dialog State Callback
     private var activeCalibrationCallback: (() -> Unit)? = null
@@ -108,6 +118,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var tvLogFull: TextView
     private lateinit var svLogFull: ScrollView
     private lateinit var btnLogCopy: TextView
+    private lateinit var btnLogExport: TextView
     private lateinit var btnLogClearTab: TextView
 
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -210,22 +221,38 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnPresetSlow = findViewById(R.id.btnPresetSlow)
         cbOptBoot = findViewById(R.id.cbOptBoot)
         cbOptKeepAlive = findViewById(R.id.cbOptKeepAlive)
+        cbOptConditionalBt = findViewById(R.id.cbOptConditionalBt)
+        tvConditionalBtDevice = findViewById(R.id.tvConditionalBtDevice)
+        btnOptChooseBtDevice = findViewById(R.id.btnOptChooseBtDevice)
         btnOptDoze = findViewById(R.id.btnOptDoze)
         btnOptOverlay = findViewById(R.id.btnOptOverlay)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
         cbOptSound = findViewById(R.id.cbOptSound)
+        cbOptTts = findViewById(R.id.cbOptTts)
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate)
         btnOptTaskerExport = findViewById(R.id.btnOptTaskerExport)
+        btnExitApp = findViewById(R.id.btnExitApp)
+        tvActiveProfile = findViewById(R.id.tvActiveProfile)
+        btnChooseProfile = findViewById(R.id.btnChooseProfile)
+        btnNewProfile = findViewById(R.id.btnNewProfile)
+        btnDeleteProfile = findViewById(R.id.btnDeleteProfile)
+        updateActiveProfileLabel()
+        findViewById<TextView>(R.id.tvAppVersionInfo).text =
+            "Livall BR80 Remote v${BuildConfig.VERSION_NAME} • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
 
         cbOptBoot.isChecked = mappingStorage.isAutoStartOnBootEnabled()
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
+        cbOptConditionalBt.isChecked = mappingStorage.isConditionalBtEnabled()
+        updateConditionalBtDeviceLabel()
         cbOptHaptic.isChecked = mappingStorage.isHapticFeedbackEnabled()
         cbOptSound.isChecked = mappingStorage.isSoundFeedbackEnabled()
+        cbOptTts.isChecked = mappingStorage.isTtsFeedbackEnabled()
 
         // Log Tab
         tvLogFull = findViewById(R.id.tvLogFull)
         svLogFull = findViewById(R.id.svLogFull)
         btnLogCopy = findViewById(R.id.btnLogCopy)
+        btnLogExport = findViewById(R.id.btnLogExport)
         btnLogClearTab = findViewById(R.id.btnLogClearTab)
     }
 
@@ -267,8 +294,32 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         cbOptKeepAlive.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setKeepAliveEnabled(isChecked)
+            if (isChecked && cbOptConditionalBt.isChecked) {
+                cbOptConditionalBt.isChecked = false
+                mappingStorage.setConditionalBtEnabled(false)
+                log("Keep-Alive condizionale disattivato: incompatibile con Keep-Alive Always-On.")
+            }
             bleService?.gattManager?.startKeepAliveIfEnabled()
             log("Keep-Alive impostato a: " + if (isChecked) "ATTIVO (Ping ogni 35s)" else "DISATTIVATO")
+        }
+
+        cbOptConditionalBt.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && mappingStorage.getConditionalBtMac().isNullOrEmpty()) {
+                Toast.makeText(this, "Seleziona prima un dispositivo BT dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
+                cbOptConditionalBt.isChecked = false
+                return@setOnCheckedChangeListener
+            }
+            mappingStorage.setConditionalBtEnabled(isChecked)
+            if (isChecked && cbOptKeepAlive.isChecked) {
+                cbOptKeepAlive.isChecked = false
+                mappingStorage.setKeepAliveEnabled(false)
+                log("Keep-Alive Always-On disattivato: incompatibile con Keep-Alive condizionale.")
+            }
+            log("Keep-Alive condizionale a dispositivo BT: " + if (isChecked) "ATTIVO" else "DISATTIVATO")
+        }
+
+        btnOptChooseBtDevice.setOnClickListener {
+            showBondedDevicePickerDialog()
         }
 
         cbOptHaptic.setOnCheckedChangeListener { _, isChecked ->
@@ -279,6 +330,14 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptSound.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setSoundFeedbackEnabled(isChecked)
             log("Beep audio feedback: " + if (isChecked) "Attivo" else "Disattivato")
+        }
+
+        cbOptTts.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setTtsFeedbackEnabled(isChecked)
+            log("Annuncio vocale (TTS): " + if (isChecked) "Attivo" else "Disattivato")
+            if (isChecked) {
+                bleService?.ttsFeedbackManager?.speak("Annuncio vocale attivato")
+            }
         }
 
         btnOptDoze.setOnClickListener {
@@ -293,9 +352,24 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             AppUpdateManager.checkForUpdates(this, isManualCheck = true)
         }
 
+        btnChooseProfile.setOnClickListener { showChooseProfileDialog() }
+        btnNewProfile.setOnClickListener { showNewProfileDialog() }
+        btnDeleteProfile.setOnClickListener { showDeleteProfileDialog() }
+
         btnOptTaskerExport.setOnClickListener {
             TaskerExporter.exportAndShare(this)
             log("Progetto Tasker XML esportato.")
+        }
+
+        btnExitApp.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Esci dall'applicazione")
+                .setMessage("L'app verrà chiusa completamente e il servizio in background verrà interrotto. Il telecomando smetterà di funzionare finché non riapri l'app. Continuare?")
+                .setPositiveButton("Esci") { _, _ ->
+                    exitApplication()
+                }
+                .setNegativeButton("Annulla", null)
+                .show()
         }
 
         // Log Tab Listeners
@@ -308,6 +382,34 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         btnLogClearTab.setOnClickListener {
             tvLogFull.text = "[LOG PULITO]"
+        }
+
+        btnLogExport.setOnClickListener {
+            exportLogToFile()
+        }
+    }
+
+    private fun exportLogToFile() {
+        try {
+            val logsDir = File(cacheDir, "logs").apply { mkdirs() }
+            val fileName = "BR80_Log_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.txt"
+            val logFile = File(logsDir, fileName)
+            logFile.writeText(tvLogFull.text.toString())
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                logFile
+            )
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Esporta Log Diagnostico"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Errore esportazione log: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -748,8 +850,146 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     override fun onStart() {
         super.onStart()
-        val intent = Intent(this, BleForegroundService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        if (!isBound) {
+            val intent = Intent(this, BleForegroundService::class.java)
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    private fun updateActiveProfileLabel() {
+        tvActiveProfile.text = "Profilo Attivo: ${mappingStorage.getActiveProfileName()}"
+    }
+
+    private fun showChooseProfileDialog() {
+        val profiles = mappingStorage.getProfileNames()
+        val current = mappingStorage.getActiveProfileName()
+        val checkedIndex = profiles.indexOfFirst { it.equals(current, ignoreCase = true) }.coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle("Scegli Profilo di Mappatura")
+            .setSingleChoiceItems(profiles.toTypedArray(), checkedIndex) { dialog, which ->
+                val chosen = profiles[which]
+                mappingStorage.setActiveProfileName(chosen)
+                updateActiveProfileLabel()
+                selectButton(currentSelectedButton)
+                log("Profilo di mappatura attivo: $chosen")
+                dialog.dismiss()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showNewProfileDialog() {
+        val input = EditText(this).apply {
+            hint = "Es. Musica, Navigatore, Sportivo"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Nuovo Profilo di Mappatura")
+            .setMessage("Le azioni del nuovo profilo partiranno vuote (Nessuna azione) e potrai personalizzarle liberamente.")
+            .setView(input)
+            .setPositiveButton("Crea") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isEmpty()) {
+                    Toast.makeText(this, "Il nome del profilo non può essere vuoto.", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (mappingStorage.addProfile(name)) {
+                    mappingStorage.setActiveProfileName(name)
+                    updateActiveProfileLabel()
+                    selectButton(currentSelectedButton)
+                    log("Nuovo profilo creato e attivato: $name")
+                } else {
+                    Toast.makeText(this, "Esiste già un profilo con questo nome.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showDeleteProfileDialog() {
+        val profiles = mappingStorage.getProfileNames().filter { !it.equals("Standard", ignoreCase = true) }
+        if (profiles.isEmpty()) {
+            Toast.makeText(this, "Non ci sono profili personalizzati da eliminare.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Elimina Profilo")
+            .setItems(profiles.toTypedArray()) { _, which ->
+                val toDelete = profiles[which]
+                AlertDialog.Builder(this)
+                    .setTitle("Conferma Eliminazione")
+                    .setMessage("Eliminare definitivamente il profilo \"$toDelete\" e tutte le sue mappature?")
+                    .setPositiveButton("Elimina") { _, _ ->
+                        mappingStorage.deleteProfile(toDelete)
+                        updateActiveProfileLabel()
+                        selectButton(currentSelectedButton)
+                        log("Profilo eliminato: $toDelete")
+                    }
+                    .setNegativeButton("Annulla", null)
+                    .show()
+            }
+            .setNegativeButton("Chiudi", null)
+            .show()
+    }
+
+    private fun updateConditionalBtDeviceLabel() {
+        val name = mappingStorage.getConditionalBtName()
+        val mac = mappingStorage.getConditionalBtMac()
+        tvConditionalBtDevice.text = if (!name.isNullOrEmpty() && !mac.isNullOrEmpty()) {
+            "Dispositivo selezionato: $name [$mac]"
+        } else {
+            "Nessun dispositivo selezionato"
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showBondedDevicePickerDialog() {
+        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        if (!hasPermission) {
+            Toast.makeText(this, "Permesso Bluetooth mancante: concedilo e riprova.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+        val adapter = bluetoothManager?.adapter
+        val bondedDevices = adapter?.bondedDevices?.toList() ?: emptyList()
+
+        if (bondedDevices.isEmpty()) {
+            Toast.makeText(this, "Nessun dispositivo Bluetooth accoppiato trovato. Accoppia prima l'interfono/casco nelle impostazioni di sistema.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val labels = bondedDevices.map { "${it.name ?: "Sconosciuto"} [${it.address}]" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Scegli Dispositivo BT")
+            .setItems(labels) { _, which ->
+                val device = bondedDevices[which]
+                mappingStorage.setConditionalBtDevice(device.address, device.name)
+                updateConditionalBtDeviceLabel()
+                log("Dispositivo BT condizionale impostato: ${device.name} [${device.address}]")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun exitApplication() {
+        if (isBound) {
+            bleService?.listener = null
+            unbindService(serviceConnection)
+            isBound = false
+        }
+        val stopIntent = Intent(this, BleForegroundService::class.java).apply {
+            action = BleForegroundService.ACTION_STOP_SERVICE
+        }
+        startService(stopIntent)
+        finishAndRemoveTask()
     }
 
     override fun onStop() {

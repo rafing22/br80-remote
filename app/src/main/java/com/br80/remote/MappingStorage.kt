@@ -187,12 +187,88 @@ class MappingStorage(context: Context) {
         prefs.edit().putBoolean(KEY_SOUND_FEEDBACK, enabled).apply()
     }
 
+    fun isTtsFeedbackEnabled(): Boolean {
+        return prefs.getBoolean(KEY_TTS_FEEDBACK, false)
+    }
+
+    fun setTtsFeedbackEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_TTS_FEEDBACK, enabled).apply()
+    }
+
     fun isKeepAliveEnabled(): Boolean {
         return prefs.getBoolean(KEY_KEEP_ALIVE, true)
     }
 
     fun setKeepAliveEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KEEP_ALIVE, enabled).apply()
+    }
+
+    // Dispositivo BT Condizionale (es. Interfono / Casco / Auto)
+    fun isConditionalBtEnabled(): Boolean {
+        return prefs.getBoolean(KEY_CONDITIONAL_BT_ENABLED, false)
+    }
+
+    fun setConditionalBtEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CONDITIONAL_BT_ENABLED, enabled).apply()
+    }
+
+    fun getConditionalBtMac(): String? {
+        return prefs.getString(KEY_CONDITIONAL_BT_MAC, null)
+    }
+
+    fun getConditionalBtName(): String? {
+        return prefs.getString(KEY_CONDITIONAL_BT_NAME, null)
+    }
+
+    fun setConditionalBtDevice(mac: String?, name: String?) {
+        prefs.edit()
+            .putString(KEY_CONDITIONAL_BT_MAC, mac)
+            .putString(KEY_CONDITIONAL_BT_NAME, name)
+            .apply()
+    }
+
+    // Gestione Profili di Mappatura
+    fun getActiveProfileName(): String {
+        return prefs.getString(KEY_ACTIVE_PROFILE_NAME, "Standard") ?: "Standard"
+    }
+
+    fun setActiveProfileName(profileName: String) {
+        prefs.edit().putString(KEY_ACTIVE_PROFILE_NAME, profileName).apply()
+    }
+
+    fun getProfileNames(): List<String> {
+        val custom = prefs.getStringSet(KEY_PROFILE_NAMES, emptySet())?.sorted() ?: emptyList()
+        return listOf("Standard") + custom
+    }
+
+    fun addProfile(profileName: String): Boolean {
+        val trimmed = profileName.trim()
+        if (trimmed.isEmpty() || trimmed.equals("Standard", ignoreCase = true)) return false
+        val current = prefs.getStringSet(KEY_PROFILE_NAMES, emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (current.any { it.equals(trimmed, ignoreCase = true) }) return false
+        current.add(trimmed)
+        prefs.edit().putStringSet(KEY_PROFILE_NAMES, current).apply()
+        return true
+    }
+
+    fun deleteProfile(profileName: String) {
+        if (profileName.equals("Standard", ignoreCase = true)) return
+        val current = prefs.getStringSet(KEY_PROFILE_NAMES, emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.removeAll { it.equals(profileName, ignoreCase = true) }
+        prefs.edit().putStringSet(KEY_PROFILE_NAMES, current).apply()
+
+        // Rimuove anche le mappature salvate per il profilo eliminato
+        val editor = prefs.edit()
+        for (button in Br80Button.values()) {
+            for (gesture in GestureType.values()) {
+                editor.remove("map_profile_${profileName}_${button.name}_${gesture.name}")
+            }
+        }
+        editor.apply()
+
+        if (getActiveProfileName().equals(profileName, ignoreCase = true)) {
+            setActiveProfileName("Standard")
+        }
     }
 
     fun getLastConnectedMac(): String? {
@@ -204,7 +280,12 @@ class MappingStorage(context: Context) {
     }
 
     private fun getMappingKey(button: Br80Button, gesture: GestureType): String {
-        return "map_${button.name}_${gesture.name}"
+        val profile = getActiveProfileName()
+        return if (profile.equals("Standard", ignoreCase = true)) {
+            "map_${button.name}_${gesture.name}"
+        } else {
+            "map_profile_${profile}_${button.name}_${gesture.name}"
+        }
     }
 
     private fun getDefaultAction(button: Br80Button, gesture: GestureType): ButtonAction {
@@ -236,9 +317,15 @@ class MappingStorage(context: Context) {
         private const val KEY_LAST_MAC = "pref_last_connected_mac"
         private const val KEY_HAPTIC_FEEDBACK = "pref_haptic_feedback"
         private const val KEY_SOUND_FEEDBACK = "pref_sound_feedback"
+        private const val KEY_TTS_FEEDBACK = "pref_tts_feedback"
         private const val KEY_KEEP_ALIVE = "pref_keep_alive"
         private const val KEY_MULTI_TAP_WINDOW = "pref_multi_tap_window_ms"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
+        private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
+        private const val KEY_CONDITIONAL_BT_MAC = "pref_conditional_bt_mac"
+        private const val KEY_CONDITIONAL_BT_NAME = "pref_conditional_bt_name"
+        private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
+        private const val KEY_PROFILE_NAMES = "pref_profile_names"
     }
 }

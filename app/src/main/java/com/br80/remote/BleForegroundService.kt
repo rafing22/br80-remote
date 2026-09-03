@@ -15,7 +15,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 
-class BleForegroundService : Service(), BleGattManager.BleGattListener {
+class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDeviceMonitor.BtDeviceMonitorListener {
 
     private val binder = LocalBinder()
     var listener: BleServiceListener? = null
@@ -27,6 +27,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
     lateinit var gestureDetector: GestureDetector
         private set
     lateinit var actionExecutor: ActionExecutor
+        private set
+    lateinit var ttsFeedbackManager: TtsFeedbackManager
+        private set
+    lateinit var btDeviceMonitor: BtDeviceMonitor
         private set
 
     val currentState: BleGattManager.ConnectionState
@@ -67,7 +71,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
     override fun onCreate() {
         super.onCreate()
         mappingStorage = MappingStorage(this)
-        actionExecutor = ActionExecutor(this, mappingStorage) { logMsg ->
+        ttsFeedbackManager = TtsFeedbackManager(this, mappingStorage)
+        actionExecutor = ActionExecutor(this, mappingStorage, ttsFeedbackManager) { logMsg ->
             listener?.onLog(logMsg)
         }
         gestureDetector = GestureDetector(mappingStorage) { button, gesture ->
@@ -76,6 +81,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
             listener?.onGestureExecuted(button, gesture)
         }
         gattManager = BleGattManager(this, mappingStorage, this)
+        btDeviceMonitor = BtDeviceMonitor(this, mappingStorage, this)
+        btDeviceMonitor.startMonitoring()
 
         createNotificationChannel()
     }
@@ -87,6 +94,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
             }
             ACTION_DISCONNECT -> {
                 disconnectDevice()
+            }
+            ACTION_STOP_SERVICE -> {
+                stopServiceCompletely()
+                return START_NOT_STICKY
             }
             else -> {
                 val notification = createNotification(getNotificationContentText())
@@ -102,7 +113,11 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
                 }
 
                 if (intent?.getBooleanExtra(EXTRA_CONNECT_NOW, false) == true) {
-                    connectDevice()
+                    if (!mappingStorage.isConditionalBtEnabled() || btDeviceMonitor.isTargetCurrentlyConnected()) {
+                        connectDevice()
+                    } else {
+                        onLog("Keep-Alive condizionale attivo: in attesa della connessione del dispositivo BT target.")
+                    }
                 }
             }
         }
@@ -118,6 +133,47 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
         gattManager.disconnect()
         gestureDetector.reset()
         updateNotification()
+    }
+
+    fun stopServiceCompletely() {
+        gattManager.disconnect(enterPassiveListening = false)
+        gestureDetector.reset()
+        btDeviceMonitor.stopMonitoring()
+        ttsFeedbackManager.shutdown()
+        try {
+            if (cpuWakeLock?.isHeld == true) {
+                cpuWakeLock?.release()
+            }
+        } catch (e: Exception) {
+            // Ignora
+        }
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    // Callbacks da BtDeviceMonitor
+    override fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?) {
+        val name = deviceName ?: "Interfono/Casco"
+        if (isConnected) {
+            onLog("Dispositivo BT Target ($name) connesso! Attivo Keep-Alive e ascolto reattivo...")
+            connectDevice()
+        } else {
+            onLog("Dispositivo BT Target ($name) disconnesso. Arresto Keep-Alive e ascolto reattivo.")
+            if (mappingStorage.isConditionalBtEnabled()) {
+                disconnectDevice()
+            }
+        }
+    }
+
+    override fun onBluetoothStateChanged(isBtOn: Boolean) {
+        if (isBtOn && !mappingStorage.getLastConnectedMac().isNullOrEmpty()) {
+            if (!mappingStorage.isConditionalBtEnabled() || btDeviceMonitor.isTargetCurrentlyConnected()) {
+                onLog("Bluetooth riattivato sul telefono. Riavvio ascolto automatico del telecomando...")
+                connectDevice()
+            } else {
+                onLog("Bluetooth riattivato: in attesa della connessione del dispositivo BT target per il Keep-Alive condizionale.")
+            }
+        }
     }
 
     // Callbacks da BleGattManager
@@ -168,7 +224,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
-        // Aggiunta pulsante d'azione rapida
+        // Pulsanti d'azione notifica
         if (currentState == BleGattManager.ConnectionState.DISCONNECTED) {
             val connectIntent = Intent(this, BleForegroundService::class.java).apply {
                 action = ACTION_CONNECT
@@ -182,6 +238,13 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
             val pendingDisconnect = PendingIntent.getService(this, 2, disconnectIntent, flags)
             builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnetti", pendingDisconnect)
         }
+
+        // Pulsante Esci definitivo
+        val stopIntent = Intent(this, BleForegroundService::class.java).apply {
+            action = ACTION_STOP_SERVICE
+        }
+        val pendingStop = PendingIntent.getService(this, 3, stopIntent, flags)
+        builder.addAction(android.R.drawable.ic_lock_power_off, "Esci", pendingStop)
 
         return builder.build()
     }
@@ -208,8 +271,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        gattManager.disconnect()
+        gattManager.disconnect(enterPassiveListening = false)
         gestureDetector.reset()
+        btDeviceMonitor.stopMonitoring()
+        ttsFeedbackManager.shutdown()
         try {
             if (cpuWakeLock?.isHeld == true) {
                 cpuWakeLock?.release()
@@ -225,5 +290,6 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener {
         const val EXTRA_CONNECT_NOW = "extra_connect_now"
         const val ACTION_CONNECT = "com.br80.remote.ACTION_CONNECT"
         const val ACTION_DISCONNECT = "com.br80.remote.ACTION_DISCONNECT"
+        const val ACTION_STOP_SERVICE = "com.br80.remote.ACTION_STOP_SERVICE"
     }
 }

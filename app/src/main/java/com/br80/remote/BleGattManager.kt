@@ -67,6 +67,13 @@ class BleGattManager(
     private var keepAliveRunnable: Runnable? = null
     private val keepAliveIntervalMs = 35_000L // Ping ogni 35s per prevenire lo standby firmware
 
+    // Coda FIFO per serializzare le operazioni GATT (una sola Read/Write/Descriptor alla volta):
+    // lo stack Android BLE non gestisce operazioni concorrenti, quindi ogni comando viene
+    // messo in coda e la prossima operazione parte solo al completamento della precedente
+    // (dal relativo callback onCharacteristicWrite/onDescriptorWrite/onCharacteristicRead).
+    private val gattOperationQueue = ArrayDeque<() -> Unit>()
+    private var gattOperationInProgress = false
+
     private val handler = Handler(Looper.getMainLooper())
 
     private val serviceUuid = UUID.fromString("0000a2a0-0000-1000-8000-00805f9b34fb")
@@ -119,6 +126,11 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     fun connect() {
+        if (currentState == ConnectionState.CONNECTING || currentState == ConnectionState.CONNECTED) {
+            log("Connessione già in corso o attiva: richiesta duplicata ignorata.")
+            return
+        }
+
         userRequestedDisconnect = false
         cancelPendingReconnect()
         updateState(ConnectionState.CONNECTING)
@@ -270,9 +282,10 @@ class BleGattManager(
     @SuppressLint("MissingPermission")
     private fun connectGattTo(device: BluetoothDevice) {
         wakeRetries = 0
+        stopLeScan()
         handler.postDelayed({
             try {
-                log("Connessione GATT a ${device.address}...")
+                log("Connessione GATT ad alta velocità a ${device.address}...")
                 bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             } catch (e: Exception) {
                 log("Eccezione connectGatt: ${e.message}")
@@ -284,16 +297,48 @@ class BleGattManager(
     }
 
     @SuppressLint("MissingPermission")
-    fun disconnect() {
-        userRequestedDisconnect = true
+    fun disconnect(enterPassiveListening: Boolean = true) {
         stopConnectionWatchdog()
         stopKeepAlive()
         cancelPendingReconnect()
         stopLeScan()
-
-        log("Disconnessione richiesta dall'utente.")
         closeGatt(refresh = true)
         updateState(ConnectionState.DISCONNECTED)
+
+        if (enterPassiveListening) {
+            userRequestedDisconnect = false
+            reconnectAttempts = 0
+            log("Disconnesso. Ascolto passivo attivo: premi un tasto sul telecomando per riconnetterti.")
+            val adapter = getBluetoothAdapter()
+            if (adapter != null && adapter.isEnabled) {
+                startLeScan(adapter, isBackgroundStandby = true)
+            }
+        } else {
+            userRequestedDisconnect = true
+            log("Disconnessione completa richiesta dall'utente.")
+        }
+    }
+
+    private fun enqueueGattOperation(operation: () -> Unit) {
+        gattOperationQueue.addLast(operation)
+        if (!gattOperationInProgress) {
+            processNextGattOperation()
+        }
+    }
+
+    private fun processNextGattOperation() {
+        val next = gattOperationQueue.removeFirstOrNull()
+        if (next == null) {
+            gattOperationInProgress = false
+            return
+        }
+        gattOperationInProgress = true
+        next()
+    }
+
+    private fun clearGattOperationQueue() {
+        gattOperationQueue.clear()
+        gattOperationInProgress = false
     }
 
     private fun refreshGatt(gatt: BluetoothGatt): Boolean {
@@ -310,6 +355,7 @@ class BleGattManager(
     private fun closeGatt(refresh: Boolean = true) {
         stopConnectionWatchdog()
         stopKeepAlive()
+        clearGattOperationQueue()
         val gatt = bluetoothGatt
         bluetoothGatt = null
         if (gatt != null) {
@@ -411,6 +457,15 @@ class BleGattManager(
                     reconnectAttempts = 0
                     stopConnectionWatchdog()
                     stopLeScan()
+
+                    // Richiede priorità di connessione ad alta velocità (7.5 - 15ms latency)
+                    try {
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                        log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH).")
+                    } catch (e: Exception) {
+                        Log.w(tag, "Impossibile impostare priorità elevata: ${e.message}")
+                    }
+
                     updateState(ConnectionState.CONNECTED)
                     startKeepAliveIfEnabled()
                     log("Connesso al BR80. Scoperta servizi GATT in corso...")
@@ -484,6 +539,7 @@ class BleGattManager(
                         scheduleAutoReconnect()
                     }
                 }
+                processNextGattOperation()
             }
         }
 
@@ -500,6 +556,7 @@ class BleGattManager(
                         log("Abilitazione descrittore notifiche fallita: status $status")
                     }
                 }
+                processNextGattOperation()
             }
         }
 
@@ -517,6 +574,7 @@ class BleGattManager(
                     }
                 }
             }
+            handler.post { processNextGattOperation() }
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
@@ -530,6 +588,7 @@ class BleGattManager(
                     }
                 }
             }
+            handler.post { processNextGattOperation() }
         }
 
         @Suppress("DEPRECATION")
@@ -565,14 +624,16 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     private fun writeWakeCharacteristic(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        val value = byteArrayOf(0xFF.toByte())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
-        } else {
-            @Suppress("DEPRECATION")
-            characteristic.value = value
-            @Suppress("DEPRECATION")
-            gatt.writeCharacteristic(characteristic)
+        enqueueGattOperation {
+            val value = byteArrayOf(0xFF.toByte())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+            } else {
+                @Suppress("DEPRECATION")
+                characteristic.value = value
+                @Suppress("DEPRECATION")
+                gatt.writeCharacteristic(characteristic)
+            }
         }
     }
 
@@ -581,13 +642,15 @@ class BleGattManager(
         gatt.setCharacteristicNotification(characteristic, true)
         val cccd = characteristic.getDescriptor(cccdUuid)
         if (cccd != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-            } else {
-                @Suppress("DEPRECATION")
-                cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                @Suppress("DEPRECATION")
-                gatt.writeDescriptor(cccd)
+            enqueueGattOperation {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    gatt.writeDescriptor(cccd)
+                }
             }
         } else {
             log("Descrittore CCCD (0x2902) non trovato su characteristic.")
@@ -600,7 +663,9 @@ class BleGattManager(
         val batteryService = g.getService(batteryServiceUuid)
         val batteryChar = batteryService?.getCharacteristic(batteryLevelUuid)
         if (batteryChar != null) {
-            g.readCharacteristic(batteryChar)
+            enqueueGattOperation {
+                g.readCharacteristic(batteryChar)
+            }
         }
     }
 }

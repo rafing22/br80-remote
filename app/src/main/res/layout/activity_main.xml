@@ -397,6 +397,78 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
+                <!-- Card Profili di Mappatura -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FFFFFF"
+                    android:padding="16dp"
+                    android:elevation="2dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎛️ Profili di Mappatura"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/tvActiveProfile"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Profilo Attivo: Standard"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#0284C7"
+                        android:layout_marginBottom="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnChooseProfile"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Cambia"
+                            android:textSize="12sp"
+                            android:backgroundTint="#0284C7"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginEnd="4dp" />
+
+                        <Button
+                            android:id="@+id/btnNewProfile"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Nuovo"
+                            android:textSize="12sp"
+                            android:backgroundTint="#334155"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp" />
+
+                        <Button
+                            android:id="@+id/btnDeleteProfile"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Elimina"
+                            android:textSize="12sp"
+                            android:backgroundTint="#DC2626"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginStart="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <!-- Card Reattività & Calibrazione Ritmo Tap -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -552,6 +624,44 @@
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="12dp" />
 
+                    <CheckBox
+                        android:id="@+id/cbOptConditionalBt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Keep-Alive condizionale a dispositivo BT specifico"
+                        android:textSize="14sp"
+                        android:textColor="#1E293B" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Attiva il Keep-Alive e l'ascolto reattivo solo quando il dispositivo scelto (es. interfono/casco) è connesso, per risparmiare batteria quando non stai guidando."
+                        android:textSize="12sp"
+                        android:textColor="#64748B"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvConditionalBtDevice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nessun dispositivo selezionato"
+                        android:textSize="13sp"
+                        android:textStyle="italic"
+                        android:textColor="#94A3B8"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <Button
+                        android:id="@+id/btnOptChooseBtDevice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Scegli Dispositivo BT (Interfono / Casco)"
+                        android:textSize="13sp"
+                        android:backgroundTint="#475569"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginBottom="12dp" />
+
                     <Button
                         android:id="@+id/btnOptDoze"
                         android:layout_width="match_parent"
@@ -609,7 +719,25 @@
                         android:text="Beep audio di conferma"
                         android:textSize="14sp"
                         android:checked="false"
+                        android:layout_marginBottom="8dp"
                         android:textColor="#1E293B" />
+
+                    <CheckBox
+                        android:id="@+id/cbOptTts"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Annuncio vocale (TTS) delle azioni"
+                        android:textSize="14sp"
+                        android:checked="false"
+                        android:textColor="#1E293B" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Pronuncia ad alta voce ogni azione eseguita (es. &quot;Volume su&quot;, &quot;Torcia accesa&quot;), utile con interfono/casco."
+                        android:textSize="12sp"
+                        android:textColor="#64748B"
+                        android:layout_marginStart="32dp" />
 
                 </LinearLayout>
 
@@ -649,15 +777,26 @@
                         android:text="⚡ Esporta Progetto Tasker (.xml)"
                         android:textSize="13sp"
                         android:backgroundTint="#334155"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginBottom="8dp" />
+
+                    <Button
+                        android:id="@+id/btnExitApp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🚪 Esci / Chiudi Applicazione"
+                        android:textSize="13sp"
+                        android:backgroundTint="#DC2626"
                         android:textColor="#FFFFFF" />
 
                 </LinearLayout>
 
                 <!-- Info Versione -->
                 <TextView
+                    android:id="@+id/tvAppVersionInfo"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Livall BR80 Remote v1.3 • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+                    android:text="Livall BR80 Remote • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
                     android:textSize="12sp"
                     android:textColor="#94A3B8"
                     android:gravity="center"
@@ -700,6 +839,17 @@
                     android:text="Copia"
                     android:textSize="13sp"
                     android:textColor="#38BDF8"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/btnLogExport"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Esporta"
+                    android:textSize="13sp"
+                    android:textColor="#22C55E"
                     android:padding="8dp"
                     android:clickable="true"
                     android:focusable="true" />

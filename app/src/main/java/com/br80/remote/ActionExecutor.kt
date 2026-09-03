@@ -26,6 +26,7 @@ import android.view.KeyEvent
 class ActionExecutor(
     private val context: Context,
     private val mappingStorage: MappingStorage,
+    var ttsFeedbackManager: TtsFeedbackManager? = null,
     private val onLog: (String) -> Unit
 ) {
 
@@ -43,8 +44,10 @@ class ActionExecutor(
         // 1. Emette sempre il broadcast per Tasker e altre app di automazione
         sendTaskerBroadcast(button, gesture, eventId, batteryLevel)
 
-        // 2. Emette feedback aptico/sonoro
-        triggerFeedback()
+        // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione")
+        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY) {
+            triggerFeedback(action.getReadableDescription())
+        }
 
         // 3. Esegue l'azione nativa corrispondente
         try {
@@ -359,7 +362,7 @@ class ActionExecutor(
         }
     }
 
-    private fun triggerFeedback() {
+    private fun triggerFeedback(actionDescription: String) {
         if (mappingStorage.isHapticFeedbackEnabled()) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -387,6 +390,10 @@ class ActionExecutor(
             } catch (e: Exception) {
                 Log.w(tag, "Tone failed: ${e.message}")
             }
+        }
+
+        if (mappingStorage.isTtsFeedbackEnabled()) {
+            ttsFeedbackManager?.speak(actionDescription)
         }
     }
 
