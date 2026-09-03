@@ -26,6 +26,12 @@ jobs:
           release-type: simple
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          # Token personale invece del GITHUB_TOKEN di default: i tag creati
+          # con il token automatico NON fanno scattare altri workflow (misura
+          # anti-loop di GitHub), quindi build.yml non partirebbe mai sul tag
+          # appena creato. Con un PAT, il tag conta come un'azione "umana" e
+          # innesca regolarmente build.yml.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   # L'updater "generic" di release-please (marker x-release-please-version)
   # si è dimostrato inaffidabile su questo file: non aggiornava versionName.
