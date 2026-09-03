@@ -963,8 +963,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
-            startAndBindBleService()
-            bleService?.connectDevice()
+            val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (allGranted) {
+                startAndBindBleService()
+                bleService?.connectDevice()
+            } else {
+                Toast.makeText(this, "Permessi negati: impossibile connettersi al telecomando senza autorizzare Bluetooth.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
