@@ -78,6 +78,12 @@ enum class ActionType(
     CAMERA_SHUTTER("camera_shutter", "Scatto Fotocamera", "Invia il comando hardware per scattare una foto", ActionCategory.UTILITY),
     KEEP_SCREEN_ON_TOGGLE("screen_on_toggle", "Schermo Sempre Acceso", "Mantiene lo schermo attivo per il navigatore", ActionCategory.UTILITY),
     OPEN_APP("open_app", "Apri Applicazione", "Avvia qualsiasi app installata a tua scelta", ActionCategory.UTILITY, true, "Seleziona app"),
+    SYSTEM_BACK("system_back", "Tasto Indietro", "Simula il tasto di sistema Indietro (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
+    SYSTEM_HOME("system_home", "Tasto Home", "Simula il tasto di sistema Home (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
+    LOCK_SCREEN("lock_screen", "Blocca Schermo", "Blocca immediatamente lo schermo del telefono (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
+    VOLUME_SET_LEVEL("volume_set_level", "Imposta Volume Preciso", "Imposta il volume multimediale al livello preciso configurato in Opzioni", ActionCategory.MEDIA),
+    REDIAL_LAST_RECEIVED("redial_last_received", "Richiama Ultima Chiamata Ricevuta", "Richiama l'ultimo numero da cui hai ricevuto una chiamata", ActionCategory.PHONE),
+    REDIAL_LAST_DIALED("redial_last_dialed", "Richiama Ultimo Numero Effettuato", "Richiama l'ultimo numero che hai chiamato", ActionCategory.PHONE),
 
     // Automation
     TASKER_ONLY("tasker_only", "Broadcast Tasker / MacroDroid", "Invia broadcast globale 'com.br80.remote.BUTTON_EVENT'", ActionCategory.AUTOMATION),
@@ -305,6 +311,25 @@ class MappingStorage(context: Context) {
         }
     }
 
+    // Livello di volume preciso applicato dall'azione VOLUME_SET_LEVEL (default 70%)
+    fun getPreferredVolumeLevelPercent(): Int {
+        return prefs.getInt(KEY_PREFERRED_VOLUME_PERCENT, 70)
+    }
+
+    fun setPreferredVolumeLevelPercent(percent: Int) {
+        prefs.edit().putInt(KEY_PREFERRED_VOLUME_PERCENT, percent.coerceIn(0, 100)).apply()
+    }
+
+    // Opzione sviluppatore nascosta (sblocco a 7 tocchi in Opzioni): abilita il gancio
+    // di debug ADB per simulare pressioni tasto, oltre a esistere solo in build di debug.
+    fun isDeveloperModeEnabled(): Boolean {
+        return prefs.getBoolean(KEY_DEVELOPER_MODE, false)
+    }
+
+    fun setDeveloperModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEVELOPER_MODE, enabled).apply()
+    }
+
     fun getLastConnectedMac(): String? {
         return prefs.getString(KEY_LAST_MAC, null)
     }
@@ -377,5 +402,7 @@ class MappingStorage(context: Context) {
         private const val KEY_AUDIO_BT_DEVICES = "pref_audio_bt_devices"
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
         private const val KEY_PROFILE_NAMES = "pref_profile_names"
+        private const val KEY_PREFERRED_VOLUME_PERCENT = "pref_preferred_volume_percent"
+        private const val KEY_DEVELOPER_MODE = "pref_developer_mode_enabled"
     }
 }

@@ -41,6 +41,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -71,6 +72,20 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+
+        <!-- Servizio di Accessibilità: solo per performGlobalAction (Indietro/Home/Blocca Schermo) -->
+        <service
+            android:name=".Br80AccessibilityService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
         <!-- Receiver per avvio automatico all'accensione dello smartphone -->
         <receiver

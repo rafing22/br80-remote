@@ -1,7 +1,6 @@
 package com.br80.remote
 
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -39,20 +38,15 @@ object ScoAudioGateway {
         return isAnyDeviceConnected(context, targetMacs)
     }
 
+    /** True se una sessione SCO precedente è ancora aperta o in fase di chiusura. */
+    fun isSessionActive(): Boolean = scoReceiver != null || previousAudioMode != null
+
     fun isAnyDeviceConnected(context: Context, macs: List<String>): Boolean {
         if (macs.isEmpty()) return false
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return false
         val adapter = bluetoothManager.adapter ?: return false
         if (!adapter.isEnabled) return false
-
-        return try {
-            val a2dp = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP)
-            val headset = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)
-            (a2dp + headset).any { device -> macs.any { it.equals(device.address, ignoreCase = true) } }
-        } catch (e: Exception) {
-            Log.w(TAG, "Impossibile verificare dispositivi audio connessi: ${e.message}")
-            false
-        }
+        return BtProfileConnectionChecker.isAnyDeviceConnected(macs)
     }
 
     /**

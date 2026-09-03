@@ -52,9 +52,6 @@ class BleGattManager(
     private var isConnectingGatt = false
     private var lastKnownRssi: Int? = null
     private val weakSignalRssiThreshold = -75 // Sotto questa soglia il segnale è considerato marginale
-    private var connectionPriorityIsHigh = false
-    private var priorityDowngradeRunnable: Runnable? = null
-    private val priorityDowngradeDelayMs = 2000L // Tempo sufficiente per wake + scoperta servizi + notifiche
     private var userRequestedDisconnect = false
     private var isScanning = false
     private var scanCallback: ScanCallback? = null
@@ -79,6 +76,8 @@ class BleGattManager(
     // (dal relativo callback onCharacteristicWrite/onDescriptorWrite/onCharacteristicRead).
     private val gattOperationQueue = ArrayDeque<() -> Unit>()
     private var gattOperationInProgress = false
+    private var gattOperationTimeoutRunnable: Runnable? = null
+    private val gattOperationTimeoutMs = 8000L
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -361,6 +360,7 @@ class BleGattManager(
     }
 
     private fun processNextGattOperation() {
+        cancelGattOperationTimeout()
         val next = gattOperationQueue.removeFirstOrNull()
         if (next == null) {
             gattOperationInProgress = false
@@ -368,9 +368,22 @@ class BleGattManager(
         }
         gattOperationInProgress = true
         next()
+        gattOperationTimeoutRunnable = Runnable {
+            log("Timeout operazione GATT (nessuna risposta dopo ${gattOperationTimeoutMs / 1000}s). Ripristino auto-healing...")
+            closeGatt(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            scheduleAutoReconnect()
+        }
+        handler.postDelayed(gattOperationTimeoutRunnable!!, gattOperationTimeoutMs)
+    }
+
+    private fun cancelGattOperationTimeout() {
+        gattOperationTimeoutRunnable?.let { handler.removeCallbacks(it) }
+        gattOperationTimeoutRunnable = null
     }
 
     private fun clearGattOperationQueue() {
+        cancelGattOperationTimeout()
         gattOperationQueue.clear()
         gattOperationInProgress = false
     }
@@ -391,9 +404,6 @@ class BleGattManager(
         stopKeepAlive()
         clearGattOperationQueue()
         isConnectingGatt = false
-        priorityDowngradeRunnable?.let { handler.removeCallbacks(it) }
-        priorityDowngradeRunnable = null
-        connectionPriorityIsHigh = false
         val gatt = bluetoothGatt
         bluetoothGatt = null
         if (gatt != null) {
@@ -497,24 +507,19 @@ class BleGattManager(
                     stopConnectionWatchdog()
                     stopLeScan()
 
-                    // Richiede priorità di connessione adattiva: HIGH su segnale buono (7.5-15ms
-                    // di latenza), BALANCED su segnale debole per non stressare un link marginale
-                    // e ridurre i CONN_TIMEOUT/GATT_ERROR 133 tipici delle connessioni instabili.
-                    // HIGH viene poi riportata a BALANCED non appena l'handshake iniziale (wake +
-                    // scoperta servizi + notifiche) è completo: mantenerla per l'intera sessione
-                    // costringerebbe anche il telecomando (non solo il telefono) a "svegliarsi"
-                    // ogni 7.5-15ms per controllare dati, sprecando la sua batteria durante i
-                    // lunghi intervalli di inattività tra una pressione e l'altra.
+                    // Priorità di connessione adattiva impostata una sola volta, per l'intera
+                    // sessione: HIGH su segnale buono (7.5-15ms di latenza), BALANCED su segnale
+                    // debole per non stressare un link marginale. Non viene più riportata a
+                    // BALANCED dopo l'handshake (era causa confermata di CONN_TIMEOUT/GATT_ERROR
+                    // a pochi secondi dal downgrade, osservato 2 volte dal vivo).
                     try {
                         val rssi = lastKnownRssi
                         if (rssi != null && rssi < weakSignalRssiThreshold) {
                             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
-                            connectionPriorityIsHigh = false
                             log("Segnale debole (RSSI $rssi): priorità connessione BALANCED per maggiore stabilità.")
                         } else {
                             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                            connectionPriorityIsHigh = true
-                            log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH) per l'handshake iniziale.")
+                            log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH).")
                         }
                     } catch (e: Exception) {
                         Log.w(tag, "Impossibile impostare priorità elevata: ${e.message}")
@@ -606,21 +611,6 @@ class BleGattManager(
                         handler.postDelayed({
                             readBatteryLevel(gatt)
                         }, 400L)
-
-                        if (connectionPriorityIsHigh) {
-                            priorityDowngradeRunnable?.let { handler.removeCallbacks(it) }
-                            val downgrade = Runnable {
-                                try {
-                                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
-                                    connectionPriorityIsHigh = false
-                                    log("Handshake completato: priorità connessione riportata a BALANCED per risparmiare batteria (telefono e telecomando).")
-                                } catch (e: Exception) {
-                                    Log.w(tag, "Impossibile riportare la priorità a BALANCED: ${e.message}")
-                                }
-                            }
-                            priorityDowngradeRunnable = downgrade
-                            handler.postDelayed(downgrade, priorityDowngradeDelayMs)
-                        }
                     } else {
                         log("Abilitazione descrittore notifiche fallita: status $status")
                     }
@@ -661,8 +651,12 @@ class BleGattManager(
             handler.post { processNextGattOperation() }
         }
 
+        // Su Android 13+ (API 33+) il sistema chiama ENTRAMBI gli overload per lo stesso
+        // evento, raddoppiando ogni pressione fisica: solo l'overload byte[] elabora il
+        // payload da API 33 in su, il legacy solo sotto (dove il nuovo non viene mai chiamato).
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
             if (characteristic.uuid == buttonUuid) {
                 handleButtonPayload(characteristic.value)
             }

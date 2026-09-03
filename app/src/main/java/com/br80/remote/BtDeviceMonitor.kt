@@ -95,12 +95,14 @@ class BtDeviceMonitor(
         if (!adapter.isEnabled) return false
 
         try {
-            // Controlla sia il profilo A2DP che HEADSET/GATT per cuffie / interfoni / telecomandi
-            val a2dpConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP)
-            val headsetConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)
+            // GATT (es. telecomando BR80 stesso) è l'unico profilo supportato da
+            // BluetoothManager.getConnectedDevices(); A2DP/HEADSET (cuffie/interfoni) passano
+            // dal checker condiviso basato sui proxy di profilo.
             val gattConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
-            val allConnected = a2dpConnected + headsetConnected + gattConnected
-            return allConnected.any { device -> targetMacs.any { it.equals(device.address, ignoreCase = true) } }
+            if (gattConnected.any { device -> targetMacs.any { it.equals(device.address, ignoreCase = true) } }) {
+                return true
+            }
+            return BtProfileConnectionChecker.isAnyDeviceConnected(targetMacs)
         } catch (e: Exception) {
             Log.w(tag, "Impossibile verificare dispositivi connessi da BluetoothManager: ${e.message}")
         }

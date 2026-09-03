@@ -110,6 +110,16 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var btnManageTtsLabels: Button
     private lateinit var btnOptDoze: Button
     private lateinit var btnOptOverlay: Button
+    private lateinit var btnOptAccessibility: Button
+    private lateinit var tvPreferredVolumeLevel: TextView
+    private lateinit var btnVolPreset25: Button
+    private lateinit var btnVolPreset50: Button
+    private lateinit var btnVolPreset75: Button
+    private lateinit var btnVolPreset100: Button
+    private lateinit var cardDeveloperMode: LinearLayout
+    private lateinit var cbOptDevAdbHook: CheckBox
+    private var versionTapCount = 0
+    private var versionTapLastMs = 0L
     private lateinit var cbOptHaptic: CheckBox
     private lateinit var cbOptSound: CheckBox
     private lateinit var cbOptTts: CheckBox
@@ -243,6 +253,14 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnManageTtsLabels = findViewById(R.id.btnManageTtsLabels)
         btnOptDoze = findViewById(R.id.btnOptDoze)
         btnOptOverlay = findViewById(R.id.btnOptOverlay)
+        btnOptAccessibility = findViewById(R.id.btnOptAccessibility)
+        tvPreferredVolumeLevel = findViewById(R.id.tvPreferredVolumeLevel)
+        btnVolPreset25 = findViewById(R.id.btnVolPreset25)
+        btnVolPreset50 = findViewById(R.id.btnVolPreset50)
+        btnVolPreset75 = findViewById(R.id.btnVolPreset75)
+        btnVolPreset100 = findViewById(R.id.btnVolPreset100)
+        cardDeveloperMode = findViewById(R.id.cardDeveloperMode)
+        cbOptDevAdbHook = findViewById(R.id.cbOptDevAdbHook)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
         cbOptSound = findViewById(R.id.cbOptSound)
         cbOptTts = findViewById(R.id.cbOptTts)
@@ -254,8 +272,16 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnNewProfile = findViewById(R.id.btnNewProfile)
         btnDeleteProfile = findViewById(R.id.btnDeleteProfile)
         updateActiveProfileLabel()
-        findViewById<TextView>(R.id.tvAppVersionInfo).text =
+        val tvAppVersionInfo = findViewById<TextView>(R.id.tvAppVersionInfo)
+        tvAppVersionInfo.text =
             "Livall BR80 Remote v${BuildConfig.VERSION_NAME} • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+        tvAppVersionInfo.setOnClickListener { onVersionInfoTapped() }
+
+        tvPreferredVolumeLevel.text = "Livello attuale: ${mappingStorage.getPreferredVolumeLevelPercent()}%"
+        if (BuildConfig.DEBUG && mappingStorage.isDeveloperModeEnabled()) {
+            cardDeveloperMode.visibility = android.view.View.VISIBLE
+        }
+        cbOptDevAdbHook.isChecked = mappingStorage.isDeveloperModeEnabled()
 
         cbOptBoot.isChecked = mappingStorage.isAutoStartOnBootEnabled()
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
@@ -393,6 +419,20 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         btnOptOverlay.setOnClickListener {
             requestOverlayPermission()
+        }
+
+        btnOptAccessibility.setOnClickListener {
+            requestAccessibilityPermission()
+        }
+
+        btnVolPreset25.setOnClickListener { setPreferredVolumePreset(25) }
+        btnVolPreset50.setOnClickListener { setPreferredVolumePreset(50) }
+        btnVolPreset75.setOnClickListener { setPreferredVolumePreset(75) }
+        btnVolPreset100.setOnClickListener { setPreferredVolumePreset(100) }
+
+        cbOptDevAdbHook.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setDeveloperModeEnabled(isChecked)
+            log("Opzione sviluppatore - Gancio Comandi ADB: " + if (isChecked) "Attivo" else "Disattivato")
         }
 
         btnCheckUpdate.setOnClickListener {
@@ -917,7 +957,11 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 BleGattManager.ConnectionState.DISCONNECTED -> {
                     checkPermissionsAndConnect()
                 }
-                BleGattManager.ConnectionState.CONNECTING,
+                BleGattManager.ConnectionState.CONNECTING -> {
+                    // No-op: un secondo tap durante l'handshake interromperebbe una connessione
+                    // che si stava per completare (confermato dal vivo, log al millisecondo).
+                    // C'è già un watchdog di 5s che sblocca da solo se il device non risponde.
+                }
                 BleGattManager.ConnectionState.CONNECTED -> {
                     service.disconnectDevice()
                 }
@@ -945,6 +989,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             needed.add(Manifest.permission.ANSWER_PHONE_CALLS)
         }
+
+        needed.add(Manifest.permission.READ_CALL_LOG)
 
         val missing = needed.filter {
             ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -1158,6 +1204,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         super.onResume()
         updateBatteryOptButtonState()
         updateOverlayButtonState()
+        updateAccessibilityButtonState()
         updateTapSpeedText()
     }
 
@@ -1294,6 +1341,53 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 } catch (e: Exception) {
                     log("Impossibile aprire impostazioni overlay: ${e.message}")
                 }
+            }
+        }
+    }
+
+    private fun updateAccessibilityButtonState() {
+        val enabled = Br80AccessibilityService.isRunning()
+        if (enabled) {
+            btnOptAccessibility.text = "Servizio Accessibilità: Attivo ✓"
+            btnOptAccessibility.isEnabled = false
+            btnOptAccessibility.backgroundTintList = toColorStateList(Color.parseColor("#16A34A"))
+        } else {
+            btnOptAccessibility.text = "Attiva Servizio Accessibilità (Indietro / Home / Blocca Schermo)"
+            btnOptAccessibility.isEnabled = true
+            btnOptAccessibility.backgroundTintList = toColorStateList(Color.parseColor("#475569"))
+        }
+    }
+
+    private fun requestAccessibilityPermission() {
+        try {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        } catch (e: Exception) {
+            log("Impossibile aprire impostazioni accessibilità: ${e.message}")
+        }
+    }
+
+    private fun setPreferredVolumePreset(percent: Int) {
+        mappingStorage.setPreferredVolumeLevelPercent(percent)
+        tvPreferredVolumeLevel.text = "Livello attuale: $percent%"
+        log("Volume preciso preferito impostato a $percent%")
+    }
+
+    // Sblocco nascosto dell'opzione sviluppatore: 7 tocchi consecutivi entro 3s sul
+    // testo versione, come il "tap sul numero build" di Android.
+    private fun onVersionInfoTapped() {
+        val now = System.currentTimeMillis()
+        if (now - versionTapLastMs > 3000L) {
+            versionTapCount = 0
+        }
+        versionTapLastMs = now
+        versionTapCount++
+        if (versionTapCount >= 7) {
+            versionTapCount = 0
+            if (BuildConfig.DEBUG) {
+                mappingStorage.setDeveloperModeEnabled(true)
+                cbOptDevAdbHook.isChecked = true
+                cardDeveloperMode.visibility = android.view.View.VISIBLE
+                Toast.makeText(this, "Modalità sviluppatore attivata", Toast.LENGTH_SHORT).show()
             }
         }
     }

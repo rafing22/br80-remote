@@ -17,6 +17,8 @@ import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.accessibilityservice.AccessibilityService
+import android.provider.CallLog
 import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.telecom.TelecomManager
@@ -109,6 +111,24 @@ class ActionExecutor(
                 ActionType.OPEN_APP -> {
                     openApp(action.parameter)
                 }
+                ActionType.SYSTEM_BACK -> {
+                    performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK, "Indietro")
+                }
+                ActionType.SYSTEM_HOME -> {
+                    performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME, "Home")
+                }
+                ActionType.LOCK_SCREEN -> {
+                    performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN, "Blocca Schermo")
+                }
+                ActionType.VOLUME_SET_LEVEL -> {
+                    setVolumeToPreferredLevel()
+                }
+                ActionType.REDIAL_LAST_RECEIVED -> {
+                    redialFromCallLog(CallLog.Calls.INCOMING_TYPE)
+                }
+                ActionType.REDIAL_LAST_DIALED -> {
+                    redialFromCallLog(CallLog.Calls.OUTGOING_TYPE)
+                }
             }
         } catch (e: Exception) {
             val err = "Errore esecuzione azione ${action.type}: ${e.message}"
@@ -178,12 +198,15 @@ class ActionExecutor(
         val shouldUseScoGateway = mappingStorage.isAudioBtRoutingEnabled() &&
             ScoAudioGateway.isTargetAudioDeviceConnected(context, mappingStorage)
 
-        if (shouldUseScoGateway) {
+        if (shouldUseScoGateway && ScoAudioGateway.isSessionActive()) {
+            onLog("Canale voce interfono ancora impegnato da una richiesta precedente: attivo Gemini sul percorso audio predefinito. Riprova tra qualche secondo.")
+            fireGeminiIntents()
+        } else if (shouldUseScoGateway) {
             ScoAudioGateway.openScoAndAwait(context) { connected ->
                 if (connected) {
                     onLog("Canale voce interfono aperto. Attivo Gemini...")
                 } else {
-                    onLog("Canale voce interfono non disponibile: attivo Gemini sul percorso audio predefinito.")
+                    onLog("Canale voce interfono non disponibile (dispositivo non ha risposto in tempo): attivo Gemini sul percorso audio predefinito.")
                 }
                 fireGeminiIntents()
                 if (connected) {
@@ -385,6 +408,56 @@ class ActionExecutor(
             onLog("Applicazione $packageName avviata.")
         } else {
             onLog("Applicazione $packageName non trovata.")
+        }
+    }
+
+    private fun performGlobalAction(globalAction: Int, actionLabel: String) {
+        val service = Br80AccessibilityService.instance
+        if (service == null) {
+            onLog("$actionLabel non eseguito: Servizio di Accessibilità non attivo (abilitalo in Opzioni).")
+            return
+        }
+        val success = service.performGlobalAction(globalAction)
+        onLog(if (success) "$actionLabel eseguito." else "$actionLabel: esecuzione non riuscita.")
+    }
+
+    private fun setVolumeToPreferredLevel() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        val percent = mappingStorage.getPreferredVolumeLevelPercent()
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val level = ((percent / 100f) * maxVolume).toInt().coerceIn(0, maxVolume)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, level, AudioManager.FLAG_SHOW_UI)
+        onLog("Volume impostato al $percent% ($level/$maxVolume).")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun redialFromCallLog(type: Int) {
+        if (context.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            onLog("Permesso READ_CALL_LOG non concesso: impossibile leggere il registro chiamate.")
+            return
+        }
+        try {
+            // Nota: alcuni provider (es. Samsung) rifiutano "LIMIT" nella sortOrder con
+            // "Invalid token LIMIT" (confermato dal vivo). Si ordina per data decrescente
+            // e si prende semplicemente la prima riga, senza LIMIT nella query SQL.
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER),
+                "${CallLog.Calls.TYPE} = ?",
+                arrayOf(type.toString()),
+                "${CallLog.Calls.DATE} DESC"
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val number = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
+                    if (!number.isNullOrBlank()) {
+                        speedDial(number)
+                        return
+                    }
+                }
+                onLog("Nessuna chiamata trovata nel registro per questo tipo.")
+            }
+        } catch (e: Exception) {
+            onLog("Errore lettura registro chiamate: ${e.message}")
         }
     }
 

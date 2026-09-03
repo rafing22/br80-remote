@@ -70,6 +70,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         if (!BuildConfig.DEBUG) return
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                // Doppia sicurezza: oltre a esistere solo nelle build di debug, il gancio
+                // elabora eventi solo se l'utente ha esplicitamente abilitato l'opzione
+                // sviluppatore nascosta (sblocco a 7 tocchi in Opzioni).
+                if (!mappingStorage.isDeveloperModeEnabled()) return
                 val buttonName = intent?.getStringExtra("button") ?: return
                 val isPress = intent.getBooleanExtra("press", true)
                 val button = try {
@@ -120,6 +124,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
         createNotificationChannel()
         registerDebugButtonSimulator()
+        BtProfileConnectionChecker.initialize(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -188,7 +193,15 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         manager?.cancel(NOTIFICATION_ID)
-        stopSelf()
+        // Ritardo difensivo: su questo dispositivo la notifica è risultata a volte ancora
+        // presente lato sistema (dumpsys) alcuni secondi dopo un cancel() immediatamente
+        // seguito da stopSelf(), causa non determinabile con certezza. Diamo tempo al
+        // cancel di essere processato prima che il servizio termini; cancel ridondante
+        // anche in onDestroy() come ulteriore rete di sicurezza.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            manager?.cancel(NOTIFICATION_ID)
+            stopSelf()
+        }, 400L)
     }
 
     // Callbacks da BtDeviceMonitor
@@ -327,6 +340,9 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         gestureDetector.reset()
         btDeviceMonitor.stopMonitoring()
         ttsFeedbackManager.shutdown()
+        BtProfileConnectionChecker.shutdown(this)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        manager?.cancel(NOTIFICATION_ID)
         try {
             if (cpuWakeLock?.isHeld == true) {
                 cpuWakeLock?.release()
