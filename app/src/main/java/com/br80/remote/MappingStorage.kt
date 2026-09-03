@@ -278,11 +278,13 @@ class MappingStorage(context: Context) {
         current.removeAll { it.equals(profileName, ignoreCase = true) }
         prefs.edit().putStringSet(KEY_PROFILE_NAMES, current).apply()
 
-        // Rimuove anche le mappature salvate per il profilo eliminato
+        // Rimuove anche le mappature e i testi TTS personalizzati salvati per il profilo eliminato
         val editor = prefs.edit()
         for (button in Br80Button.values()) {
             for (gesture in GestureType.values()) {
-                editor.remove("map_profile_${profileName}_${button.name}_${gesture.name}")
+                val mappingKey = "map_profile_${profileName}_${button.name}_${gesture.name}"
+                editor.remove(mappingKey)
+                editor.remove("tts_label_$mappingKey")
             }
         }
         editor.apply()
@@ -306,6 +308,21 @@ class MappingStorage(context: Context) {
             "map_${button.name}_${gesture.name}"
         } else {
             "map_profile_${profile}_${button.name}_${gesture.name}"
+        }
+    }
+
+    // Testo TTS personalizzato per singola combinazione tasto+gesto (per profilo attivo).
+    // Se non impostato, si usa la descrizione automatica dell'azione (ButtonAction.getReadableDescription()).
+    fun getCustomTtsLabel(button: Br80Button, gesture: GestureType): String? {
+        return prefs.getString("tts_label_${getMappingKey(button, gesture)}", null)
+    }
+
+    fun setCustomTtsLabel(button: Br80Button, gesture: GestureType, label: String?) {
+        val key = "tts_label_${getMappingKey(button, gesture)}"
+        if (label.isNullOrBlank()) {
+            prefs.edit().remove(key).apply()
+        } else {
+            prefs.edit().putString(key, label.trim()).apply()
         }
     }
 

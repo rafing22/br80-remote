@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Tema scuro "Cruscotto" applicato a tutti gli AlertDialog dell'app (picker dispositivi,
+         profili, scegli azione, testi TTS, conferme), per coerenza con activity_main.xml. -->
+    <style name="Theme.Br80.CockpitDialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="colorAccent">@color/cockpit_accent</item>
+        <item name="android:windowBackground">@drawable/bg_cockpit_dialog_window</item>
+        <item name="android:textColorPrimary">@color/cockpit_ink</item>
+        <item name="android:textColorSecondary">@color/cockpit_muted</item>
+        <item name="android:textColorAlertDialogListItem">@color/cockpit_ink</item>
+    </style>
+
+</resources>

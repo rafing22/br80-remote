@@ -11,4 +11,21 @@
     <color name="status_connected">#16A34A</color>
     <color name="status_connecting">#EAB308</color>
     <color name="status_disconnected">#DC2626</color>
+
+    <!-- Palette "Cruscotto BR80" (tema scuro, ispirato al telecomando fisico reale) -->
+    <color name="cockpit_bg">#151215</color>
+    <color name="cockpit_screen_bg">#1C1815</color>
+    <color name="cockpit_card">#241F19</color>
+    <color name="cockpit_border">#382F24</color>
+    <color name="cockpit_ink">#F2E6D4</color>
+    <color name="cockpit_muted">#A3927B</color>
+    <color name="cockpit_muted_dim">#8A7A64</color>
+    <color name="cockpit_accent">#E0140F</color>
+    <color name="cockpit_accent_bright">#FF5147</color>
+    <color name="cockpit_body_top">#38383D</color>
+    <color name="cockpit_body_bottom">#131315</color>
+    <color name="cockpit_hub_top">#3A3A3E</color>
+    <color name="cockpit_hub_bottom">#0E0E10</color>
+    <color name="cockpit_hub_ring">#1C1C1F</color>
+    <color name="cockpit_chevron">#75797F</color>
 </resources>

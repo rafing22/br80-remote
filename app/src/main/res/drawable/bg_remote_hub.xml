@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/cockpit_hub_ring" />
+        </shape>
+    </item>
+    <item android:top="3dp" android:bottom="3dp" android:left="3dp" android:right="3dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:centerX="0.38"
+                android:centerY="0.32"
+                android:startColor="@color/cockpit_hub_top"
+                android:endColor="@color/cockpit_hub_bottom" />
+        </shape>
+    </item>
+</layer-list>

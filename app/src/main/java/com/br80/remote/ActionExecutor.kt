@@ -48,7 +48,8 @@ class ActionExecutor(
         // Per Gemini niente TTS: l'apertura del canale SCO subito dopo taglierebbe la frase
         // a metà mentre il canale passa da A2DP a SCO; resta solo vibrazione/beep immediati.
         if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY) {
-            triggerFeedback(action.getReadableDescription(), allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
+            val ttsText = mappingStorage.getCustomTtsLabel(button, gesture) ?: action.getReadableDescription()
+            triggerFeedback(ttsText, allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
         }
 
         // 3. Esegue l'azione nativa corrispondente

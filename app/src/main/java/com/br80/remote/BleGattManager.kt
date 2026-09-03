@@ -33,6 +33,7 @@ class BleGattManager(
         fun onStateChanged(state: ConnectionState)
         fun onButtonRawEvent(button: Br80Button, isPress: Boolean)
         fun onBatteryUpdated(level: Int)
+        fun onRssiUpdated(rssi: Int)
         fun onLog(message: String)
     }
 
@@ -50,6 +51,8 @@ class BleGattManager(
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var isConnectingGatt = false
+    private var lastKnownRssi: Int? = null
+    private val weakSignalRssiThreshold = -75 // Sotto questa soglia il segnale è considerato marginale
     private var userRequestedDisconnect = false
     private var isScanning = false
     private var scanCallback: ScanCallback? = null
@@ -216,6 +219,8 @@ class BleGattManager(
 
                 if (matchesName || matchesService || matchesMac) {
                     val displayName = recordName ?: devName ?: "BR80"
+                    lastKnownRssi = result.rssi
+                    listener.onRssiUpdated(result.rssi)
                     log("Telecomando rilevato: $displayName [${device.address}], RSSI: ${result.rssi}")
                     stopLeScan()
                     stopConnectionWatchdog()
@@ -471,10 +476,18 @@ class BleGattManager(
                     stopConnectionWatchdog()
                     stopLeScan()
 
-                    // Richiede priorità di connessione ad alta velocità (7.5 - 15ms latency)
+                    // Richiede priorità di connessione adattiva: HIGH su segnale buono (7.5-15ms
+                    // di latenza), BALANCED su segnale debole per non stressare un link marginale
+                    // e ridurre i CONN_TIMEOUT/GATT_ERROR 133 tipici delle connessioni instabili.
                     try {
-                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                        log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH).")
+                        val rssi = lastKnownRssi
+                        if (rssi != null && rssi < weakSignalRssiThreshold) {
+                            gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+                            log("Segnale debole (RSSI $rssi): priorità connessione BALANCED per maggiore stabilità.")
+                        } else {
+                            gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                            log("Impostata priorità connessione BLE ad Alta Velocità (CONNECTION_PRIORITY_HIGH).")
+                        }
                     } catch (e: Exception) {
                         Log.w(tag, "Impossibile impostare priorità elevata: ${e.message}")
                     }

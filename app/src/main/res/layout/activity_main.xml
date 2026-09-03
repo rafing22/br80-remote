@@ -3,16 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F8FAFC">
+    android:background="@color/cockpit_screen_bg">
 
     <!-- Top App Header & Quick Connection Status -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="#FFFFFF"
+        android:background="@color/cockpit_card"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp"
+        android:paddingVertical="14dp"
         android:elevation="2dp"
         android:gravity="center_vertical">
 
@@ -25,10 +25,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Livall BR80 Remote"
-                android:textSize="17sp"
+                android:text="LIVALL BR80"
+                android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#0F172A" />
+                android:letterSpacing="0.02"
+                android:textColor="@color/cockpit_ink" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -41,7 +42,7 @@
                     android:id="@+id/viewStatusDot"
                     android:layout_width="8dp"
                     android:layout_height="8dp"
-                    android:background="#DC2626"
+                    android:background="@color/status_disconnected"
                     android:layout_marginEnd="6dp" />
 
                 <TextView
@@ -50,7 +51,7 @@
                     android:layout_height="wrap_content"
                     android:text="Disconnesso"
                     android:textSize="13sp"
-                    android:textColor="#64748B" />
+                    android:textColor="@color/cockpit_muted" />
 
                 <TextView
                     android:id="@+id/tvHeaderBattery"
@@ -59,7 +60,8 @@
                     android:text=""
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="#0284C7"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/cockpit_ink"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
         </LinearLayout>
@@ -71,7 +73,7 @@
             android:text="Connetti"
             android:textSize="13sp"
             android:paddingHorizontal="14dp"
-            android:backgroundTint="#0284C7"
+            android:backgroundTint="@color/cockpit_accent"
             android:textColor="#FFFFFF" />
 
     </LinearLayout>
@@ -97,129 +99,264 @@
                 android:padding="16dp"
                 android:gravity="center_horizontal">
 
+                <!-- Gauge Batteria / RSSI (cruscotto analogico) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="7dp"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:background="@drawable/bg_gauge_panel"
+                        android:padding="12dp">
+
+                        <com.br80.remote.ArcGaugeView
+                            android:id="@+id/gaugeBattery"
+                            android:layout_width="70dp"
+                            android:layout_height="20dp" />
+
+                        <TextView
+                            android:id="@+id/tvGaugeBatteryValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:fontFamily="monospace"
+                            android:textStyle="bold"
+                            android:textSize="17sp"
+                            android:textColor="@color/cockpit_ink"
+                            android:layout_marginTop="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BATTERIA"
+                            android:textSize="10sp"
+                            android:letterSpacing="0.08"
+                            android:textColor="@color/cockpit_muted"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="7dp"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:background="@drawable/bg_gauge_panel"
+                        android:padding="12dp">
+
+                        <com.br80.remote.ArcGaugeView
+                            android:id="@+id/gaugeRssi"
+                            android:layout_width="70dp"
+                            android:layout_height="20dp" />
+
+                        <TextView
+                            android:id="@+id/tvGaugeRssiValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:fontFamily="monospace"
+                            android:textStyle="bold"
+                            android:textSize="17sp"
+                            android:textColor="@color/cockpit_ink"
+                            android:layout_marginTop="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SEGNALE dBm"
+                            android:textSize="10sp"
+                            android:letterSpacing="0.08"
+                            android:textColor="@color/cockpit_muted"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tocca un tasto o premilo sul telecomando per configurarlo:"
                     android:textSize="12sp"
-                    android:textColor="#64748B"
-                    android:layout_marginBottom="12dp" />
+                    android:textColor="@color/cockpit_muted"
+                    android:layout_marginBottom="14dp" />
 
                 <!-- Controller BR80 Grafico Interattivo Fedele al Dispositivo Reale -->
-                <LinearLayout
-                    android:layout_width="260dp"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="#0F172A"
-                    android:padding="14dp"
-                    android:gravity="center_horizontal"
-                    android:elevation="4dp"
-                    android:layout_marginBottom="16dp">
+                <RelativeLayout
+                    android:layout_width="210dp"
+                    android:layout_height="320dp"
+                    android:layout_marginBottom="18dp">
 
-                    <!-- Tab Superiore: FOTO -->
-                    <Button
-                        android:id="@+id/btnPadCamera"
-                        android:layout_width="140dp"
-                        android:layout_height="44dp"
-                        android:text="📷 FOTO"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:backgroundTint="#334155"
-                        android:textColor="#F8FAFC"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
+                    <!-- Corpo pillola del telecomando -->
+                    <View
+                        android:layout_width="176dp"
+                        android:layout_height="228dp"
+                        android:layout_centerInParent="true"
+                        android:background="@drawable/bg_remote_body" />
 
-                    <!-- D-Pad Circolare Centrale -->
-                    <LinearLayout
-                        android:layout_width="220dp"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal"
-                        android:layout_marginVertical="6dp">
+                    <!-- Aletta superiore: FOTO -->
+                    <FrameLayout
+                        android:id="@+id/wingCamera"
+                        android:layout_width="92dp"
+                        android:layout_height="62dp"
+                        android:layout_alignParentTop="true"
+                        android:layout_centerHorizontal="true"
+                        android:background="@drawable/bg_remote_wing">
 
-                        <!-- Tasto UP -->
+                        <Button
+                            android:id="@+id/btnPadCamera"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="📷"
+                            android:textSize="18sp"
+                            android:background="@android:color/transparent"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
+                    </FrameLayout>
+
+                    <!-- Aletta inferiore: VOCE / INTERCOM -->
+                    <FrameLayout
+                        android:id="@+id/wingCall"
+                        android:layout_width="92dp"
+                        android:layout_height="62dp"
+                        android:layout_alignParentBottom="true"
+                        android:layout_centerHorizontal="true"
+                        android:background="@drawable/bg_remote_wing">
+
+                        <Button
+                            android:id="@+id/btnPadCall"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="🗣️"
+                            android:textSize="18sp"
+                            android:background="@android:color/transparent"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
+                    </FrameLayout>
+
+                    <!-- Ghiera / Hub Centrale -->
+                    <FrameLayout
+                        android:id="@+id/remoteHub"
+                        android:layout_width="156dp"
+                        android:layout_height="156dp"
+                        android:layout_centerInParent="true"
+                        android:background="@drawable/bg_remote_hub">
+
                         <Button
                             android:id="@+id/btnPadUp"
-                            android:layout_width="64dp"
+                            android:layout_width="60dp"
                             android:layout_height="44dp"
+                            android:layout_gravity="top|center_horizontal"
+                            android:layout_marginTop="4dp"
                             android:text="▲"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
-                            android:backgroundTint="#1E293B"
-                            android:textColor="#F8FAFC"
+                            android:textColor="@color/cockpit_chevron"
+                            android:background="@android:color/transparent"
                             android:insetTop="0dp"
-                            android:insetBottom="0dp" />
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
 
-                        <!-- Riga Centrale: L (Sinistra) | STOP ROSSO (Home) | R (Destra) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center"
-                            android:layout_marginVertical="2dp">
-
-                            <Button
-                                android:id="@+id/btnPadLeft"
-                                android:layout_width="54dp"
-                                android:layout_height="54dp"
-                                android:text="L"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:backgroundTint="#1E293B"
-                                android:textColor="#4ADE80"
-                                android:layout_marginEnd="6dp" />
-
-                            <!-- Pulsante Centrale ROSSO (Stop/Confirm) -->
-                            <Button
-                                android:id="@+id/btnPadHome"
-                                android:layout_width="66dp"
-                                android:layout_height="66dp"
-                                android:text="⏹"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:backgroundTint="#EF4444"
-                                android:textColor="#FFFFFF" />
-
-                            <Button
-                                android:id="@+id/btnPadRight"
-                                android:layout_width="54dp"
-                                android:layout_height="54dp"
-                                android:text="R"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:backgroundTint="#1E293B"
-                                android:textColor="#FB923C"
-                                android:layout_marginStart="6dp" />
-
-                        </LinearLayout>
-
-                        <!-- Tasto DOWN -->
                         <Button
                             android:id="@+id/btnPadDown"
-                            android:layout_width="64dp"
+                            android:layout_width="60dp"
                             android:layout_height="44dp"
+                            android:layout_gravity="bottom|center_horizontal"
+                            android:layout_marginBottom="4dp"
                             android:text="▼"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/cockpit_chevron"
+                            android:background="@android:color/transparent"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
+
+                        <Button
+                            android:id="@+id/btnPadLeft"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:layout_gravity="center_vertical|start"
+                            android:layout_marginStart="6dp"
+                            android:text="L"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:backgroundTint="#1E293B"
-                            android:textColor="#F8FAFC"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/cockpit_chevron"
+                            android:background="@android:color/transparent"
                             android:insetTop="0dp"
-                            android:insetBottom="0dp" />
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
 
-                    </LinearLayout>
+                        <Button
+                            android:id="@+id/btnPadRight"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:layout_gravity="center_vertical|end"
+                            android:layout_marginEnd="6dp"
+                            android:text="R"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/cockpit_chevron"
+                            android:background="@android:color/transparent"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:stateListAnimator="@null" />
 
-                    <!-- Tab Inferiore: VOCE / INTERCOM -->
-                    <Button
-                        android:id="@+id/btnPadCall"
-                        android:layout_width="140dp"
-                        android:layout_height="44dp"
-                        android:text="🗣️ VOCE"
-                        android:textSize="12sp"
+                        <!-- Tasto Centrale ROSSO (Stop/Confirm) -->
+                        <Button
+                            android:id="@+id/btnPadHome"
+                            android:layout_width="66dp"
+                            android:layout_height="66dp"
+                            android:layout_gravity="center"
+                            android:text="⏹"
+                            android:textSize="18sp"
+                            android:textColor="#FFFFFF"
+                            android:background="@drawable/bg_remote_center_button"
+                            android:stateListAnimator="@null" />
+
+                    </FrameLayout>
+
+                </RelativeLayout>
+
+                <!-- Card Ultima Azione Eseguita -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="12dp"
+                    android:layout_marginBottom="14dp">
+
+                    <TextView
+                        android:id="@+id/tvLastActionTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nessuna azione eseguita"
+                        android:textSize="14sp"
                         android:textStyle="bold"
-                        android:backgroundTint="#334155"
-                        android:textColor="#38BDF8"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
+                        android:textColor="@color/cockpit_ink" />
+
+                    <TextView
+                        android:id="@+id/tvLastActionSub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="In attesa di un comando dal telecomando"
+                        android:textSize="11.5sp"
+                        android:fontFamily="monospace"
+                        android:textColor="@color/cockpit_muted_dim"
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
@@ -229,9 +366,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp">
+                    android:background="@drawable/bg_gauge_panel"
+                    android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -248,14 +384,14 @@
                             android:text="Freccia Su (UP)"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#0F172A" />
+                            android:textColor="@color/cockpit_ink" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Tocca per cambiare"
                             android:textSize="12sp"
-                            android:textColor="#0284C7" />
+                            android:textColor="@color/cockpit_accent" />
                     </LinearLayout>
 
                     <!-- 4 Righe Gesti -->
@@ -265,7 +401,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="10dp"
-                        android:background="#F8FAFC"
+                        android:background="@color/cockpit_bg"
                         android:clickable="true"
                         android:focusable="true"
                         android:layout_marginBottom="4dp">
@@ -276,7 +412,7 @@
                             android:layout_weight="1.2"
                             android:text="👆 Singolo Tap (1x)"
                             android:textSize="13sp"
-                            android:textColor="#334155" />
+                            android:textColor="@color/cockpit_muted" />
 
                         <TextView
                             android:id="@+id/tvActionSingle"
@@ -286,7 +422,7 @@
                             android:text="Volume +"
                             android:textSize="13sp"
                             android:textStyle="bold"
-                            android:textColor="#0284C7"
+                            android:textColor="@color/cockpit_accent"
                             android:gravity="end" />
                     </LinearLayout>
 
@@ -296,7 +432,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="10dp"
-                        android:background="#F8FAFC"
+                        android:background="@color/cockpit_bg"
                         android:clickable="true"
                         android:focusable="true"
                         android:layout_marginBottom="4dp">
@@ -307,7 +443,7 @@
                             android:layout_weight="1.2"
                             android:text="✌️ Doppio Tap (2x)"
                             android:textSize="13sp"
-                            android:textColor="#334155" />
+                            android:textColor="@color/cockpit_muted" />
 
                         <TextView
                             android:id="@+id/tvActionDouble"
@@ -316,7 +452,7 @@
                             android:layout_weight="2"
                             android:text="Nessuna azione"
                             android:textSize="13sp"
-                            android:textColor="#94A3B8"
+                            android:textColor="@color/cockpit_muted_dim"
                             android:gravity="end" />
                     </LinearLayout>
 
@@ -326,7 +462,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="10dp"
-                        android:background="#F8FAFC"
+                        android:background="@color/cockpit_bg"
                         android:clickable="true"
                         android:focusable="true"
                         android:layout_marginBottom="4dp">
@@ -337,7 +473,7 @@
                             android:layout_weight="1.2"
                             android:text="👌 Triplo Tap (3x)"
                             android:textSize="13sp"
-                            android:textColor="#334155" />
+                            android:textColor="@color/cockpit_muted" />
 
                         <TextView
                             android:id="@+id/tvActionTriple"
@@ -346,7 +482,7 @@
                             android:layout_weight="2"
                             android:text="Nessuna azione"
                             android:textSize="13sp"
-                            android:textColor="#94A3B8"
+                            android:textColor="@color/cockpit_muted_dim"
                             android:gravity="end" />
                     </LinearLayout>
 
@@ -356,7 +492,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="10dp"
-                        android:background="#F8FAFC"
+                        android:background="@color/cockpit_bg"
                         android:clickable="true"
                         android:focusable="true">
 
@@ -366,7 +502,7 @@
                             android:layout_weight="1.2"
                             android:text="⏱️ Pressione Lunga"
                             android:textSize="13sp"
-                            android:textColor="#334155" />
+                            android:textColor="@color/cockpit_muted" />
 
                         <TextView
                             android:id="@+id/tvActionLong"
@@ -375,7 +511,7 @@
                             android:layout_weight="2"
                             android:text="Google Gemini"
                             android:textSize="13sp"
-                            android:textColor="#94A3B8"
+                            android:textColor="@color/cockpit_muted_dim"
                             android:gravity="end" />
                     </LinearLayout>
 
@@ -402,9 +538,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
@@ -413,7 +549,7 @@
                         android:text="🎛️ Profili di Mappatura"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="4dp" />
 
                     <TextView
@@ -423,7 +559,7 @@
                         android:text="Profilo Attivo: Standard"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#0284C7"
+                        android:textColor="@color/cockpit_accent"
                         android:layout_marginBottom="10dp" />
 
                     <LinearLayout
@@ -438,7 +574,7 @@
                             android:layout_weight="1"
                             android:text="Cambia"
                             android:textSize="12sp"
-                            android:backgroundTint="#0284C7"
+                            android:backgroundTint="@color/cockpit_accent"
                             android:textColor="#FFFFFF"
                             android:layout_marginEnd="4dp" />
 
@@ -449,8 +585,8 @@
                             android:layout_weight="1"
                             android:text="Nuovo"
                             android:textSize="12sp"
-                            android:backgroundTint="#334155"
-                            android:textColor="#FFFFFF"
+                            android:backgroundTint="@color/cockpit_border"
+                            android:textColor="@color/cockpit_ink"
                             android:layout_marginStart="4dp"
                             android:layout_marginEnd="4dp" />
 
@@ -461,7 +597,7 @@
                             android:layout_weight="1"
                             android:text="Elimina"
                             android:textSize="12sp"
-                            android:backgroundTint="#DC2626"
+                            android:backgroundTint="#7A1410"
                             android:textColor="#FFFFFF"
                             android:layout_marginStart="4dp" />
 
@@ -474,18 +610,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⏱️ Reattività &amp; Calibrazione Tap"
+                        android:text="⏱️ Reattività Ritmo Tap"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="4dp" />
 
                     <TextView
@@ -495,26 +631,15 @@
                         android:text="Finestra Doppio Tap: 420 ms (Standard)"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="#0284C7"
+                        android:textColor="@color/cockpit_accent"
                         android:layout_marginBottom="10dp" />
-
-                    <!-- Pulsante Auto-Apprendimento -->
-                    <Button
-                        android:id="@+id/btnAutoCalibrate"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="🎯 Auto-Apprendimento Ritmo (3 Tentativi)"
-                        android:textSize="13sp"
-                        android:backgroundTint="#0284C7"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginBottom="12dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Oppure scegli un profilo rapido:"
+                        android:text="Scegli un profilo rapido:"
                         android:textSize="12sp"
-                        android:textColor="#64748B"
+                        android:textColor="@color/cockpit_muted"
                         android:layout_marginBottom="6dp" />
 
                     <!-- Presets Rapidi -->
@@ -530,8 +655,8 @@
                             android:layout_weight="1"
                             android:text="280ms\nSport"
                             android:textSize="10sp"
-                            android:backgroundTint="#F1F5F9"
-                            android:textColor="#0F172A"
+                            android:backgroundTint="@color/cockpit_bg"
+                            android:textColor="@color/cockpit_ink"
                             android:layout_marginEnd="4dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
@@ -543,8 +668,8 @@
                             android:layout_weight="1"
                             android:text="420ms\nNormale"
                             android:textSize="10sp"
-                            android:backgroundTint="#F1F5F9"
-                            android:textColor="#0F172A"
+                            android:backgroundTint="@color/cockpit_bg"
+                            android:textColor="@color/cockpit_ink"
                             android:layout_marginEnd="4dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
@@ -556,8 +681,8 @@
                             android:layout_weight="1"
                             android:text="550ms\nGuanti"
                             android:textSize="10sp"
-                            android:backgroundTint="#F1F5F9"
-                            android:textColor="#0F172A"
+                            android:backgroundTint="@color/cockpit_bg"
+                            android:textColor="@color/cockpit_ink"
                             android:layout_marginEnd="4dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
@@ -569,8 +694,8 @@
                             android:layout_weight="1"
                             android:text="700ms\nLento"
                             android:textSize="10sp"
-                            android:backgroundTint="#F1F5F9"
-                            android:textColor="#0F172A"
+                            android:backgroundTint="@color/cockpit_bg"
+                            android:textColor="@color/cockpit_ink"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
 
@@ -583,9 +708,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
@@ -594,7 +719,7 @@
                         android:text="Connessione &amp; Background"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="12dp" />
 
                     <CheckBox
@@ -604,7 +729,7 @@
                         android:text="Avvio automatico all'accensione del telefono"
                         android:textSize="14sp"
                         android:checked="true"
-                        android:textColor="#1E293B"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="8dp" />
 
                     <CheckBox
@@ -613,14 +738,14 @@
                         android:layout_height="wrap_content"
                         android:text="Keep-Alive / Always-On (Anti-Standby BR80)"
                         android:textSize="14sp"
-                        android:textColor="#1E293B" />
+                        android:textColor="@color/cockpit_ink" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Invia un ping periodico ogni 60s per evitare il deep sleep del BR80. Consente risposta istantanea al primissimo tocco senza attesa di risveglio."
                         android:textSize="12sp"
-                        android:textColor="#64748B"
+                        android:textColor="@color/cockpit_muted"
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="12dp" />
 
@@ -630,14 +755,14 @@
                         android:layout_height="wrap_content"
                         android:text="Keep-Alive condizionale a dispositivo BT specifico"
                         android:textSize="14sp"
-                        android:textColor="#1E293B" />
+                        android:textColor="@color/cockpit_ink" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Attiva il Keep-Alive e l'ascolto reattivo solo quando il dispositivo scelto (es. interfono/casco) è connesso, per risparmiare batteria quando non stai guidando."
                         android:textSize="12sp"
-                        android:textColor="#64748B"
+                        android:textColor="@color/cockpit_muted"
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="8dp" />
 
@@ -648,7 +773,7 @@
                         android:text="Nessun dispositivo selezionato"
                         android:textSize="13sp"
                         android:textStyle="italic"
-                        android:textColor="#94A3B8"
+                        android:textColor="@color/cockpit_muted_dim"
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="8dp" />
 
@@ -658,8 +783,8 @@
                         android:layout_height="wrap_content"
                         android:text="Scegli Dispositivo BT (Interfono / Casco)"
                         android:textSize="13sp"
-                        android:backgroundTint="#475569"
-                        android:textColor="#FFFFFF"
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="12dp" />
 
                     <Button
@@ -668,8 +793,8 @@
                         android:layout_height="wrap_content"
                         android:text="Disattiva Ottimizzazione Batteria (Doze)"
                         android:textSize="13sp"
-                        android:backgroundTint="#475569"
-                        android:textColor="#FFFFFF" />
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink" />
 
                     <Button
                         android:id="@+id/btnOptOverlay"
@@ -677,8 +802,8 @@
                         android:layout_height="wrap_content"
                         android:text="Consenti Avvio su Altre App (Gemini / Mappe)"
                         android:textSize="13sp"
-                        android:backgroundTint="#475569"
-                        android:textColor="#FFFFFF"
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginTop="8dp" />
 
                 </LinearLayout>
@@ -688,9 +813,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
@@ -699,7 +824,7 @@
                         android:text="Feedback alla Pressione (Guanti)"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="12dp" />
 
                     <CheckBox
@@ -709,7 +834,7 @@
                         android:text="Vibrazione breve di conferma"
                         android:textSize="14sp"
                         android:checked="true"
-                        android:textColor="#1E293B"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="8dp" />
 
                     <CheckBox
@@ -720,7 +845,7 @@
                         android:textSize="14sp"
                         android:checked="false"
                         android:layout_marginBottom="8dp"
-                        android:textColor="#1E293B" />
+                        android:textColor="@color/cockpit_ink" />
 
                     <CheckBox
                         android:id="@+id/cbOptTts"
@@ -729,14 +854,14 @@
                         android:text="Annuncio vocale (TTS) delle azioni"
                         android:textSize="14sp"
                         android:checked="false"
-                        android:textColor="#1E293B" />
+                        android:textColor="@color/cockpit_ink" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Pronuncia ad alta voce ogni azione eseguita (es. &quot;Volume su&quot;, &quot;Torcia accesa&quot;), utile con interfono/casco."
                         android:textSize="12sp"
-                        android:textColor="#64748B"
+                        android:textColor="@color/cockpit_muted"
                         android:layout_marginStart="32dp" />
 
                 </LinearLayout>
@@ -746,9 +871,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
@@ -757,7 +882,7 @@
                         android:text="🎧 Audio Interfono per TTS / Comandi Vocali"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="4dp" />
 
                     <CheckBox
@@ -766,14 +891,14 @@
                         android:layout_height="wrap_content"
                         android:text="Garantisci canale voce (SCO) verso l'interfono"
                         android:textSize="14sp"
-                        android:textColor="#1E293B" />
+                        android:textColor="@color/cockpit_ink" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Apre il canale voce verso il dispositivo scelto prima di ogni messaggio TTS o attivazione Gemini, e lo rilascia solo a messaggio concluso: evita comandi persi o tagliati sull'interfono. Indipendente dal dispositivo del Keep-Alive."
                         android:textSize="12sp"
-                        android:textColor="#64748B"
+                        android:textColor="@color/cockpit_muted"
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="8dp" />
 
@@ -784,7 +909,7 @@
                         android:text="Nessun dispositivo selezionato"
                         android:textSize="13sp"
                         android:textStyle="italic"
-                        android:textColor="#94A3B8"
+                        android:textColor="@color/cockpit_muted_dim"
                         android:layout_marginStart="32dp"
                         android:layout_marginBottom="8dp" />
 
@@ -794,8 +919,46 @@
                         android:layout_height="wrap_content"
                         android:text="Scegli Dispositivo Audio (Interfono / Casco)"
                         android:textSize="13sp"
-                        android:backgroundTint="#475569"
-                        android:textColor="#FFFFFF" />
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink" />
+
+                </LinearLayout>
+
+                <!-- Card Testi Annuncio Vocale (TTS) personalizzati -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔊 Testi Annuncio Vocale (TTS)"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/cockpit_ink"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Personalizza la frase pronunciata dal TTS per ogni tasto/gesto, al posto del testo automatico dell'azione."
+                        android:textSize="12sp"
+                        android:textColor="@color/cockpit_muted"
+                        android:layout_marginBottom="8dp" />
+
+                    <Button
+                        android:id="@+id/btnManageTtsLabels"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Gestisci Testi TTS"
+                        android:textSize="13sp"
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink" />
 
                 </LinearLayout>
 
@@ -804,9 +967,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="#FFFFFF"
-                    android:padding="16dp"
-                    android:elevation="2dp"
+                    android:background="@drawable/bg_cockpit_card"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:layout_marginBottom="16dp">
 
                     <TextView
@@ -815,7 +978,7 @@
                         android:text="Aggiornamenti &amp; Automazione"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#0F172A"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="12dp" />
 
                     <Button
@@ -824,7 +987,7 @@
                         android:layout_height="wrap_content"
                         android:text="🔄 Verifica Aggiornamenti su GitHub"
                         android:textSize="13sp"
-                        android:backgroundTint="#0284C7"
+                        android:backgroundTint="@color/cockpit_accent"
                         android:textColor="#FFFFFF"
                         android:layout_marginBottom="8dp" />
 
@@ -834,8 +997,8 @@
                         android:layout_height="wrap_content"
                         android:text="⚡ Esporta Progetto Tasker (.xml)"
                         android:textSize="13sp"
-                        android:backgroundTint="#334155"
-                        android:textColor="#FFFFFF"
+                        android:backgroundTint="@color/cockpit_border"
+                        android:textColor="@color/cockpit_ink"
                         android:layout_marginBottom="8dp" />
 
                     <Button
@@ -844,7 +1007,7 @@
                         android:layout_height="wrap_content"
                         android:text="🚪 Esci / Chiudi Applicazione"
                         android:textSize="13sp"
-                        android:backgroundTint="#DC2626"
+                        android:backgroundTint="#7A1410"
                         android:textColor="#FFFFFF" />
 
                 </LinearLayout>
@@ -856,7 +1019,7 @@
                     android:layout_height="wrap_content"
                     android:text="Livall BR80 Remote • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
                     android:textSize="12sp"
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/cockpit_muted_dim"
                     android:gravity="center"
                     android:paddingVertical="8dp" />
 
@@ -869,14 +1032,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:background="#0F172A"
+            android:background="@color/cockpit_bg"
             android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="#1E293B"
+                android:background="@color/cockpit_card"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
                 android:gravity="center_vertical">
@@ -888,7 +1051,7 @@
                     android:text="Log Eventi Real-Time"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="#F8FAFC" />
+                    android:textColor="@color/cockpit_ink" />
 
                 <TextView
                     android:id="@+id/btnLogCopy"
@@ -896,7 +1059,7 @@
                     android:layout_height="wrap_content"
                     android:text="Copia"
                     android:textSize="13sp"
-                    android:textColor="#38BDF8"
+                    android:textColor="@color/cockpit_accent"
                     android:padding="8dp"
                     android:clickable="true"
                     android:focusable="true" />
@@ -907,7 +1070,7 @@
                     android:layout_height="wrap_content"
                     android:text="Esporta"
                     android:textSize="13sp"
-                    android:textColor="#22C55E"
+                    android:textColor="#4ADE80"
                     android:padding="8dp"
                     android:clickable="true"
                     android:focusable="true" />
@@ -918,7 +1081,7 @@
                     android:layout_height="wrap_content"
                     android:text="Pulisci"
                     android:textSize="13sp"
-                    android:textColor="#EF4444"
+                    android:textColor="@color/cockpit_accent_bright"
                     android:padding="8dp"
                     android:clickable="true"
                     android:focusable="true" />
@@ -935,7 +1098,7 @@
                     android:id="@+id/tvLogFull"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/cockpit_muted"
                     android:textSize="12sp"
                     android:fontFamily="monospace"
                     android:text="[READY] Registro eventi inizializzato..." />
@@ -950,7 +1113,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:orientation="horizontal"
-        android:background="#FFFFFF"
+        android:background="@color/cockpit_card"
         android:elevation="8dp">
 
         <LinearLayout
@@ -977,7 +1140,7 @@
                 android:text="Controller"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="#0284C7" />
+                android:textColor="@color/cockpit_accent" />
         </LinearLayout>
 
         <LinearLayout
@@ -1003,7 +1166,7 @@
                 android:layout_height="wrap_content"
                 android:text="Opzioni"
                 android:textSize="11sp"
-                android:textColor="#64748B" />
+                android:textColor="@color/cockpit_muted" />
         </LinearLayout>
 
         <LinearLayout
@@ -1029,7 +1192,7 @@
                 android:layout_height="wrap_content"
                 android:text="Log"
                 android:textSize="11sp"
-                android:textColor="#64748B" />
+                android:textColor="@color/cockpit_muted" />
         </LinearLayout>
 
     </LinearLayout>

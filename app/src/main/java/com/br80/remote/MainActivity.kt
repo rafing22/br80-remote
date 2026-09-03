@@ -52,6 +52,14 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var tvHeaderBattery: TextView
     private lateinit var btnQuickConnect: Button
 
+    // Gauge cruscotto (batteria / RSSI) e card ultima azione
+    private lateinit var gaugeBattery: ArcGaugeView
+    private lateinit var tvGaugeBatteryValue: TextView
+    private lateinit var gaugeRssi: ArcGaugeView
+    private lateinit var tvGaugeRssiValue: TextView
+    private lateinit var tvLastActionTitle: TextView
+    private lateinit var tvLastActionSub: TextView
+
     // Tab Containers
     private lateinit var tabController: ScrollView
     private lateinit var tabOptions: ScrollView
@@ -88,7 +96,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     // Options Tab Views
     private lateinit var tvCurrentTapSpeed: TextView
-    private lateinit var btnAutoCalibrate: Button
     private lateinit var btnPresetFast: Button
     private lateinit var btnPresetStd: Button
     private lateinit var btnPresetGloves: Button
@@ -101,6 +108,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var cbOptAudioBtRouting: CheckBox
     private lateinit var tvAudioBtDevice: TextView
     private lateinit var btnOptChooseAudioBtDevice: Button
+    private lateinit var btnManageTtsLabels: Button
     private lateinit var btnOptDoze: Button
     private lateinit var btnOptOverlay: Button
     private lateinit var cbOptHaptic: CheckBox
@@ -113,9 +121,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var btnChooseProfile: Button
     private lateinit var btnNewProfile: Button
     private lateinit var btnDeleteProfile: Button
-
-    // Calibration Dialog State Callback
-    private var activeCalibrationCallback: (() -> Unit)? = null
 
     // Log Tab Views
     private lateinit var tvLogFull: TextView
@@ -182,6 +187,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         tvHeaderBattery = findViewById(R.id.tvHeaderBattery)
         btnQuickConnect = findViewById(R.id.btnQuickConnect)
 
+        gaugeBattery = findViewById(R.id.gaugeBattery)
+        tvGaugeBatteryValue = findViewById(R.id.tvGaugeBatteryValue)
+        gaugeRssi = findViewById(R.id.gaugeRssi)
+        tvGaugeRssiValue = findViewById(R.id.tvGaugeRssiValue)
+        tvLastActionTitle = findViewById(R.id.tvLastActionTitle)
+        tvLastActionSub = findViewById(R.id.tvLastActionSub)
+
         // Tabs
         tabController = findViewById(R.id.tabController)
         tabOptions = findViewById(R.id.tabOptions)
@@ -217,7 +229,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         // Options
         tvCurrentTapSpeed = findViewById(R.id.tvCurrentTapSpeed)
-        btnAutoCalibrate = findViewById(R.id.btnAutoCalibrate)
         btnPresetFast = findViewById(R.id.btnPresetFast)
         btnPresetStd = findViewById(R.id.btnPresetStd)
         btnPresetGloves = findViewById(R.id.btnPresetGloves)
@@ -230,6 +241,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptAudioBtRouting = findViewById(R.id.cbOptAudioBtRouting)
         tvAudioBtDevice = findViewById(R.id.tvAudioBtDevice)
         btnOptChooseAudioBtDevice = findViewById(R.id.btnOptChooseAudioBtDevice)
+        btnManageTtsLabels = findViewById(R.id.btnManageTtsLabels)
         btnOptDoze = findViewById(R.id.btnOptDoze)
         btnOptOverlay = findViewById(R.id.btnOptOverlay)
         cbOptHaptic = findViewById(R.id.cbOptHaptic)
@@ -284,11 +296,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         rowGestureTriple.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.TRIPLE) }
         rowGestureLong.setOnClickListener { showActionPicker(currentSelectedButton, GestureType.LONG) }
 
-        // Calibration & Presets
-        btnAutoCalibrate.setOnClickListener {
-            showAutoCalibrationDialog()
-        }
+        // Tieni premuto su un gesto per personalizzare il testo pronunciato dal TTS
+        rowGestureSingle.setOnLongClickListener { showCustomTtsLabelDialog(currentSelectedButton, GestureType.SINGLE); true }
+        rowGestureDouble.setOnLongClickListener { showCustomTtsLabelDialog(currentSelectedButton, GestureType.DOUBLE); true }
+        rowGestureTriple.setOnLongClickListener { showCustomTtsLabelDialog(currentSelectedButton, GestureType.TRIPLE); true }
+        rowGestureLong.setOnLongClickListener { showCustomTtsLabelDialog(currentSelectedButton, GestureType.LONG); true }
 
+        // Presets rapidi ritmo tap
         btnPresetFast.setOnClickListener { setTapSpeedPreset(280L, "Sportivo (280ms)") }
         btnPresetStd.setOnClickListener { setTapSpeedPreset(420L, "Standard (420ms)") }
         btnPresetGloves.setOnClickListener { setTapSpeedPreset(550L, "Guanti (550ms)") }
@@ -352,6 +366,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             }
         }
 
+        btnManageTtsLabels.setOnClickListener {
+            showManageTtsLabelsDialog()
+        }
+
         cbOptHaptic.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setHapticFeedbackEnabled(isChecked)
             log("Vibrazione feedback: " + if (isChecked) "Attiva" else "Disattivata")
@@ -392,7 +410,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         btnExitApp.setOnClickListener {
-            AlertDialog.Builder(this)
+            AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
                 .setTitle("Esci dall'applicazione")
                 .setMessage("L'app verrà chiusa completamente e il servizio in background verrà interrotto. Il telecomando smetterà di funzionare finché non riapri l'app. Continuare?")
                 .setPositiveButton("Esci") { _, _ ->
@@ -461,84 +479,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         tvCurrentTapSpeed.text = "Finestra Doppio Tap: $current ms ($desc)"
     }
 
-    // Dialog Auto-Apprendimento Ritmo Tap a 3 tentativi
-    private fun showAutoCalibrationDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_tap_calibration, null)
-        val tvHeader = dialogView.findViewById<TextView>(R.id.tvCalibAttemptHeader)
-        val tvStatus = dialogView.findViewById<TextView>(R.id.tvCalibAttemptStatus)
-        val tvHistory = dialogView.findViewById<TextView>(R.id.tvCalibHistory)
-        val btnTap = dialogView.findViewById<Button>(R.id.btnCalibTapArea)
-
-        var currentAttempt = 1
-        val measuredIntervals = mutableListOf<Long>()
-        var firstTapTime = 0L
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("🎯 Calibrazione Ritmo Personale")
-            .setView(dialogView)
-            .setNegativeButton("Annulla") { _, _ ->
-                activeCalibrationCallback = null
-            }
-            .setCancelable(false)
-            .create()
-
-        fun handleTapEvent() {
-            val now = SystemClock.uptimeMillis()
-            if (firstTapTime == 0L) {
-                firstTapTime = now
-                tvStatus.text = "1° tocco registrato! Fai subito il 2° tocco..."
-                tvStatus.setTextColor(Color.parseColor("#0284C7"))
-            } else {
-                val interval = now - firstTapTime
-                firstTapTime = 0L
-
-                if (interval in 100L..1500L) {
-                    measuredIntervals.add(interval)
-                    val historyText = measuredIntervals.mapIndexed { idx, ms -> "Tentativo ${idx + 1}: ${ms}ms ✓" }.joinToString("\n")
-                    tvHistory.text = historyText
-
-                    if (currentAttempt < 3) {
-                        currentAttempt++
-                        tvHeader.text = "Tentativo $currentAttempt di 3"
-                        tvStatus.text = "Ottimo! Ora fai il Tentativo $currentAttempt..."
-                        tvStatus.setTextColor(Color.parseColor("#16A34A"))
-                    } else {
-                        // Calibrazione completata!
-                        activeCalibrationCallback = null
-                        val avg = measuredIntervals.average().toLong()
-                        val optimal = (avg + 70L).coerceIn(250L, 850L)
-                        mappingStorage.setMultiTapWindowMs(optimal)
-                        updateTapSpeedText()
-                        dialog.dismiss()
-
-                        AlertDialog.Builder(this)
-                            .setTitle("✅ Calibrazione Riuscita!")
-                            .setMessage("Media misurata: $avg ms\nFinestra ideale impostata: $optimal ms (con margine confortevole).\n\nOra i doppi e tripli tap saranno perfettamente calibrati sulla tua velocità!")
-                            .setPositiveButton("Perfetto", null)
-                            .show()
-
-                        log("Auto-apprendimento completato: media $avg ms -> impostato $optimal ms")
-                    }
-                } else {
-                    tvStatus.text = "Troppo lento (>1.5s). Riprova il 1° tocco..."
-                    tvStatus.setTextColor(Color.parseColor("#DC2626"))
-                }
-            }
-        }
-
-        btnTap.setOnClickListener {
-            handleTapEvent()
-        }
-
-        activeCalibrationCallback = {
-            runOnUiThread {
-                handleTapEvent()
-            }
-        }
-
-        dialog.show()
-    }
-
     private fun setupBottomNav() {
         navBtnController.setOnClickListener { switchTab(0) }
         navBtnOptions.setOnClickListener { switchTab(1) }
@@ -550,48 +490,46 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         tabOptions.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
         tabLog.visibility = if (tabIndex == 2) View.VISIBLE else View.GONE
 
-        tvNavTextController.setTextColor(toColorStateList(if (tabIndex == 0) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
-        tvNavTextOptions.setTextColor(toColorStateList(if (tabIndex == 1) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
-        tvNavTextLog.setTextColor(toColorStateList(if (tabIndex == 2) Color.parseColor("#0284C7") else Color.parseColor("#64748B")))
+        tvNavTextController.setTextColor(toColorStateList(if (tabIndex == 0) Color.parseColor("#E0140F") else Color.parseColor("#A3927B")))
+        tvNavTextOptions.setTextColor(toColorStateList(if (tabIndex == 1) Color.parseColor("#E0140F") else Color.parseColor("#A3927B")))
+        tvNavTextLog.setTextColor(toColorStateList(if (tabIndex == 2) Color.parseColor("#E0140F") else Color.parseColor("#A3927B")))
     }
 
     // Selezione del tasto del D-Pad
     private fun selectButton(button: Br80Button) {
         currentSelectedButton = button
 
-        // Reset colori di sfondo D-Pad
-        val defaultPadColor = Color.parseColor("#1E293B")
-        val defaultCenterColor = Color.parseColor("#EF4444")
-        val defaultSpecialColor = Color.parseColor("#334155")
-        val activePadColor = Color.parseColor("#0EA5E9")
-        val activeCenterColor = Color.parseColor("#B91C1C")
+        // Evidenzia il tasto selezionato sulla sagoma reale del telecomando: il corpo/hub resta
+        // fisso (drawable), cambia solo il colore/opacità del testo dell'elemento selezionato.
+        val chevronDefault = Color.parseColor("#75797F")
+        val chevronActive = Color.parseColor("#F2E6D4")
 
-        btnPadUp.backgroundTintList = toColorStateList(if (button == Br80Button.UP) activePadColor else defaultPadColor)
-        btnPadDown.backgroundTintList = toColorStateList(if (button == Br80Button.DOWN) activePadColor else defaultPadColor)
-        btnPadLeft.backgroundTintList = toColorStateList(if (button == Br80Button.LEFT) activePadColor else defaultPadColor)
-        btnPadRight.backgroundTintList = toColorStateList(if (button == Br80Button.RIGHT) activePadColor else defaultPadColor)
-        btnPadHome.backgroundTintList = toColorStateList(if (button == Br80Button.HOME) activeCenterColor else defaultCenterColor)
-        btnPadCamera.backgroundTintList = toColorStateList(if (button == Br80Button.CAMERA) activePadColor else defaultSpecialColor)
-        btnPadCall.backgroundTintList = toColorStateList(if (button == Br80Button.CALL) activePadColor else defaultSpecialColor)
+        btnPadUp.setTextColor(if (button == Br80Button.UP) chevronActive else chevronDefault)
+        btnPadDown.setTextColor(if (button == Br80Button.DOWN) chevronActive else chevronDefault)
+        btnPadLeft.setTextColor(if (button == Br80Button.LEFT) chevronActive else chevronDefault)
+        btnPadRight.setTextColor(if (button == Br80Button.RIGHT) chevronActive else chevronDefault)
+        btnPadCamera.alpha = if (button == Br80Button.CAMERA) 1f else 0.55f
+        btnPadCall.alpha = if (button == Br80Button.CALL) 1f else 0.55f
+        btnPadHome.alpha = if (button == Br80Button.HOME) 1f else 0.9f
 
         // Aggiorna scheda gesti
         tvSelectedButtonTitle.text = "${button.displayName} (${button.name})"
 
         val actSingle = mappingStorage.getAction(button, GestureType.SINGLE)
         tvActionSingle.text = actSingle.getReadableDescription()
-        tvActionSingle.setTextColor(if (actSingle.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+        tvActionSingle.setTextColor(if (actSingle.type == ActionType.NONE) Color.parseColor("#A3927B") else Color.parseColor("#E0140F"))
 
         val actDouble = mappingStorage.getAction(button, GestureType.DOUBLE)
         tvActionDouble.text = actDouble.getReadableDescription()
-        tvActionDouble.setTextColor(if (actDouble.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+        tvActionDouble.setTextColor(if (actDouble.type == ActionType.NONE) Color.parseColor("#A3927B") else Color.parseColor("#E0140F"))
 
         val actTriple = mappingStorage.getAction(button, GestureType.TRIPLE)
         tvActionTriple.text = actTriple.getReadableDescription()
-        tvActionTriple.setTextColor(if (actTriple.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+        tvActionTriple.setTextColor(if (actTriple.type == ActionType.NONE) Color.parseColor("#A3927B") else Color.parseColor("#E0140F"))
 
         val actLong = mappingStorage.getAction(button, GestureType.LONG)
         tvActionLong.text = actLong.getReadableDescription()
-        tvActionLong.setTextColor(if (actLong.type == ActionType.NONE) Color.parseColor("#94A3B8") else Color.parseColor("#0284C7"))
+        tvActionLong.setTextColor(if (actLong.type == ActionType.NONE) Color.parseColor("#A3927B") else Color.parseColor("#E0140F"))
     }
 
     // Dialog Selezione Azioni con Categorie Collassabili (chiuse all'avvio) e Ricerca Testuale
@@ -600,7 +538,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         val etSearch = dialogView.findViewById<EditText>(R.id.etActionSearch)
         val llContainer = dialogView.findViewById<LinearLayout>(R.id.llActionsContainer)
 
-        val dialog = AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("${button.displayName} — ${gesture.displayName}")
             .setView(dialogView)
             .setNegativeButton("Annulla", null)
@@ -632,7 +570,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(12, 12, 12, 12)
-                    setBackgroundColor(Color.parseColor("#E2E8F0"))
+                    setBackgroundColor(Color.parseColor("#382F24"))
                     isClickable = true
                     isFocusable = true
                     val params = LinearLayout.LayoutParams(
@@ -646,7 +584,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 val arrowIcon = TextView(this).apply {
                     text = if (isExpanded) "▼" else "▶"
                     textSize = 12f
-                    setTextColor(Color.parseColor("#475569"))
+                    setTextColor(Color.parseColor("#A3927B"))
                     setPadding(0, 0, 8, 0)
                 }
 
@@ -654,7 +592,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     text = "${category.icon} ${category.displayName} (${actions.size})"
                     textSize = 14f
                     setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.parseColor("#0F172A"))
+                    setTextColor(Color.parseColor("#F2E6D4"))
                     val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                     layoutParams = p
                 }
@@ -672,7 +610,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     val row = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(12, 8, 12, 8)
-                        setBackgroundColor(Color.parseColor("#FFFFFF"))
+                        setBackgroundColor(Color.parseColor("#241F19"))
                         isClickable = true
                         isFocusable = true
                         val params = LinearLayout.LayoutParams(
@@ -692,13 +630,13 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                         text = action.displayName
                         textSize = 13.5f
                         setTypeface(null, Typeface.BOLD)
-                        setTextColor(if (action == ActionType.NONE) Color.parseColor("#64748B") else Color.parseColor("#0284C7"))
+                        setTextColor(if (action == ActionType.NONE) Color.parseColor("#A3927B") else Color.parseColor("#E0140F"))
                     }
 
                     val tvDesc = TextView(this).apply {
                         text = action.description
                         textSize = 12f
-                        setTextColor(Color.parseColor("#64748B"))
+                        setTextColor(Color.parseColor("#A3927B"))
                     }
 
                     row.addView(tvTitle)
@@ -755,7 +693,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
         val appLabels = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Seleziona Applicazione da aprire")
             .setItems(appLabels) { _, which ->
                 val selectedApp = apps[which]
@@ -770,13 +708,176 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             .show()
     }
 
+    // Dialog "Gestisci Testi TTS" raggruppato per tasto fisico (badge UP/CALL/CAMERA...),
+    // tag di gesto in monospace (1x/2x/3x/LONG) e chip "personalizzato" solo quando serve.
+    private fun showManageTtsLabelsDialog() {
+        val entries = mutableListOf<Pair<Br80Button, GestureType>>()
+        for (button in Br80Button.values()) {
+            for (gesture in GestureType.values()) {
+                val action = mappingStorage.getAction(button, gesture)
+                if (action.type != ActionType.NONE) {
+                    entries.add(button to gesture)
+                }
+            }
+        }
+
+        if (entries.isEmpty()) {
+            Toast.makeText(this, "Nessuna azione mappata su cui personalizzare il TTS.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_manage_tts_labels, null)
+        val container = dialogView.findViewById<LinearLayout>(R.id.llTtsLabelsContainer)
+
+        fun populateTtsList() {
+            container.removeAllViews()
+            val grouped = entries.groupBy({ it.first }, { it.second })
+
+            for ((button, gestures) in grouped) {
+                val groupHead = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(8, 20, 8, 8)
+                }
+
+                val badge = TextView(this).apply {
+                    text = button.name
+                    textSize = 11f
+                    setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+                    setTextColor(Color.parseColor("#241F19"))
+                    background = androidx.core.content.ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_tts_button_badge)
+                    setPadding(14, 4, 14, 4)
+                }
+
+                val name = TextView(this).apply {
+                    text = "  ${button.displayName}"
+                    textSize = 13f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.parseColor("#F2E6D4"))
+                }
+
+                groupHead.addView(badge)
+                groupHead.addView(name)
+                container.addView(groupHead)
+
+                for (gesture in gestures) {
+                    val action = mappingStorage.getAction(button, gesture)
+                    val custom = mappingStorage.getCustomTtsLabel(button, gesture)
+                    val ttsText = custom ?: action.getReadableDescription()
+
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(12, 10, 10, 10)
+                        background = androidx.core.content.ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_tts_row)
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 0, 0, 6)
+                        layoutParams = params
+                        isClickable = true
+                        isFocusable = true
+                        setOnClickListener {
+                            showCustomTtsLabelDialog(button, gesture) { populateTtsList() }
+                        }
+                    }
+
+                    val gestureTag = TextView(this).apply {
+                        text = gesture.tag
+                        textSize = 10.5f
+                        setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+                        setTextColor(Color.parseColor("#FF5147"))
+                        background = androidx.core.content.ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_tts_gesture_tag)
+                        setPadding(10, 4, 10, 4)
+                        minWidth = 60
+                        gravity = Gravity.CENTER
+                    }
+
+                    val mainCol = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                        p.setMargins(16, 0, 8, 0)
+                        layoutParams = p
+                    }
+
+                    val phrase = TextView(this).apply {
+                        text = "“$ttsText”"
+                        textSize = 13f
+                        setTextColor(Color.parseColor("#F2E6D4"))
+                    }
+                    mainCol.addView(phrase)
+
+                    if (custom != null) {
+                        val customChip = TextView(this).apply {
+                            text = "● PERSONALIZZATO"
+                            textSize = 9f
+                            setTypeface(null, Typeface.BOLD)
+                            setTextColor(Color.parseColor("#FBBF24"))
+                            background = androidx.core.content.ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_tts_custom_chip)
+                            setPadding(8, 2, 8, 2)
+                            val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                            p.topMargin = 4
+                            layoutParams = p
+                        }
+                        mainCol.addView(customChip)
+                    }
+
+                    val pencil = TextView(this).apply {
+                        text = "✏️"
+                        textSize = 13f
+                    }
+
+                    row.addView(gestureTag)
+                    row.addView(mainCol)
+                    row.addView(pencil)
+                    container.addView(row)
+                }
+            }
+        }
+
+        populateTtsList()
+
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Gestisci Testi TTS")
+            .setView(dialogView)
+            .setNegativeButton("Chiudi", null)
+            .show()
+    }
+
+    private fun showCustomTtsLabelDialog(button: Br80Button, gesture: GestureType, onSaved: (() -> Unit)? = null) {
+        val action = mappingStorage.getAction(button, gesture)
+        val currentCustom = mappingStorage.getCustomTtsLabel(button, gesture)
+
+        val input = EditText(this).apply {
+            hint = action.getReadableDescription()
+            setText(currentCustom ?: "")
+            setSelection(text.length)
+            setTextColor(Color.parseColor("#F2E6D4"))
+            setHintTextColor(Color.parseColor("#A3927B"))
+        }
+
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Personalizza Annuncio Vocale")
+            .setMessage("${button.displayName} — ${gesture.displayName}\nTesto pronunciato dal TTS per questa azione. Lascia vuoto per usare il testo automatico (\"${action.getReadableDescription()}\").")
+            .setView(input)
+            .setPositiveButton("Salva") { _, _ ->
+                val label = input.text.toString().trim()
+                mappingStorage.setCustomTtsLabel(button, gesture, if (label.isEmpty()) null else label)
+                log("Testo TTS personalizzato per ${button.name}_${gesture.name}: " + if (label.isEmpty()) "rimosso (torna automatico)" else "\"$label\"")
+                onSaved?.invoke()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
     private fun showDestinationPicker(button: Br80Button, gesture: GestureType) {
         val input = EditText(this).apply {
             hint = "Es. Casa, Lavoro, o coordinate GPS"
             setText(mappingStorage.getAction(button, gesture).parameter)
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Destinazione Navigazione")
             .setMessage("Inserisci l'indirizzo o punto per Google Maps:")
             .setView(input)
@@ -797,7 +898,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             setText(mappingStorage.getAction(button, gesture).parameter)
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Numero Chiamata Rapida")
             .setMessage("Inserisci il numero telefonico da chiamare direttamente:")
             .setView(input)
@@ -895,7 +996,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         val current = mappingStorage.getActiveProfileName()
         val checkedIndex = profiles.indexOfFirst { it.equals(current, ignoreCase = true) }.coerceAtLeast(0)
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Scegli Profilo di Mappatura")
             .setSingleChoiceItems(profiles.toTypedArray(), checkedIndex) { dialog, which ->
                 val chosen = profiles[which]
@@ -914,7 +1015,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             hint = "Es. Musica, Navigatore, Sportivo"
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Nuovo Profilo di Mappatura")
             .setMessage("Le azioni del nuovo profilo partiranno vuote (Nessuna azione) e potrai personalizzarle liberamente.")
             .setView(input)
@@ -944,11 +1045,11 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             return
         }
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Elimina Profilo")
             .setItems(profiles.toTypedArray()) { _, which ->
                 val toDelete = profiles[which]
-                AlertDialog.Builder(this)
+                AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
                     .setTitle("Conferma Eliminazione")
                     .setMessage("Eliminare definitivamente il profilo \"$toDelete\" e tutte le sue mappature?")
                     .setPositiveButton("Elimina") { _, _ ->
@@ -1012,7 +1113,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         val labels = bondedDevices.map { "${it.name ?: "Sconosciuto"} [${it.address}]" }.toTypedArray()
         val checkedItems = bondedDevices.map { device -> currentMacs.any { it.equals(device.address, ignoreCase = true) } }.toBooleanArray()
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
             .setTitle("Scegli Dispositivi BT (selezione multipla)")
             .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
                 checkedItems[which] = isChecked
@@ -1068,14 +1169,14 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                         tvHeaderStatus.setTextColor(Color.parseColor("#CA8A04"))
                         tvHeaderBattery.text = ""
                         btnQuickConnect.text = "Riconnetti"
-                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#E0140F"))
                     } else {
                         viewStatusDot.backgroundTintList = toColorStateList(Color.parseColor("#DC2626"))
                         tvHeaderStatus.text = "Disconnesso"
-                        tvHeaderStatus.setTextColor(Color.parseColor("#64748B"))
+                        tvHeaderStatus.setTextColor(Color.parseColor("#A3927B"))
                         tvHeaderBattery.text = ""
                         btnQuickConnect.text = "Connetti"
-                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#0284C7"))
+                        btnQuickConnect.backgroundTintList = toColorStateList(Color.parseColor("#E0140F"))
                     }
                 }
                 BleGattManager.ConnectionState.CONNECTING -> {
@@ -1099,7 +1200,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     override fun onButtonRawEvent(button: Br80Button, isPress: Boolean) {
         runOnUiThread {
             if (isPress) {
-                activeCalibrationCallback?.invoke()
                 selectButton(button)
             }
         }
@@ -1109,13 +1209,28 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         runOnUiThread {
             val time = timeFormat.format(Date())
             log("[$time] AZIONE ESEGUITA -> ${button.name} [${gesture.name}]")
+
+            val action = mappingStorage.getAction(button, gesture)
+            tvLastActionTitle.text = "${button.name} — ${gesture.displayName}"
+            tvLastActionSub.text = "→ ${action.getReadableDescription().uppercase(Locale.getDefault())}"
         }
     }
 
     override fun onBatteryUpdated(level: Int) {
         runOnUiThread {
             tvHeaderBattery.text = "• $level% 🔋"
-            tvHeaderBattery.setTextColor(if (level <= 20) Color.parseColor("#DC2626") else Color.parseColor("#0284C7"))
+            tvHeaderBattery.setTextColor(if (level <= 20) Color.parseColor("#DC2626") else Color.parseColor("#E0140F"))
+            tvGaugeBatteryValue.text = if (level >= 0) "$level%" else "--"
+            gaugeBattery.setValue(if (level >= 0) level / 100f else 0f)
+        }
+    }
+
+    override fun onRssiUpdated(rssi: Int) {
+        runOnUiThread {
+            tvGaugeRssiValue.text = "$rssi"
+            // RSSI tipico BLE tra -100 dBm (segnale minimo) e -30 dBm (segnale massimo)
+            val normalized = ((rssi + 100) / 70f).coerceIn(0f, 1f)
+            gaugeRssi.setValue(normalized)
         }
     }
 

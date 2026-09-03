@@ -1,6 +1,23 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v2.4)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.0)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+
+---
+
+## 🎛️ Novità Versione 3.0 — Redesign "Cruscotto" e pulizia interfaccia
+
+### Nuova interfaccia scura ispirata al telecomando reale
+- **Tema "Cruscotto" su tutta l'app:** sfondo scuro, card con accento rosso coerente con l'unico colore acceso presente sul telecomando fisico (il tasto centrale).
+- **D-pad a sagoma reale:** il controller nella tab principale riproduce la forma vera del BR80 (corpo a pillola, alette per fotocamera/voce, ghiera con frecce e L/R), non più semplici pulsanti quadrati.
+- **Gauge analogici Batteria / RSSI:** due indicatori ad arco in stile cruscotto mostrano in tempo reale il livello di batteria e la potenza del segnale Bluetooth del telecomando.
+- **Card "Ultima Azione Eseguita":** mostra tasto, gesto e azione dell'ultimo comando ricevuto dal telecomando, senza dover controllare il log.
+- **Tutti i dialog e i popup ritemati:** selezione dispositivi Bluetooth, profili, scelta azione e gestione testi TTS ora coerenti con il tema scuro (prima apparivano con lo stile chiaro di sistema).
+
+### Testi TTS riorganizzati
+- Il pannello "Gestisci Testi TTS" ora raggruppa le voci per tasto fisico (badge "UP", "CALL", ecc.) invece di un'unica lista piatta, con tag di gesto in stile monospace ("1x", "2x", "3x", "LONG") e un'etichetta "● PERSONALIZZATO" mostrata solo sulle frasi effettivamente modificate.
+
+### Pulizia funzionalità
+- **Rimosso l'Auto-Apprendimento del Ritmo Tap** (calibrazione a 3 tentativi): restano i 4 preset rapidi (Sportivo 280ms, Standard 420ms, Guanti 550ms, Lento 700ms) per impostare la finestra del doppio/triplo tap.
 
 ---
 
@@ -92,7 +109,7 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 
 ### 1. Download Diretto
 Puoi scaricare l'APK da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v2.4.apk`**)
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v3.0.apk`**)
 - **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
 
 ### 2. Aggiornamenti In-App

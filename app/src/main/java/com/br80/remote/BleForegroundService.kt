@@ -44,6 +44,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         fun onButtonRawEvent(button: Br80Button, isPress: Boolean)
         fun onGestureExecuted(button: Br80Button, gesture: GestureType)
         fun onBatteryUpdated(level: Int)
+        fun onRssiUpdated(rssi: Int)
         fun onLog(message: String)
     }
 
@@ -191,6 +192,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     override fun onBatteryUpdated(level: Int) {
         updateNotification()
         listener?.onBatteryUpdated(level)
+    }
+
+    override fun onRssiUpdated(rssi: Int) {
+        listener?.onRssiUpdated(rssi)
     }
 
     override fun onLog(message: String) {

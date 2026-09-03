@@ -13,7 +13,9 @@
         android:hint="🔍 Cerca azione (es. gemini, volume, torcia)..."
         android:textSize="14sp"
         android:paddingHorizontal="12dp"
-        android:background="#F1F5F9"
+        android:background="@drawable/bg_gauge_panel"
+        android:textColor="@color/cockpit_ink"
+        android:textColorHint="@color/cockpit_muted"
         android:inputType="text"
         android:singleLine="true"
         android:layout_marginBottom="12dp" />
