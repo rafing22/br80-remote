@@ -27,11 +27,13 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # release-please aggiorna solo versionName (semver) via il marker
-  # x-release-please-version. versionCode (l'intero Android che deve solo
-  # crescere ad ogni release, scollegato dal semver) viene incrementato qui
-  # con un commit aggiuntivo sulla stessa Release PR, prima che tu la mergi.
-  bump-version-code:
+  # L'updater "generic" di release-please (marker x-release-please-version)
+  # si è dimostrato inaffidabile su questo file: non aggiornava versionName.
+  # Questo job aggiorna sia versionName (letto dal manifest, che invece
+  # release-please aggiorna correttamente) sia versionCode (auto-incrementato
+  # di +1, scollegato dal semver) con un commit aggiuntivo sulla stessa
+  # Release PR, prima che tu la mergi.
+  sync-android-version:
     needs: release-please
     if: ${{ needs.release-please.outputs.pr != '' }}
     runs-on: ubuntu-latest
@@ -41,16 +43,20 @@ jobs:
         with:
           ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
 
-      - name: Incrementa versionCode
+      - name: Sincronizza versionName e versionCode
         run: |
           set -euo pipefail
-          current=$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | grep -oE '[0-9]+')
-          next=$((current + 1))
-          sed -i "s/versionCode = $current \/\/ x-release-please-versionCode/versionCode = $next \/\/ x-release-please-versionCode/" app/build.gradle.kts
+          newVersionName=$(python3 -c "import json; print(json.load(open('.release-please-manifest.json'))['.'])")
+          currentVersionCode=$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | grep -oE '[0-9]+')
+          nextVersionCode=$((currentVersionCode + 1))
+
+          sed -i "s/versionCode = $currentVersionCode \/\/ x-release-please-versionCode/versionCode = $nextVersionCode \/\/ x-release-please-versionCode/" app/build.gradle.kts
+          sed -i "s/versionName = \"[0-9.]*\" \/\/ x-release-please-version/versionName = \"$newVersionName\" \/\/ x-release-please-version/" app/build.gradle.kts
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/build.gradle.kts
           if ! git diff --cached --quiet; then
-            git commit -m "chore: bump versionCode to $next"
+            git commit -m "chore: sincronizza versionName a $newVersionName e versionCode a $nextVersionCode"
             git push
           fi

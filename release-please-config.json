@@ -3,13 +3,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "changelog-path": "CHANGELOG.md",
-      "extra-files": [
-        {
-          "type": "generic",
-          "path": "app/build.gradle.kts"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
