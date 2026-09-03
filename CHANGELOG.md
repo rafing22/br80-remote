@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/rafing22/br80-remote/compare/v3.3.0...v3.3.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* le azioni chiamata avviano davvero la chiamata, registratore vocale funzionante ([9ef4469](https://github.com/rafing22/br80-remote/commit/9ef44695a46e0a34bc7009fbcadebc893a1ba70c))
+
 ## [3.3.0](https://github.com/rafing22/br80-remote/compare/v3.2.2...v3.3.0) (2026-09-03)
 
 
