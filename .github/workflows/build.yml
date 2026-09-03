@@ -38,8 +38,13 @@ jobs:
       - name: Prepare APK with release naming
         run: |
           mkdir -p release_apk
-          TAG_OR_BRANCH="${{ github.ref_name }}"
+          # Su eventi pull_request, github.ref_name vale qualcosa come "8/merge"
+          # (non un nome di branch/tag) e lo slash romperebbe il path del file:
+          # su PR usa invece head_ref (il nome reale del branch sorgente) e in
+          # ogni caso sanitizza eventuali "/" residui (es. branch "feature/x").
+          TAG_OR_BRANCH="${{ github.head_ref || github.ref_name }}"
           VERSION="${TAG_OR_BRANCH#v}"
+          VERSION="${VERSION//\//-}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
             VERSION="dev"
           fi
