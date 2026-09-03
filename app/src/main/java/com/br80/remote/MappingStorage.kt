@@ -203,7 +203,18 @@ class MappingStorage(context: Context) {
         prefs.edit().putBoolean(KEY_KEEP_ALIVE, enabled).apply()
     }
 
-    // Dispositivo BT Condizionale (es. Interfono / Casco / Auto)
+    private fun decodeDeviceSet(raw: Set<String>?): Set<Pair<String, String>> {
+        return raw?.mapNotNull {
+            val parts = it.split("|", limit = 2)
+            if (parts.size == 2 && parts[0].isNotBlank()) parts[0] to parts[1] else null
+        }?.toSet() ?: emptySet()
+    }
+
+    private fun encodeDeviceSet(devices: Set<Pair<String, String>>): Set<String> {
+        return devices.map { "${it.first}|${it.second}" }.toSet()
+    }
+
+    // Dispositivi BT Condizionali (es. Interfono / Casco / Auto) - può essere più di uno
     fun isConditionalBtEnabled(): Boolean {
         return prefs.getBoolean(KEY_CONDITIONAL_BT_ENABLED, false)
     }
@@ -212,22 +223,15 @@ class MappingStorage(context: Context) {
         prefs.edit().putBoolean(KEY_CONDITIONAL_BT_ENABLED, enabled).apply()
     }
 
-    fun getConditionalBtMac(): String? {
-        return prefs.getString(KEY_CONDITIONAL_BT_MAC, null)
+    fun getConditionalBtDevices(): Set<Pair<String, String>> {
+        return decodeDeviceSet(prefs.getStringSet(KEY_CONDITIONAL_BT_DEVICES, emptySet()))
     }
 
-    fun getConditionalBtName(): String? {
-        return prefs.getString(KEY_CONDITIONAL_BT_NAME, null)
+    fun setConditionalBtDevices(devices: Set<Pair<String, String>>) {
+        prefs.edit().putStringSet(KEY_CONDITIONAL_BT_DEVICES, encodeDeviceSet(devices)).apply()
     }
 
-    fun setConditionalBtDevice(mac: String?, name: String?) {
-        prefs.edit()
-            .putString(KEY_CONDITIONAL_BT_MAC, mac)
-            .putString(KEY_CONDITIONAL_BT_NAME, name)
-            .apply()
-    }
-
-    // Dispositivo Audio BT per TTS / Comandi Vocali (es. Interfono/Casco), indipendente dal Keep-Alive condizionale
+    // Dispositivi Audio BT per TTS / Comandi Vocali (es. Interfono/Casco), indipendenti dal Keep-Alive condizionale
     fun isAudioBtRoutingEnabled(): Boolean {
         return prefs.getBoolean(KEY_AUDIO_BT_ENABLED, false)
     }
@@ -236,19 +240,12 @@ class MappingStorage(context: Context) {
         prefs.edit().putBoolean(KEY_AUDIO_BT_ENABLED, enabled).apply()
     }
 
-    fun getAudioBtMac(): String? {
-        return prefs.getString(KEY_AUDIO_BT_MAC, null)
+    fun getAudioBtDevices(): Set<Pair<String, String>> {
+        return decodeDeviceSet(prefs.getStringSet(KEY_AUDIO_BT_DEVICES, emptySet()))
     }
 
-    fun getAudioBtName(): String? {
-        return prefs.getString(KEY_AUDIO_BT_NAME, null)
-    }
-
-    fun setAudioBtDevice(mac: String?, name: String?) {
-        prefs.edit()
-            .putString(KEY_AUDIO_BT_MAC, mac)
-            .putString(KEY_AUDIO_BT_NAME, name)
-            .apply()
+    fun setAudioBtDevices(devices: Set<Pair<String, String>>) {
+        prefs.edit().putStringSet(KEY_AUDIO_BT_DEVICES, encodeDeviceSet(devices)).apply()
     }
 
     // Gestione Profili di Mappatura
@@ -347,11 +344,9 @@ class MappingStorage(context: Context) {
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
-        private const val KEY_CONDITIONAL_BT_MAC = "pref_conditional_bt_mac"
-        private const val KEY_CONDITIONAL_BT_NAME = "pref_conditional_bt_name"
+        private const val KEY_CONDITIONAL_BT_DEVICES = "pref_conditional_bt_devices"
         private const val KEY_AUDIO_BT_ENABLED = "pref_audio_bt_enabled"
-        private const val KEY_AUDIO_BT_MAC = "pref_audio_bt_mac"
-        private const val KEY_AUDIO_BT_NAME = "pref_audio_bt_name"
+        private const val KEY_AUDIO_BT_DEVICES = "pref_audio_bt_devices"
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
         private const val KEY_PROFILE_NAMES = "pref_profile_names"
     }

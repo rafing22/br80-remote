@@ -312,8 +312,8 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         cbOptConditionalBt.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && mappingStorage.getConditionalBtMac().isNullOrEmpty()) {
-                Toast.makeText(this, "Seleziona prima un dispositivo BT dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
+            if (isChecked && mappingStorage.getConditionalBtDevices().isEmpty()) {
+                Toast.makeText(this, "Seleziona prima almeno un dispositivo BT dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
                 cbOptConditionalBt.isChecked = false
                 return@setOnCheckedChangeListener
             }
@@ -327,16 +327,16 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         btnOptChooseBtDevice.setOnClickListener {
-            showBondedDevicePickerDialog { device ->
-                mappingStorage.setConditionalBtDevice(device.address, device.name)
+            showBondedDeviceMultiPickerDialog(mappingStorage.getConditionalBtDevices()) { selected ->
+                mappingStorage.setConditionalBtDevices(selected)
                 updateConditionalBtDeviceLabel()
-                log("Dispositivo BT condizionale impostato: ${device.name} [${device.address}]")
+                log("Dispositivi BT condizionali impostati: ${selected.joinToString(", ") { it.second }}")
             }
         }
 
         cbOptAudioBtRouting.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && mappingStorage.getAudioBtMac().isNullOrEmpty()) {
-                Toast.makeText(this, "Seleziona prima un dispositivo audio dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
+            if (isChecked && mappingStorage.getAudioBtDevices().isEmpty()) {
+                Toast.makeText(this, "Seleziona prima almeno un dispositivo audio dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
                 cbOptAudioBtRouting.isChecked = false
                 return@setOnCheckedChangeListener
             }
@@ -345,10 +345,10 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         }
 
         btnOptChooseAudioBtDevice.setOnClickListener {
-            showBondedDevicePickerDialog { device ->
-                mappingStorage.setAudioBtDevice(device.address, device.name)
+            showBondedDeviceMultiPickerDialog(mappingStorage.getAudioBtDevices()) { selected ->
+                mappingStorage.setAudioBtDevices(selected)
                 updateAudioBtDeviceLabel()
-                log("Dispositivo audio per TTS/Comandi impostato: ${device.name} [${device.address}]")
+                log("Dispositivi audio per TTS/Comandi impostati: ${selected.joinToString(", ") { it.second }}")
             }
         }
 
@@ -964,18 +964,31 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             .show()
     }
 
-    private fun updateConditionalBtDeviceLabel() {
-        val name = mappingStorage.getConditionalBtName()
-        val mac = mappingStorage.getConditionalBtMac()
-        tvConditionalBtDevice.text = if (!name.isNullOrEmpty() && !mac.isNullOrEmpty()) {
-            "Dispositivo selezionato: $name [$mac]"
-        } else {
+    private fun formatDeviceSetLabel(devices: Set<Pair<String, String>>): String {
+        return if (devices.isEmpty()) {
             "Nessun dispositivo selezionato"
+        } else {
+            "Dispositivi selezionati: " + devices.joinToString(", ") { it.second }
         }
     }
 
+    private fun updateConditionalBtDeviceLabel() {
+        tvConditionalBtDevice.text = formatDeviceSetLabel(mappingStorage.getConditionalBtDevices())
+    }
+
+    private fun updateAudioBtDeviceLabel() {
+        tvAudioBtDevice.text = formatDeviceSetLabel(mappingStorage.getAudioBtDevices())
+    }
+
+    /**
+     * Mostra un elenco di dispositivi accoppiati a selezione multipla, pre-selezionando
+     * quelli già scelti in [currentSelection] (per mac). Conferma con [onSelectionConfirmed].
+     */
     @SuppressLint("MissingPermission")
-    private fun showBondedDevicePickerDialog(onDeviceChosen: (android.bluetooth.BluetoothDevice) -> Unit) {
+    private fun showBondedDeviceMultiPickerDialog(
+        currentSelection: Set<Pair<String, String>>,
+        onSelectionConfirmed: (Set<Pair<String, String>>) -> Unit
+    ) {
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
         } else {
@@ -995,25 +1008,23 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             return
         }
 
+        val currentMacs = currentSelection.map { it.first }
         val labels = bondedDevices.map { "${it.name ?: "Sconosciuto"} [${it.address}]" }.toTypedArray()
+        val checkedItems = bondedDevices.map { device -> currentMacs.any { it.equals(device.address, ignoreCase = true) } }.toBooleanArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Scegli Dispositivo BT")
-            .setItems(labels) { _, which ->
-                onDeviceChosen(bondedDevices[which])
+            .setTitle("Scegli Dispositivi BT (selezione multipla)")
+            .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
+                checkedItems[which] = isChecked
+            }
+            .setPositiveButton("Conferma") { _, _ ->
+                val selected = bondedDevices.filterIndexed { index, _ -> checkedItems[index] }
+                    .map { it.address to (it.name ?: "Sconosciuto") }
+                    .toSet()
+                onSelectionConfirmed(selected)
             }
             .setNegativeButton("Annulla", null)
             .show()
-    }
-
-    private fun updateAudioBtDeviceLabel() {
-        val name = mappingStorage.getAudioBtName()
-        val mac = mappingStorage.getAudioBtMac()
-        tvAudioBtDevice.text = if (!name.isNullOrEmpty() && !mac.isNullOrEmpty()) {
-            "Dispositivo selezionato: $name [$mac]"
-        } else {
-            "Nessun dispositivo selezionato"
-        }
     }
 
     private fun exitApplication() {

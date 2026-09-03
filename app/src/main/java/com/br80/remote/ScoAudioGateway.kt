@@ -22,30 +22,43 @@ object ScoAudioGateway {
     private const val TAG = "ScoAudioGateway"
     private val handler = Handler(Looper.getMainLooper())
 
+    // Piccolo margine dopo la conferma SCO_AUDIO_STATE_CONNECTED: su alcuni OEM l'evento
+    // arriva un istante prima che il percorso audio sia davvero stabile, tagliando l'inizio
+    // del beep/prompt di Gemini.
+    private const val AUDIO_SETTLE_DELAY_MS = 350L
+
     private var scoReceiver: BroadcastReceiver? = null
     private var scoTimeoutRunnable: Runnable? = null
+    private var settleRunnable: Runnable? = null
     private var geminiWatchRunnable: Runnable? = null
+    private var previousAudioMode: Int? = null
 
     fun isTargetAudioDeviceConnected(context: Context, mappingStorage: MappingStorage): Boolean {
-        val targetMac = mappingStorage.getAudioBtMac() ?: return false
+        val targetMacs = mappingStorage.getAudioBtDevices().map { it.first }
+        if (targetMacs.isEmpty()) return false
+        return isAnyDeviceConnected(context, targetMacs)
+    }
+
+    fun isAnyDeviceConnected(context: Context, macs: List<String>): Boolean {
+        if (macs.isEmpty()) return false
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return false
         val adapter = bluetoothManager.adapter ?: return false
         if (!adapter.isEnabled) return false
 
         return try {
-            val a2dp = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP).any { it.address.equals(targetMac, ignoreCase = true) }
-            val headset = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET).any { it.address.equals(targetMac, ignoreCase = true) }
-            a2dp || headset
+            val a2dp = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP)
+            val headset = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)
+            (a2dp + headset).any { device -> macs.any { it.equals(device.address, ignoreCase = true) } }
         } catch (e: Exception) {
-            Log.w(TAG, "Impossibile verificare dispositivo audio connesso: ${e.message}")
+            Log.w(TAG, "Impossibile verificare dispositivi audio connessi: ${e.message}")
             false
         }
     }
 
     /**
-     * Apre il canale SCO verso l'interfono e attende la conferma di sistema.
-     * Chiama [onResult] con true se il canale è confermato aperto entro [timeoutMs],
-     * false altrimenti (il chiamante decide il fallback).
+     * Apre il canale SCO verso l'interfono e attende la conferma di sistema (più un
+     * breve margine di assestamento). Chiama [onResult] con true se il canale è pronto
+     * entro [timeoutMs], false altrimenti (il chiamante decide il fallback).
      */
     fun openScoAndAwait(context: Context, timeoutMs: Long = 2500L, onResult: (Boolean) -> Unit) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -70,7 +83,12 @@ object ScoAudioGateway {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 val state = intent?.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1) ?: -1
                 when (state) {
-                    AudioManager.SCO_AUDIO_STATE_CONNECTED -> resolve(true)
+                    AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
+                        // Attendi il margine di assestamento prima di considerare il canale
+                        // davvero pronto per riprodurre/catturare audio.
+                        settleRunnable = Runnable { resolve(true) }
+                        handler.postDelayed(settleRunnable!!, AUDIO_SETTLE_DELAY_MS)
+                    }
                     AudioManager.SCO_AUDIO_STATE_DISCONNECTED, AudioManager.SCO_AUDIO_STATE_ERROR -> resolve(false)
                 }
             }
@@ -89,6 +107,10 @@ object ScoAudioGateway {
         handler.postDelayed(scoTimeoutRunnable!!, timeoutMs)
 
         try {
+            previousAudioMode = audioManager.mode
+            // MODE_IN_COMMUNICATION è necessario su diversi OEM perché l'audio venga
+            // effettivamente instradato sul canale SCO invece che restare sullo speaker/A2DP.
+            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
             @Suppress("DEPRECATION")
             audioManager.startBluetoothSco()
             audioManager.isBluetoothScoOn = true
@@ -108,6 +130,8 @@ object ScoAudioGateway {
             audioManager?.isBluetoothScoOn = false
             @Suppress("DEPRECATION")
             audioManager?.stopBluetoothSco()
+            audioManager?.mode = previousAudioMode ?: AudioManager.MODE_NORMAL
+            previousAudioMode = null
         } catch (e: Exception) {
             Log.w(TAG, "Errore rilascio SCO: ${e.message}")
         }
@@ -116,6 +140,8 @@ object ScoAudioGateway {
     private fun cleanupScoWait(context: Context) {
         scoTimeoutRunnable?.let { handler.removeCallbacks(it) }
         scoTimeoutRunnable = null
+        settleRunnable?.let { handler.removeCallbacks(it) }
+        settleRunnable = null
         scoReceiver?.let {
             try {
                 context.applicationContext.unregisterReceiver(it)

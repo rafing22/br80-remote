@@ -29,26 +29,20 @@ class BtDeviceMonitor(
             val action = intent?.action ?: return
 
             when (action) {
-                BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                BluetoothDevice.ACTION_ACL_CONNECTED, BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                     val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    val targetMac = mappingStorage.getConditionalBtMac()
-                    val targetName = mappingStorage.getConditionalBtName()
+                    val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
 
-                    if (device != null && isTargetDevice(device, targetMac)) {
-                        val name = device.name ?: targetName ?: "Dispositivo BT"
-                        Log.d(tag, "Dispositivo BT target connesso: $name [${device.address}]")
-                        listener.onTargetDeviceConnectionChanged(true, name)
-                    }
-                }
-                BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    val targetMac = mappingStorage.getConditionalBtMac()
-                    val targetName = mappingStorage.getConditionalBtName()
-
-                    if (device != null && isTargetDevice(device, targetMac)) {
-                        val name = device.name ?: targetName ?: "Dispositivo BT"
-                        Log.d(tag, "Dispositivo BT target disconnesso: $name [${device.address}]")
-                        listener.onTargetDeviceConnectionChanged(false, name)
+                    if (device != null && isTargetDevice(device, targetMacs)) {
+                        // Ricalcola lo stato aggregato: se hai più dispositivi target configurati,
+                        // la disconnessione di UNO solo non deve spegnere il keep-alive se un
+                        // altro dispositivo target resta connesso.
+                        val stillConnected = isTargetCurrentlyConnected()
+                        val name = device.name ?: mappingStorage.getConditionalBtDevices()
+                            .firstOrNull { it.first.equals(device.address, ignoreCase = true) }?.second
+                            ?: "Dispositivo BT"
+                        Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
+                        listener.onTargetDeviceConnectionChanged(stillConnected, name)
                     }
                 }
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
@@ -92,18 +86,20 @@ class BtDeviceMonitor(
     }
 
     fun isTargetCurrentlyConnected(): Boolean {
-        val targetMac = mappingStorage.getConditionalBtMac() ?: return false
+        val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
+        if (targetMacs.isEmpty()) return false
+
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = bluetoothManager?.adapter ?: return false
-
         if (!adapter.isEnabled) return false
 
         try {
-            // Controlla sia il profilo A2DP che HEADSET per cuffie / interfoni
-            val a2dpConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP).any { it.address.equals(targetMac, ignoreCase = true) }
-            val headsetConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET).any { it.address.equals(targetMac, ignoreCase = true) }
-            val gattConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT).any { it.address.equals(targetMac, ignoreCase = true) }
-            return a2dpConnected || headsetConnected || gattConnected
+            // Controlla sia il profilo A2DP che HEADSET/GATT per cuffie / interfoni / telecomandi
+            val a2dpConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.A2DP)
+            val headsetConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)
+            val gattConnected = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
+            val allConnected = a2dpConnected + headsetConnected + gattConnected
+            return allConnected.any { device -> targetMacs.any { it.equals(device.address, ignoreCase = true) } }
         } catch (e: Exception) {
             Log.w(tag, "Impossibile verificare dispositivi connessi da BluetoothManager: ${e.message}")
         }
@@ -113,13 +109,13 @@ class BtDeviceMonitor(
     private fun checkCurrentTargetConnectionState() {
         if (mappingStorage.isConditionalBtEnabled()) {
             val isConnected = isTargetCurrentlyConnected()
-            val name = mappingStorage.getConditionalBtName()
+            val name = mappingStorage.getConditionalBtDevices().firstOrNull()?.second
             listener.onTargetDeviceConnectionChanged(isConnected, name)
         }
     }
 
-    private fun isTargetDevice(device: BluetoothDevice, targetMac: String?): Boolean {
-        if (targetMac.isNullOrEmpty()) return false
-        return device.address.equals(targetMac, ignoreCase = true)
+    private fun isTargetDevice(device: BluetoothDevice, targetMacs: List<String>): Boolean {
+        if (targetMacs.isEmpty()) return false
+        return targetMacs.any { it.equals(device.address, ignoreCase = true) }
     }
 }

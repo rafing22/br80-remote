@@ -49,6 +49,7 @@ class BleGattManager(
         private set
 
     private var bluetoothGatt: BluetoothGatt? = null
+    private var isConnectingGatt = false
     private var userRequestedDisconnect = false
     private var isScanning = false
     private var scanCallback: ScanCallback? = null
@@ -281,6 +282,15 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     private fun connectGattTo(device: BluetoothDevice) {
+        // Guard sincrono: indipendentemente da quale percorso chiami questa funzione
+        // (scan callback, watchdog, retry...), non avviare mai una seconda connessione
+        // GATT mentre una è già in corso o attiva sullo stesso o altro device.
+        if (isConnectingGatt || bluetoothGatt != null) {
+            log("Connessione GATT già in corso: richiesta duplicata verso ${device.address} ignorata.")
+            return
+        }
+        isConnectingGatt = true
+
         wakeRetries = 0
         stopLeScan()
         handler.postDelayed({
@@ -289,6 +299,7 @@ class BleGattManager(
                 bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             } catch (e: Exception) {
                 log("Eccezione connectGatt: ${e.message}")
+                isConnectingGatt = false
                 stopConnectionWatchdog()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
@@ -356,6 +367,7 @@ class BleGattManager(
         stopConnectionWatchdog()
         stopKeepAlive()
         clearGattOperationQueue()
+        isConnectingGatt = false
         val gatt = bluetoothGatt
         bluetoothGatt = null
         if (gatt != null) {
@@ -443,6 +455,7 @@ class BleGattManager(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             handler.post {
                 log("Stato connessione BLE: status=$status (${gattStatusString(status)}), newState=$newState")
+                isConnectingGatt = false
 
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     log("Errore GATT rilevato ($status). Ripristino automatico stack...")

@@ -1,4 +1,4 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v2.3)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v2.4)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
@@ -30,6 +30,17 @@ Applicazione Android open source per connettere, decodificare e mappare i tasti 
 ### Aggiornamenti
 - Verifica e installazione degli aggiornamenti in-app corretta (permesso `INTERNET` e `REQUEST_INSTALL_PACKAGES` dichiarati correttamente).
 - **Keystore di debug condiviso** committato nel repository: build locali e build CI producono APK firmati in modo identico, così gli aggiornamenti in-app funzionano sempre senza conflitti di firma.
+
+### Novità Versione 2.4 — Rilevamento gesti riprogettato e dispositivi multipli
+- **Rilevamento tap riprogettato** secondo le best practice standard (debounce + finestra scorrevole + guardia anti-glitch):
+  - **Debounce hardware** (~35ms): filtra i pacchetti PRESS/RELEASE spuri che il telecomando a volte invia per una singola pressione fisica, che prima corrompevano il conteggio dei tap.
+  - **Guardia press/release fantasma:** un RELEASE senza PRESS corrispondente (o viceversa) viene ignorato, eliminando i falsi "LONG" o "SINGLE" fantasma osservati nei log.
+  - **Finestra scorrevole per doppio/triplo tap:** il timer si riavvia ad ogni tap invece di essere fisso dal primo, così anche un triplo tap con cadenza più lenta viene riconosciuto correttamente (prima veniva letto come doppio tap).
+  - **LONG press reattivo:** ora scatta nell'istante esatto in cui superi la soglia configurata, mentre tieni ancora premuto, senza dover attendere il rilascio del tasto.
+- **Connessione GATT ulteriormente rinforzata:** guardia anti-duplicazione spostata al livello più basso (`connectGattTo`), così nessun percorso (scanner, watchdog, retry) può più avviare due connessioni concorrenti verso lo stesso telecomando, anche dopo lunghe pause di inattività del telefono.
+- **Dispositivi Bluetooth multipli:** sia il Keep-Alive condizionale sia il canale audio SCO per TTS/Gemini supportano ora la selezione di più dispositivi contemporaneamente (es. più interfoni/cuffie): la funzione resta attiva finché almeno uno dei dispositivi scelti è connesso.
+- **Canale voce SCO più affidabile:** margine di assestamento audio dopo la conferma di apertura del canale e impostazione esplicita di `AudioManager.MODE_IN_COMMUNICATION`, per evitare che l'inizio del beep di attivazione di Gemini venga perso su alcuni dispositivi.
+- **TTS prima di Gemini rimosso:** l'annuncio vocale di conferma prima dell'attivazione di Gemini tagliava a metà frase a causa del cambio di canale audio A2DP → SCO; resta solo vibrazione/beep immediati.
 
 ---
 
@@ -81,7 +92,7 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 
 ### 1. Download Diretto
 Puoi scaricare l'APK da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v2.3.apk`**)
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v2.4.apk`**)
 - **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
 
 ### 2. Aggiornamenti In-App
