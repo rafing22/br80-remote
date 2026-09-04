@@ -69,8 +69,18 @@ class TaskerSlotsFragment : OptionsDetailFragment(R.layout.fragment_option_taske
                 textSize = 15f
             }
 
+            val trash = TextView(ctx).apply {
+                text = "🗑️"
+                textSize = 15f
+                setPadding(24, 0, 0, 0)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { showDeleteConfirmDialog(slot) }
+            }
+
             row.addView(name)
             row.addView(pencil)
+            row.addView(trash)
             container.addView(row)
         }
     }
@@ -94,6 +104,27 @@ class TaskerSlotsFragment : OptionsDetailFragment(R.layout.fragment_option_taske
                     host.appendLog("Tasto Virtuale rinominato: \"${slot.name}\" -> \"$newName\"")
                     populateSlotsList()
                 }
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showDeleteConfirmDialog(slot: TaskerVirtualSlot) {
+        val ctx = requireContext()
+        val inUse = mappingStorage.isTaskerVirtualSlotInUse(slot.id)
+        val message = if (inUse) {
+            "Almeno un tasto/gesto è ancora mappato su \"${slot.name}\": dopo l'eliminazione quella mappatura resterà orfana (nessun nome risolvibile, va rimappata su un altro Tasto Virtuale). Eliminare comunque?"
+        } else {
+            "Eliminare il Tasto Virtuale \"${slot.name}\"? Non è usato da nessuna mappatura al momento."
+        }
+
+        AlertDialog.Builder(ctx, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Elimina Tasto Virtuale")
+            .setMessage(message)
+            .setPositiveButton("Elimina") { _, _ ->
+                mappingStorage.deleteTaskerVirtualSlot(slot.id)
+                host.appendLog("Tasto Virtuale eliminato: \"${slot.name}\"")
+                populateSlotsList()
             }
             .setNegativeButton("Annulla", null)
             .show()

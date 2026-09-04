@@ -285,6 +285,20 @@ class MappingStorage private constructor(context: Context) {
         saveTaskerVirtualSlots(updated)
     }
 
+    fun deleteTaskerVirtualSlot(id: Int) {
+        val updated = getTaskerVirtualSlots().filter { it.id != id }
+        saveTaskerVirtualSlots(updated)
+    }
+
+    // True se almeno un tasto/gesto (in un profilo qualsiasi) è mappato su questo slot:
+    // usato per avvisare prima di eliminarlo, dato che quella mappatura resterebbe
+    // "orfana" (nessun nome risolvibile, il trigger Tasker smette di essere identificabile).
+    fun isTaskerVirtualSlotInUse(id: Int): Boolean {
+        return mappingCache.values.any {
+            it.actionTypeId == ActionType.TASKER_TRIGGER_EVENT.id && it.parameter == id.toString()
+        }
+    }
+
     fun getTaskerVirtualSlotName(id: Int?): String? {
         if (id == null) return null
         return getTaskerVirtualSlots().firstOrNull { it.id == id }?.name
