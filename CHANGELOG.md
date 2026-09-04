@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.6.0](https://github.com/rafing22/br80-remote/compare/v3.5.0...v3.6.0) (2026-09-04)
+
+
+### Features
+
+* firma di release dedicata e icona coerente col tema cruscotto ([bb77816](https://github.com/rafing22/br80-remote/commit/bb7781615ed1875dbcb1adea4f3e9e692471a84d))
+* ritardo configurabile lancio Gemini dopo apertura canale interfono ([aade18f](https://github.com/rafing22/br80-remote/commit/aade18f6ebf6a13be418abef52196e718d2c78c7))
+
+
+### Bug Fixes
+
+* mappature tasto non applicate alle pressioni reali e doppio bip Gemini ([a4a892b](https://github.com/rafing22/br80-remote/commit/a4a892b64cebaebcecf513584bce29262d2096d2))
+
 ## [3.5.0](https://github.com/rafing22/br80-remote/compare/v3.4.0...v3.5.0) (2026-09-04)
 
 
