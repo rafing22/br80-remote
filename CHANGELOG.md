@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0](https://github.com/rafing22/br80-remote/compare/v3.6.0...v3.7.0) (2026-09-04)
+
+
+### Features
+
+* chiudi Gemini con "Indietro" prima di rilanciarlo ([6052a49](https://github.com/rafing22/br80-remote/commit/6052a4993f7a690aa760668061bed6d6eb8bfb9f))
+
 ## [3.6.0](https://github.com/rafing22/br80-remote/compare/v3.5.0...v3.6.0) (2026-09-04)
 
 
