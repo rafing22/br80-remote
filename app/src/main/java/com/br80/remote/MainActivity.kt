@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mappingStorage = MappingStorage(this)
+        mappingStorage = MappingStorage.getInstance(this)
 
         initHeaderViews()
         setupBottomNav()

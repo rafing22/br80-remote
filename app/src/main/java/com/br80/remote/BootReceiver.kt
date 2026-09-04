@@ -9,7 +9,7 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED || intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            val mappingStorage = MappingStorage(context)
+            val mappingStorage = MappingStorage.getInstance(context)
             if (mappingStorage.isAutoStartOnBootEnabled()) {
                 val serviceIntent = Intent(context, BleForegroundService::class.java).apply {
                     putExtra(BleForegroundService.EXTRA_CONNECT_NOW, true)

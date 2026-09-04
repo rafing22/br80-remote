@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -174,7 +176,7 @@ object ScoAudioGateway {
      * Applica comunque un timeout massimo di sicurezza per non tenere il canale aperto
      * indefinitamente se il monitor non rileva nulla.
      */
-    fun releaseScoWhenGeminiFinishes(context: Context, maxTimeoutMs: Long = 10_000L, pollIntervalMs: Long = 400L) {
+    fun releaseScoWhenGeminiFinishes(context: Context, onLog: ((String) -> Unit)? = null, maxTimeoutMs: Long = 10_000L, pollIntervalMs: Long = 400L) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         if (audioManager == null) {
             releaseSco(context)
@@ -185,18 +187,34 @@ object ScoAudioGateway {
         val appContext = context.applicationContext
         val startTime = System.currentTimeMillis()
         var sawActiveRecording = false
+        var loggedMicSource = false
 
         val poller = object : Runnable {
             override fun run() {
                 val elapsed = System.currentTimeMillis() - startTime
-                val hasActiveRecording = try {
-                    audioManager.activeRecordingConfigurations.isNotEmpty()
+                val recordings = try {
+                    audioManager.activeRecordingConfigurations
                 } catch (e: Exception) {
-                    false
+                    emptyList()
                 }
+                val hasActiveRecording = recordings.isNotEmpty()
 
                 if (hasActiveRecording) {
                     sawActiveRecording = true
+                    // Log una tantum, alla prima registrazione rilevata: dice all'utente se
+                    // il microfono effettivamente in uso è quello dell'interfono (SCO) o è
+                    // ricaduto sul telefono, invece di doverlo solo presumere dal canale audio.
+                    if (!loggedMicSource && onLog != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        loggedMicSource = true
+                        val deviceType = recordings.firstOrNull()?.audioDevice?.type
+                        val label = when (deviceType) {
+                            AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "Interfono/Cuffie Bluetooth (SCO)"
+                            AudioDeviceInfo.TYPE_BUILTIN_MIC -> "Telefono (microfono integrato)"
+                            null -> "Sconosciuto (nessuna registrazione rilevata)"
+                            else -> "Altro dispositivo (tipo $deviceType)"
+                        }
+                        onLog("Microfono in uso per Gemini: $label")
+                    }
                 }
 
                 val geminiLikelyDone = sawActiveRecording && !hasActiveRecording

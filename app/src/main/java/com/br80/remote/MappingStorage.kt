@@ -129,7 +129,7 @@ data class ButtonAction(val type: ActionType, val parameter: String = "") {
     }
 }
 
-class MappingStorage(context: Context) {
+class MappingStorage private constructor(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val dao: ButtonMappingDao = Br80Database.getInstance(context).buttonMappingDao()
@@ -198,6 +198,18 @@ class MappingStorage(context: Context) {
     fun setMultiTapWindowMs(ms: Long) {
         val clamped = ms.coerceIn(200L, 900L)
         prefs.edit().putLong(KEY_MULTI_TAP_WINDOW, clamped).apply()
+    }
+
+    // Ritardo tra apertura confermata del canale voce interfono (SCO) e lancio di Gemini,
+    // in millisecondi (default 0 = comportamento invariato). Configurabile per test empirici
+    // sul comportamento del bip/microfono di Gemini rispetto al canale audio.
+    fun getGeminiLaunchDelayMs(): Long {
+        return prefs.getLong(KEY_GEMINI_LAUNCH_DELAY, 0L)
+    }
+
+    fun setGeminiLaunchDelayMs(ms: Long) {
+        val clamped = ms.coerceIn(0L, 3000L)
+        prefs.edit().putLong(KEY_GEMINI_LAUNCH_DELAY, clamped).apply()
     }
 
     // Soglia minima pressione lunga in millisecondi (default 550ms)
@@ -461,6 +473,20 @@ class MappingStorage(context: Context) {
     }
 
     companion object {
+        @Volatile private var instance: MappingStorage? = null
+
+        // Singleton legato all'Application Context: MainActivity, BleForegroundService e
+        // BootReceiver devono condividere la STESSA cache in memoria. Prima di questo fix
+        // ognuno creava una propria istanza di MappingStorage con una propria cache caricata
+        // una sola volta all'avvio: salvare una nuova mappatura dalla UI aggiornava solo la
+        // cache dell'Activity, mentre il Service (che gestisce le pressioni fisiche reali)
+        // continuava a usare la vecchia azione perché la sua cache non veniva mai invalidata.
+        fun getInstance(context: Context): MappingStorage {
+            return instance ?: synchronized(this) {
+                instance ?: MappingStorage(context.applicationContext).also { instance = it }
+            }
+        }
+
         private const val PREFS_NAME = "br80_remote_mappings"
         private const val KEY_LAST_MAC = "pref_last_connected_mac"
         private const val KEY_HAPTIC_FEEDBACK = "pref_haptic_feedback"
@@ -468,6 +494,7 @@ class MappingStorage(context: Context) {
         private const val KEY_TTS_FEEDBACK = "pref_tts_feedback"
         private const val KEY_KEEP_ALIVE = "pref_keep_alive"
         private const val KEY_MULTI_TAP_WINDOW = "pref_multi_tap_window_ms"
+        private const val KEY_GEMINI_LAUNCH_DELAY = "pref_gemini_launch_delay_ms"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"

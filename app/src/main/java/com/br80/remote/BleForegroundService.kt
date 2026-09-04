@@ -108,7 +108,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     override fun onCreate() {
         super.onCreate()
-        mappingStorage = MappingStorage(this)
+        mappingStorage = MappingStorage.getInstance(this)
         ttsFeedbackManager = TtsFeedbackManager(this, mappingStorage)
         actionExecutor = ActionExecutor(this, mappingStorage, ttsFeedbackManager) { logMsg ->
             listener?.onLog(logMsg)

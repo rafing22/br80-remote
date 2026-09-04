@@ -50,15 +50,27 @@ class ActionExecutor(
         sendTaskerBroadcast(button, gesture, eventId, batteryLevel)
 
         // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione").
-        // Per Gemini niente TTS: l'apertura del canale SCO subito dopo taglierebbe la frase
-        // a metà mentre il canale passa da A2DP a SCO; resta solo vibrazione/beep immediati.
         // Per Indietro/Home/Blocca Schermo, niente feedback se il Servizio di Accessibilità
         // non è attivo: l'azione fallirà silenziosamente (vedi performGlobalAction()), e senza
         // questo controllo l'utente sentirebbe comunque una "falsa conferma" aptica/vocale.
         val isGlobalActionWithoutService = requiresAccessibilityService(action.type) && !Br80AccessibilityService.isRunning()
         if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && action.type != ActionType.TASKER_TRIGGER_EVENT && !isGlobalActionWithoutService) {
             val ttsText = mappingStorage.getCustomTtsLabel(button, gesture) ?: action.getReadableDescription()
-            triggerFeedback(ttsText, allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
+            // Per Gemini, se il canale voce verso l'interfono sta per aprirsi (SCO), niente
+            // TTS né beep immediati: partirebbero sul percorso audio ancora predefinito
+            // (telefono) un istante prima che il canale passi all'interfono, risultando in
+            // un doppio segnale acustico percepibile ("bip dal telefono, poi dalle cuffie").
+            // Il chime di attivazione di Gemini stesso arriva già a canale pronto e basta
+            // come conferma. Se il routing interfono non è configurato non c'è alcun cambio
+            // di canale in corso, quindi il beep resta utile e viene lasciato invariato.
+            val willSwitchAudioChannelForGemini = action.type == ActionType.VOICE_ASSISTANT_GEMINI &&
+                mappingStorage.isAudioBtRoutingEnabled() &&
+                ScoAudioGateway.isTargetAudioDeviceConnected(context, mappingStorage)
+            triggerFeedback(
+                ttsText,
+                allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI,
+                allowSound = !willSwitchAudioChannelForGemini
+            )
         }
 
         // 3. Esegue l'azione nativa corrispondente
@@ -218,9 +230,14 @@ class ActionExecutor(
                 } else {
                     onLog("Canale voce interfono non disponibile (dispositivo non ha risposto in tempo): attivo Gemini sul percorso audio predefinito.")
                 }
-                fireGeminiIntents()
+                val delayMs = mappingStorage.getGeminiLaunchDelayMs()
+                if (delayMs > 0) {
+                    Handler(Looper.getMainLooper()).postDelayed({ fireGeminiIntents() }, delayMs)
+                } else {
+                    fireGeminiIntents()
+                }
                 if (connected) {
-                    ScoAudioGateway.releaseScoWhenGeminiFinishes(context)
+                    ScoAudioGateway.releaseScoWhenGeminiFinishes(context, onLog = onLog)
                 }
             }
         } else {
@@ -490,7 +507,7 @@ class ActionExecutor(
         }.start()
     }
 
-    private fun triggerFeedback(actionDescription: String, allowTts: Boolean = true) {
+    private fun triggerFeedback(actionDescription: String, allowTts: Boolean = true, allowSound: Boolean = true) {
         if (mappingStorage.isHapticFeedbackEnabled()) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -511,7 +528,7 @@ class ActionExecutor(
             }
         }
 
-        if (mappingStorage.isSoundFeedbackEnabled()) {
+        if (allowSound && mappingStorage.isSoundFeedbackEnabled()) {
             try {
                 val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 60)
                 toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 70)
