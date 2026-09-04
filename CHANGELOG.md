@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.5.0](https://github.com/rafing22/br80-remote/compare/v3.4.0...v3.5.0) (2026-09-04)
+
+
+### Features
+
+* redesign UI (MainActivity in Fragment, Opzioni a elenco, nuovo picker azioni, Room) ([9ddb1f1](https://github.com/rafing22/br80-remote/commit/9ddb1f1c74740bd45a1e607d574cff9f485aa4a3))
+
+
+### Bug Fixes
+
+* bug scoperti dalla revisione indipendente di stile/architettura ([1f57ccd](https://github.com/rafing22/br80-remote/commit/1f57ccd4a592a1a049972639b5bd853ebea5daa5))
+
 ## [3.4.0](https://github.com/rafing22/br80-remote/compare/v3.3.3...v3.4.0) (2026-09-04)
 
 
