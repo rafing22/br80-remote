@@ -619,9 +619,12 @@ class BleGattManager(
             }
         }
 
+        // Stessa doppia-chiamata di sistema su Android 13+ già osservata per
+        // onCharacteristicChanged: solo un overload deve processare/avanzare la coda.
         @SuppressLint("MissingPermission")
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
             if (characteristic.uuid == batteryLevelUuid && status == BluetoothGatt.GATT_SUCCESS) {
                 @Suppress("DEPRECATION")
                 val bytes = characteristic.value

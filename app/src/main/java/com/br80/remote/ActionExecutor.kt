@@ -13,6 +13,8 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -50,7 +52,11 @@ class ActionExecutor(
         // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione").
         // Per Gemini niente TTS: l'apertura del canale SCO subito dopo taglierebbe la frase
         // a metà mentre il canale passa da A2DP a SCO; resta solo vibrazione/beep immediati.
-        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && action.type != ActionType.TASKER_TRIGGER_EVENT) {
+        // Per Indietro/Home/Blocca Schermo, niente feedback se il Servizio di Accessibilità
+        // non è attivo: l'azione fallirà silenziosamente (vedi performGlobalAction()), e senza
+        // questo controllo l'utente sentirebbe comunque una "falsa conferma" aptica/vocale.
+        val isGlobalActionWithoutService = requiresAccessibilityService(action.type) && !Br80AccessibilityService.isRunning()
+        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && action.type != ActionType.TASKER_TRIGGER_EVENT && !isGlobalActionWithoutService) {
             val ttsText = mappingStorage.getCustomTtsLabel(button, gesture) ?: action.getReadableDescription()
             triggerFeedback(ttsText, allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
         }
@@ -419,6 +425,10 @@ class ActionExecutor(
         }
     }
 
+    private fun requiresAccessibilityService(type: ActionType): Boolean {
+        return type == ActionType.SYSTEM_BACK || type == ActionType.SYSTEM_HOME || type == ActionType.LOCK_SCREEN
+    }
+
     private fun performGlobalAction(globalAction: Int, actionLabel: String) {
         val service = Br80AccessibilityService.instance
         if (service == null) {
@@ -444,29 +454,40 @@ class ActionExecutor(
             onLog("Permesso READ_CALL_LOG non concesso: impossibile leggere il registro chiamate.")
             return
         }
-        try {
-            // Nota: alcuni provider (es. Samsung) rifiutano "LIMIT" nella sortOrder con
-            // "Invalid token LIMIT" (confermato dal vivo). Si ordina per data decrescente
-            // e si prende semplicemente la prima riga, senza LIMIT nella query SQL.
-            context.contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.NUMBER),
-                "${CallLog.Calls.TYPE} = ?",
-                arrayOf(type.toString()),
-                "${CallLog.Calls.DATE} DESC"
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val number = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
-                    if (!number.isNullOrBlank()) {
-                        speedDial(number)
-                        return
+        // Query ContentResolver spostata fuori dal thread principale: un provider lento
+        // (già osservato un quirk specifico Samsung su questa stessa query) può altrimenti
+        // causare un ANR percepibile alla pressione del tasto.
+        val mainHandler = Handler(Looper.getMainLooper())
+        Thread {
+            var foundNumber: String? = null
+            var errorMessage: String? = null
+            try {
+                // Nota: alcuni provider (es. Samsung) rifiutano "LIMIT" nella sortOrder con
+                // "Invalid token LIMIT" (confermato dal vivo). Si ordina per data decrescente
+                // e si prende semplicemente la prima riga, senza LIMIT nella query SQL.
+                context.contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    arrayOf(CallLog.Calls.NUMBER),
+                    "${CallLog.Calls.TYPE} = ?",
+                    arrayOf(type.toString()),
+                    "${CallLog.Calls.DATE} DESC"
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        foundNumber = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
                     }
                 }
-                onLog("Nessuna chiamata trovata nel registro per questo tipo.")
+            } catch (e: Exception) {
+                errorMessage = e.message
             }
-        } catch (e: Exception) {
-            onLog("Errore lettura registro chiamate: ${e.message}")
-        }
+            val number = foundNumber
+            mainHandler.post {
+                when {
+                    errorMessage != null -> onLog("Errore lettura registro chiamate: $errorMessage")
+                    !number.isNullOrBlank() -> speedDial(number)
+                    else -> onLog("Nessuna chiamata trovata nel registro per questo tipo.")
+                }
+            }
+        }.start()
     }
 
     private fun triggerFeedback(actionDescription: String, allowTts: Boolean = true) {
