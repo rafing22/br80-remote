@@ -13,8 +13,8 @@ android {
         applicationId = "com.br80.remote"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21 // x-release-please-versionCode
-        versionName = "3.3.3" // x-release-please-version
+        versionCode = 22 // x-release-please-versionCode
+        versionName = "3.4.0" // x-release-please-version
     }
 
     buildFeatures {
