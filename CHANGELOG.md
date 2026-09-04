@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.0](https://github.com/rafing22/br80-remote/compare/v4.0.0...v4.1.0) (2026-09-04)
+
+
+### Features
+
+* elimina Tasti Virtuali Tasker dalla schermata di gestione ([417e79e](https://github.com/rafing22/br80-remote/commit/417e79ecbbd0cde73c71c39e05e5c6b6b8a09b50))
+
 ## [4.0.0](https://github.com/rafing22/br80-remote/compare/v3.7.0...v4.0.0) (2026-09-04)
 
 
