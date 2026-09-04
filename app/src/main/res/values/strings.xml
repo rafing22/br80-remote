@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Livall BR80 Remote</string>
     <string name="accessibility_service_description">Permette al telecomando BR80 di simulare i tasti Indietro, Home e Blocca Schermo. Non legge né raccoglie il contenuto dello schermo.</string>
+    <string name="tasker_var_label_button">Tasto BR80</string>
+    <string name="tasker_var_label_gesture">Gesto BR80</string>
+    <string name="tasker_var_label_battery">Batteria BR80</string>
 </resources>

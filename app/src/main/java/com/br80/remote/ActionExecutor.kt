@@ -24,6 +24,7 @@ import android.speech.RecognizerIntent
 import android.telecom.TelecomManager
 import android.util.Log
 import android.view.KeyEvent
+import com.br80.remote.tasker.notifyBr80TaskerEvent
 
 class ActionExecutor(
     private val context: Context,
@@ -49,7 +50,7 @@ class ActionExecutor(
         // 2. Emette feedback aptico/sonoro/TTS (solo se l'azione non è "Nessuna Azione").
         // Per Gemini niente TTS: l'apertura del canale SCO subito dopo taglierebbe la frase
         // a metà mentre il canale passa da A2DP a SCO; resta solo vibrazione/beep immediati.
-        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY) {
+        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && action.type != ActionType.TASKER_TRIGGER_EVENT) {
             val ttsText = mappingStorage.getCustomTtsLabel(button, gesture) ?: action.getReadableDescription()
             triggerFeedback(ttsText, allowTts = action.type != ActionType.VOICE_ASSISTANT_GEMINI)
         }
@@ -59,6 +60,9 @@ class ActionExecutor(
             when (action.type) {
                 ActionType.NONE, ActionType.TASKER_ONLY -> {
                     // Solo broadcast emesso
+                }
+                ActionType.TASKER_TRIGGER_EVENT -> {
+                    notifyBr80TaskerEvent(context, button, gesture, batteryLevel)
                 }
                 ActionType.VOLUME_UP -> {
                     adjustVolume(AudioManager.ADJUST_RAISE)

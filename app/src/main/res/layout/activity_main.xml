@@ -1079,16 +1079,6 @@
                         android:layout_marginBottom="8dp" />
 
                     <Button
-                        android:id="@+id/btnOptTaskerExport"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="⚡ Esporta Progetto Tasker (.xml)"
-                        android:textSize="13sp"
-                        android:backgroundTint="@color/cockpit_border"
-                        android:textColor="@color/cockpit_ink"
-                        android:layout_marginBottom="8dp" />
-
-                    <Button
                         android:id="@+id/btnExitApp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -66,6 +66,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Plugin Tasker (Evento): espone le pressioni tasto/gesto del BR80 come
+             trigger nativo selezionabile in un Profilo Tasker -->
+        <activity
+            android:name=".tasker.Br80EventConfigActivity"
+            android:exported="true"
+            android:label="Livall BR80 Remote">
+            <intent-filter>
+                <action android:name="net.dinglisch.android.tasker.ACTION_EDIT_EVENT" />
+            </intent-filter>
+        </activity>
+
         <!-- Foreground Service per mantenere attiva la connessione BLE in background -->
         <service
             android:name=".BleForegroundService"

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/cockpit_bg"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Trigger BR80 per Tasker"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/cockpit_ink"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scegli il tasto e il gesto del telecomando BR80 che devono avviare questo Profilo Tasker. Ricorda di mappare la stessa combinazione sull'azione &quot;Attiva Trigger Tasker&quot; nell'app Livall BR80 Remote."
+        android:textSize="13sp"
+        android:textColor="@color/cockpit_muted"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tasto"
+        android:textSize="14sp"
+        android:textColor="@color/cockpit_ink"
+        android:layout_marginBottom="4dp" />
+
+    <Spinner
+        android:id="@+id/spinnerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="56dp"
+        android:paddingHorizontal="16dp"
+        android:background="@drawable/bg_cockpit_input"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Gesto"
+        android:textSize="14sp"
+        android:textColor="@color/cockpit_ink"
+        android:layout_marginBottom="4dp" />
+
+    <Spinner
+        android:id="@+id/spinnerGesture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="56dp"
+        android:paddingHorizontal="16dp"
+        android:background="@drawable/bg_cockpit_input" />
+
+</LinearLayout>

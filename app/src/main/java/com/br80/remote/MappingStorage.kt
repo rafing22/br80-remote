@@ -87,6 +87,7 @@ enum class ActionType(
 
     // Automation
     TASKER_ONLY("tasker_only", "Broadcast Tasker / MacroDroid", "Invia broadcast globale 'com.br80.remote.BUTTON_EVENT'", ActionCategory.AUTOMATION),
+    TASKER_TRIGGER_EVENT("tasker_trigger_event", "Attiva Trigger Tasker", "Attiva l'evento plugin nativo per Tasker: usa questo tasto/gesto come trigger di un Profilo Tasker (Evento > Plugin > Livall BR80 Remote)", ActionCategory.AUTOMATION),
     NONE("none", "Nessuna Azione", "Disattiva qualsiasi azione per questo gesto", ActionCategory.AUTOMATION);
 
     companion object {

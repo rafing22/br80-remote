@@ -124,7 +124,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     private lateinit var cbOptSound: CheckBox
     private lateinit var cbOptTts: CheckBox
     private lateinit var btnCheckUpdate: Button
-    private lateinit var btnOptTaskerExport: Button
     private lateinit var btnExitApp: Button
     private lateinit var tvActiveProfile: TextView
     private lateinit var btnChooseProfile: Button
@@ -269,7 +268,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         cbOptSound = findViewById(R.id.cbOptSound)
         cbOptTts = findViewById(R.id.cbOptTts)
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate)
-        btnOptTaskerExport = findViewById(R.id.btnOptTaskerExport)
         btnExitApp = findViewById(R.id.btnExitApp)
         tvActiveProfile = findViewById(R.id.tvActiveProfile)
         btnChooseProfile = findViewById(R.id.btnChooseProfile)
@@ -446,11 +444,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         btnChooseProfile.setOnClickListener { showChooseProfileDialog() }
         btnNewProfile.setOnClickListener { showNewProfileDialog() }
         btnDeleteProfile.setOnClickListener { showDeleteProfileDialog() }
-
-        btnOptTaskerExport.setOnClickListener {
-            TaskerExporter.exportAndShare(this)
-            log("Progetto Tasker XML esportato.")
-        }
 
         btnExitApp.setOnClickListener {
             AlertDialog.Builder(this, R.style.Theme_Br80_CockpitDialog)
