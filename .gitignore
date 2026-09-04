@@ -12,3 +12,4 @@ app/build/
 build/
 apk_build/
 *.apk
+app/release.keystore

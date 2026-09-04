@@ -30,12 +30,32 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // Popolato solo in CI (release-please/tag), tramite variabili d'ambiente decodificate
+        // dai GitHub Secrets. In locale, senza queste env var, "release" non è firmabile:
+        // per lo sviluppo quotidiano si continua a usare assembleDebug.
+        create("release") {
+            val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
+        }
+        release {
+            // Disattivato deliberatamente: la libreria del plugin Tasker legge le annotazioni
+            // @TaskerInputField/@TaskerOutputVariable via reflection a runtime. Abilitare R8
+            // senza regole di keep dedicate (non ancora scritte/testate) rischierebbe di
+            // rompere silenziosamente il plugin Tasker già funzionante.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
