@@ -46,5 +46,45 @@
             android:backgroundTint="@color/cockpit_card"
             android:textColor="@color/cockpit_ink" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/cockpit_border"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ritardo lancio Gemini dopo apertura canale"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Attesa (in millisecondi) tra la conferma di apertura del canale voce e l'attivazione di Gemini. Utile per fare prove ed eliminare bip o partenze premature. 0 = nessuna attesa (comportamento attuale)."
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnApplyGeminiLaunchDelay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Imposta Ritardo"
+            android:textSize="13sp"
+            android:backgroundTint="@color/cockpit_card"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            android:id="@+id/tvGeminiLaunchDelay"
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Ritardo attivo: 0 ms" />
+
     </LinearLayout>
 </LinearLayout>
