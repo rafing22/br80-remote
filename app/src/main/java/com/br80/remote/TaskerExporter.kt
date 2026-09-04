@@ -9,13 +9,25 @@ object TaskerExporter {
 
     fun generateProjectXml(): String {
         val sb = StringBuilder()
+        // Calcolato in anticipo per popolare <pids> del Project qui sotto: deve elencare
+        // gli ID dei PROFILI (200+), non dei task, altrimenti Tasker importa i profili
+        // come "orfani", non associati al progetto.
+        val profileIds = mutableListOf<Int>()
+        var nextProfileId = 200
+        for (btn in Br80Button.values()) {
+            for (gesture in GestureType.values()) {
+                profileIds.add(nextProfileId)
+                nextProfileId++
+            }
+        }
+
         sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
         sb.append("<TaskerData sr=\"\" dvi=\"1\" tv=\"6.2.22\">\n")
         sb.append("  <Project sr=\"proj_br80\" ve=\"2\">\n")
         sb.append("    <cdate>1700000000000</cdate>\n")
         sb.append("    <name>Livall BR80 Remote</name>\n")
         sb.append("    <scenes></scenes>\n")
-        sb.append("    <tasks>100,101,102</tasks>\n")
+        sb.append("    <pids>${profileIds.joinToString(",")}</pids>\n")
         sb.append("  </Project>\n")
 
         // Task 100: Esempio Foto
@@ -68,7 +80,7 @@ object TaskerExporter {
                 sb.append("    <cdate>1700000000000</cdate>\n")
                 sb.append("    <clp>true</clp>\n")
                 sb.append("    <id>$profileId</id>\n")
-                sb.append("    <mid>102</mid>\n")
+                sb.append("    <mid0>102</mid0>\n")
                 sb.append("    <nme>BR80 $eventId</nme>\n")
                 sb.append("    <Event sr=\"con0\" ve=\"2\">\n")
                 sb.append("      <code>599</code>\n") // Intent Received
@@ -99,15 +111,16 @@ object TaskerExporter {
                 file
             )
 
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/xml"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Progetto Tasker per Livall BR80")
-                putExtra(Intent.EXTRA_TEXT, "Importa questo file .xml in Tasker (Progetti -> Importa Progetto).")
+            // Tasker importa i file .xml tramite ACTION_VIEW (come "apri con", da file
+            // manager/browser), non tramite ACTION_SEND: con SEND non compare affatto
+            // nel menu di condivisione. ACTION_VIEW mostra sia Tasker sia le altre app
+            // in grado di "aprire" un XML (file manager, editor...).
+            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "text/xml")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(Intent.createChooser(shareIntent, "Salva o Importa in Tasker").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            context.startActivity(Intent.createChooser(viewIntent, "Apri con Tasker (Importa Progetto)").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) {
             // Fallback se fileprovider non è registrato: condividi come testo grezzo
             val textIntent = Intent(Intent.ACTION_SEND).apply {
