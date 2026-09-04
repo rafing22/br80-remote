@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/rafing22/br80-remote/compare/v3.7.0...v4.0.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* i Profili Tasker già configurati con il vecchio abbinamento tasto+gesto smettono di scattare (fallimento silenzioso, nessun crash) finché non vengono riconfigurati scegliendo un Tasto Virtuale, sia nell'app sia nella configurazione dell'Evento dentro Tasker.
+
+### Features
+
+* tasti virtuali Tasker e testi TTS per-azione ([aa65d75](https://github.com/rafing22/br80-remote/commit/aa65d75a0110cc26ec52c00d5e16173b842c0891))
+
 ## [3.7.0](https://github.com/rafing22/br80-remote/compare/v3.6.0...v3.7.0) (2026-09-04)
 
 
