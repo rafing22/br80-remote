@@ -2,6 +2,9 @@ package com.br80.remote
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.br80.remote.data.Br80Database
+import com.br80.remote.data.ButtonMappingDao
+import com.br80.remote.data.ButtonMappingEntity
 
 enum class Br80Button(val displayName: String, val shortName: String, val pressCode: Int, val releaseCode: Int) {
     UP("Freccia Su", "UP", 6, 38),
@@ -129,30 +132,56 @@ data class ButtonAction(val type: ActionType, val parameter: String = "") {
 class MappingStorage(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val dao: ButtonMappingDao = Br80Database.getInstance(context).buttonMappingDao()
+
+    // Cache in memoria di tutte le mappature (tutti i profili), caricata una sola volta
+    // all'avvio: le letture ad ogni pressione fisica del tasto non toccano più il database,
+    // stessa latenza (nulla) di prima con SharedPreferences. Chiave: "profilo|TASTO|GESTO".
+    private val mappingCache = mutableMapOf<String, ButtonMappingEntity>()
+
+    init {
+        migrateFromSharedPreferencesIfNeeded()
+        dao.getAll().forEach { entity ->
+            mappingCache[cacheKey(entity.profileName, entity.button, entity.gesture)] = entity
+        }
+    }
+
+    private fun cacheKey(profile: String, button: String, gesture: String) = "$profile|$button|$gesture"
+
+    private fun writeAsync(entity: ButtonMappingEntity) {
+        Thread { dao.upsert(entity) }.start()
+    }
 
     fun getAction(button: Br80Button, gesture: GestureType): ButtonAction {
-        val key = getMappingKey(button, gesture)
-        val saved = prefs.getString(key, null)
-        if (saved != null) {
-            return ButtonAction.deserialize(saved)
+        val profile = getActiveProfileName()
+        val entity = mappingCache[cacheKey(profile, button.name, gesture.name)]
+        if (entity != null) {
+            return ButtonAction(ActionType.fromId(entity.actionTypeId), entity.parameter)
         }
-        return getDefaultAction(button, gesture)
+        // I default "di fabbrica" (Volume+, Gemini, ecc.) valgono solo per il profilo
+        // Standard: un profilo personalizzato senza questa combinazione mappata deve
+        // risultare vuoto (Nessuna Azione), come promesso alla creazione del profilo.
+        return if (profile.equals("Standard", ignoreCase = true)) {
+            getDefaultAction(button, gesture)
+        } else {
+            ButtonAction(ActionType.NONE)
+        }
     }
 
     fun setAction(button: Br80Button, gesture: GestureType, action: ButtonAction) {
-        val key = getMappingKey(button, gesture)
-        val serialized = action.serialize()
-        val previousSerialized = prefs.getString(key, null)
-        val editor = prefs.edit().putString(key, serialized)
+        val profile = getActiveProfileName()
+        val key = cacheKey(profile, button.name, gesture.name)
+        val previous = mappingCache[key]
+        val actionChanged = previous == null || previous.actionTypeId != action.type.id || previous.parameter != action.parameter
         // Un testo TTS personalizzato descrive l'azione precedente: se l'azione cambia
         // davvero, il testo vecchio resterebbe a descrivere qualcosa di sbagliato. Lo
         // rimuoviamo, così torna alla descrizione automatica della nuova azione finché
         // l'utente non ne imposta uno nuovo. Se l'azione è la stessa di prima (rise-
         // lezione accidentale), non tocchiamo il testo personalizzato.
-        if (previousSerialized != serialized) {
-            editor.remove("tts_label_$key")
-        }
-        editor.apply()
+        val newLabel = if (actionChanged) null else previous?.customTtsLabel
+        val entity = ButtonMappingEntity(profile, button.name, gesture.name, action.type.id, action.parameter, newLabel)
+        mappingCache[key] = entity
+        writeAsync(entity)
     }
 
     fun hasMultiTapGestures(button: Br80Button): Boolean {
@@ -296,20 +325,41 @@ class MappingStorage(context: Context) {
         current.removeAll { it.equals(profileName, ignoreCase = true) }
         prefs.edit().putStringSet(KEY_PROFILE_NAMES, current).apply()
 
-        // Rimuove anche le mappature e i testi TTS personalizzati salvati per il profilo eliminato
-        val editor = prefs.edit()
-        for (button in Br80Button.values()) {
-            for (gesture in GestureType.values()) {
-                val mappingKey = "map_profile_${profileName}_${button.name}_${gesture.name}"
-                editor.remove(mappingKey)
-                editor.remove("tts_label_$mappingKey")
-            }
-        }
-        editor.apply()
+        // Rimuove le mappature e i testi TTS personalizzati del profilo eliminato: una
+        // singola query invece di ricostruire ogni possibile chiave (28 combinazioni).
+        mappingCache.keys.removeAll { it.startsWith("$profileName|") }
+        Thread { dao.deleteProfile(profileName) }.start()
 
         if (getActiveProfileName().equals(profileName, ignoreCase = true)) {
             setActiveProfileName("Standard")
         }
+    }
+
+    /** Rinomina un profilo personalizzato mantenendo tutte le sue mappature — prima
+     * impossibile senza ricostruire ogni chiave, ora una singola UPDATE grazie a Room. */
+    fun renameProfile(oldName: String, newName: String): Boolean {
+        val trimmedNew = newName.trim()
+        if (oldName.equals("Standard", ignoreCase = true)) return false
+        if (trimmedNew.isEmpty() || trimmedNew.equals("Standard", ignoreCase = true)) return false
+        if (getProfileNames().any { it.equals(trimmedNew, ignoreCase = true) }) return false
+
+        val current = prefs.getStringSet(KEY_PROFILE_NAMES, emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (!current.removeAll { it.equals(oldName, ignoreCase = true) }) return false
+        current.add(trimmedNew)
+        prefs.edit().putStringSet(KEY_PROFILE_NAMES, current).apply()
+
+        dao.renameProfile(oldName, trimmedNew)
+        val moved = mappingCache.keys.filter { it.startsWith("$oldName|") }
+        for (oldKey in moved) {
+            val entity = mappingCache.remove(oldKey) ?: continue
+            val renamed = entity.copy(profileName = trimmedNew)
+            mappingCache[cacheKey(trimmedNew, entity.button, entity.gesture)] = renamed
+        }
+
+        if (getActiveProfileName().equals(oldName, ignoreCase = true)) {
+            setActiveProfileName(trimmedNew)
+        }
+        return true
     }
 
     // Livello di volume preciso applicato dall'azione VOLUME_SET_LEVEL (default 70%)
@@ -339,28 +389,51 @@ class MappingStorage(context: Context) {
         prefs.edit().putString(KEY_LAST_MAC, mac).apply()
     }
 
-    private fun getMappingKey(button: Br80Button, gesture: GestureType): String {
-        val profile = getActiveProfileName()
-        return if (profile.equals("Standard", ignoreCase = true)) {
-            "map_${button.name}_${gesture.name}"
-        } else {
-            "map_profile_${profile}_${button.name}_${gesture.name}"
-        }
-    }
-
     // Testo TTS personalizzato per singola combinazione tasto+gesto (per profilo attivo).
     // Se non impostato, si usa la descrizione automatica dell'azione (ButtonAction.getReadableDescription()).
     fun getCustomTtsLabel(button: Br80Button, gesture: GestureType): String? {
-        return prefs.getString("tts_label_${getMappingKey(button, gesture)}", null)
+        return mappingCache[cacheKey(getActiveProfileName(), button.name, gesture.name)]?.customTtsLabel
     }
 
     fun setCustomTtsLabel(button: Br80Button, gesture: GestureType, label: String?) {
-        val key = "tts_label_${getMappingKey(button, gesture)}"
-        if (label.isNullOrBlank()) {
-            prefs.edit().remove(key).apply()
-        } else {
-            prefs.edit().putString(key, label.trim()).apply()
+        val profile = getActiveProfileName()
+        val key = cacheKey(profile, button.name, gesture.name)
+        val trimmed = if (label.isNullOrBlank()) null else label.trim()
+        // Se non esiste ancora una entità per questo tasto/gesto (azione mai mappata
+        // esplicitamente, sta usando il default), la crea con l'azione di default corrente
+        // così il testo personalizzato ha comunque un'azione a cui riferirsi.
+        val existing = mappingCache[key] ?: run {
+            val default = getDefaultAction(button, gesture)
+            ButtonMappingEntity(profile, button.name, gesture.name, default.type.id, default.parameter)
         }
+        val updated = existing.copy(customTtsLabel = trimmed)
+        mappingCache[key] = updated
+        writeAsync(updated)
+    }
+
+    // Migrazione una tantum dal vecchio schema SharedPreferences (chiavi composite
+    // "map_..."/"map_profile_X_..."/"tts_label_...") al database Room, per non perdere le
+    // mappature di chi aggiorna l'app da una versione precedente a questa migrazione.
+    private fun migrateFromSharedPreferencesIfNeeded() {
+        if (prefs.getBoolean(KEY_ROOM_MIGRATION_DONE, false)) return
+
+        val profiles = listOf("Standard") + (prefs.getStringSet(KEY_PROFILE_NAMES, emptySet()) ?: emptySet())
+        for (profile in profiles) {
+            for (button in Br80Button.values()) {
+                for (gesture in GestureType.values()) {
+                    val mappingKey = if (profile.equals("Standard", ignoreCase = true)) {
+                        "map_${button.name}_${gesture.name}"
+                    } else {
+                        "map_profile_${profile}_${button.name}_${gesture.name}"
+                    }
+                    val serialized = prefs.getString(mappingKey, null) ?: continue
+                    val action = ButtonAction.deserialize(serialized)
+                    val label = prefs.getString("tts_label_$mappingKey", null)
+                    dao.upsert(ButtonMappingEntity(profile, button.name, gesture.name, action.type.id, action.parameter, label))
+                }
+            }
+        }
+        prefs.edit().putBoolean(KEY_ROOM_MIGRATION_DONE, true).apply()
     }
 
     private fun getDefaultAction(button: Br80Button, gesture: GestureType): ButtonAction {
@@ -403,6 +476,7 @@ class MappingStorage(context: Context) {
         private const val KEY_AUDIO_BT_DEVICES = "pref_audio_bt_devices"
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
         private const val KEY_PROFILE_NAMES = "pref_profile_names"
+        private const val KEY_ROOM_MIGRATION_DONE = "pref_room_migration_done"
         private const val KEY_PREFERRED_VOLUME_PERCENT = "pref_preferred_volume_percent"
         private const val KEY_DEVELOPER_MODE = "pref_developer_mode_enabled"
     }

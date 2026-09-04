@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_horizontal">
+
+        <!-- Gauge Batteria / RSSI (cruscotto analogico) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="7dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:background="@drawable/bg_gauge_panel"
+                android:padding="12dp">
+
+                <com.br80.remote.ArcGaugeView
+                    android:id="@+id/gaugeBattery"
+                    android:layout_width="70dp"
+                    android:layout_height="20dp" />
+
+                <TextView
+                    android:id="@+id/tvGaugeBatteryValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:textSize="17sp"
+                    android:textColor="@color/cockpit_ink"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="BATTERIA"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/cockpit_muted"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="7dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:background="@drawable/bg_gauge_panel"
+                android:padding="12dp">
+
+                <com.br80.remote.ArcGaugeView
+                    android:id="@+id/gaugeRssi"
+                    android:layout_width="70dp"
+                    android:layout_height="20dp" />
+
+                <TextView
+                    android:id="@+id/tvGaugeRssiValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:textSize="17sp"
+                    android:textColor="@color/cockpit_ink"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SEGNALE dBm"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/cockpit_muted"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tocca un tasto o premilo sul telecomando per configurarlo:"
+            android:textSize="12sp"
+            android:textColor="@color/cockpit_muted"
+            android:layout_marginBottom="14dp" />
+
+        <!-- Controller BR80 Grafico Interattivo Fedele al Dispositivo Reale -->
+        <RelativeLayout
+            android:layout_width="210dp"
+            android:layout_height="320dp"
+            android:layout_marginBottom="18dp">
+
+            <!-- Corpo pillola del telecomando -->
+            <View
+                android:layout_width="176dp"
+                android:layout_height="228dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/bg_remote_body" />
+
+            <!-- Aletta superiore: FOTO -->
+            <FrameLayout
+                android:layout_width="92dp"
+                android:layout_height="62dp"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:background="@drawable/bg_remote_wing">
+
+                <Button
+                    android:id="@+id/btnPadCamera"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="📷"
+                    android:textSize="18sp"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+            </FrameLayout>
+
+            <!-- Aletta inferiore: VOCE / INTERCOM -->
+            <FrameLayout
+                android:layout_width="92dp"
+                android:layout_height="62dp"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:background="@drawable/bg_remote_wing">
+
+                <Button
+                    android:id="@+id/btnPadCall"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="🗣️"
+                    android:textSize="18sp"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+            </FrameLayout>
+
+            <!-- Ghiera / Hub Centrale -->
+            <FrameLayout
+                android:layout_width="156dp"
+                android:layout_height="156dp"
+                android:layout_centerInParent="true"
+                android:background="@drawable/bg_remote_hub">
+
+                <Button
+                    android:id="@+id/btnPadUp"
+                    android:layout_width="60dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:text="▲"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/cockpit_chevron"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btnPadDown"
+                    android:layout_width="60dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:layout_marginBottom="4dp"
+                    android:text="▼"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/cockpit_chevron"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btnPadLeft"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:layout_gravity="center_vertical|start"
+                    android:layout_marginStart="6dp"
+                    android:text="L"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/cockpit_chevron"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btnPadRight"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="6dp"
+                    android:text="R"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/cockpit_chevron"
+                    android:background="@android:color/transparent"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:stateListAnimator="@null" />
+
+                <!-- Tasto Centrale ROSSO (Stop/Confirm) -->
+                <Button
+                    android:id="@+id/btnPadHome"
+                    android:layout_width="66dp"
+                    android:layout_height="66dp"
+                    android:layout_gravity="center"
+                    android:text="⏹"
+                    android:textSize="18sp"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/bg_remote_center_button"
+                    android:stateListAnimator="@null" />
+
+            </FrameLayout>
+
+        </RelativeLayout>
+
+        <!-- Card Ultima Azione Eseguita -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:id="@+id/tvLastActionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Nessuna azione eseguita"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                android:id="@+id/tvLastActionSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="In attesa di un comando dal telecomando"
+                android:textSize="11.5sp"
+                android:fontFamily="monospace"
+                android:textColor="@color/cockpit_muted_dim"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- Scheda Gesti per il Tasto Selezionato -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_gauge_panel"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedButtonTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Freccia Su (UP)"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/cockpit_ink" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tocca per cambiare"
+                    android:textSize="12sp"
+                    android:textColor="@color/cockpit_accent" />
+            </LinearLayout>
+
+            <!-- 4 Righe Gesti -->
+            <LinearLayout
+                android:id="@+id/rowGestureSingle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:background="@color/cockpit_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="👆 Singolo Tap (1x)"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted" />
+
+                <TextView
+                    android:id="@+id/tvActionSingle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="Volume +"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/cockpit_accent"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowGestureDouble"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:background="@color/cockpit_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="✌️ Doppio Tap (2x)"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted" />
+
+                <TextView
+                    android:id="@+id/tvActionDouble"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="Nessuna azione"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted_dim"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowGestureTriple"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:background="@color/cockpit_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="👌 Triplo Tap (3x)"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted" />
+
+                <TextView
+                    android:id="@+id/tvActionTriple"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="Nessuna azione"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted_dim"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowGestureLong"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:background="@color/cockpit_bg"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="⏱️ Pressione Lunga"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted" />
+
+                <TextView
+                    android:id="@+id/tvActionLong"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="Google Gemini"
+                    android:textSize="13sp"
+                    android:textColor="@color/cockpit_muted_dim"
+                    android:gravity="end" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

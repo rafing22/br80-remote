@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cockpit_screen_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include layout="@layout/partial_detail_header" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <Button
+                android:id="@+id/btnCheckUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔄 Verifica Aggiornamenti su GitHub"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_accent"
+                android:textColor="@color/on_accent"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:id="@+id/tvAppVersionInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Livall BR80 Remote • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+                android:textSize="12sp"
+                android:textColor="@color/cockpit_muted_dim"
+                android:gravity="center"
+                android:paddingVertical="8dp" />
+
+            <LinearLayout
+                android:id="@+id/cardDeveloperMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_cockpit_card"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🛠️ Opzioni Sviluppatore"
+                    style="@style/Br80.Text.RowTitle"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/cbOptDevAdbHook"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Gancio Comandi ADB (solo build debug)"
+                    android:textSize="14sp"
+                    android:textColor="@color/cockpit_ink" />
+
+                <TextView
+                    style="@style/Br80.Text.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Permette di simulare pressioni tasto via 'adb shell am broadcast' per test senza telecomando fisico."
+                    android:layout_marginStart="32dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

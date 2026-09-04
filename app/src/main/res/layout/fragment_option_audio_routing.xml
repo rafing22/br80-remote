@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/cockpit_screen_bg">
+
+    <include layout="@layout/partial_detail_header" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <CheckBox
+            android:id="@+id/cbOptAudioBtRouting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Garantisci canale voce (SCO) verso l'interfono"
+            android:textSize="14sp"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Apre il canale voce verso il dispositivo scelto prima di ogni messaggio TTS o attivazione Gemini, e lo rilascia solo a messaggio concluso. Indipendente dal dispositivo del Keep-Alive."
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvAudioBtDevice"
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nessun dispositivo selezionato"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnOptChooseAudioBtDevice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scegli Dispositivo Audio (Interfono / Casco)"
+            android:textSize="13sp"
+            android:backgroundTint="@color/cockpit_card"
+            android:textColor="@color/cockpit_ink" />
+
+    </LinearLayout>
+</LinearLayout>

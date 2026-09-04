@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/cockpit_screen_bg">
+
+    <include layout="@layout/partial_detail_header" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvActiveProfile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Profilo Attivo: Standard"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/status_highlight"
+            android:layout_marginBottom="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnChooseProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Cambia"
+                android:textSize="12sp"
+                android:backgroundTint="@color/cockpit_accent"
+                android:textColor="@color/on_accent"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnNewProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Nuovo"
+                android:textSize="12sp"
+                android:backgroundTint="@color/cockpit_border"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnRenameProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Rinomina"
+                android:textSize="12sp"
+                android:backgroundTint="@color/cockpit_border"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnDeleteProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Elimina"
+                android:textSize="12sp"
+                android:backgroundTint="@color/status_error"
+                android:textColor="@color/on_accent"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

@@ -5,12 +5,40 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Search Input -->
+    <!-- Passo 1: griglia categorie -->
+    <LinearLayout
+        android:id="@+id/headerStep1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
+
+        <TextView
+            android:id="@+id/tvStep1Title"
+            style="@style/Br80.Text.RowTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Scegli una categoria" />
+
+        <TextView
+            android:id="@+id/btnSearchToggle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:textSize="17sp"
+            android:text="🔍"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
     <EditText
         android:id="@+id/etActionSearch"
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:hint="🔍 Cerca azione (es. gemini, volume, torcia)..."
+        android:layout_height="48dp"
+        android:hint="Cerca azione (es. gemini, volume, torcia)..."
         android:textSize="14sp"
         android:paddingHorizontal="12dp"
         android:background="@drawable/bg_gauge_panel"
@@ -18,18 +46,62 @@
         android:textColorHint="@color/cockpit_muted"
         android:inputType="text"
         android:singleLine="true"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
 
-    <!-- Action List Container -->
+    <!-- Passo 2: lista azioni della categoria scelta -->
+    <LinearLayout
+        android:id="@+id/headerStep2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/btnBackToCategories"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:textSize="22sp"
+            android:text="‹"
+            android:textColor="@color/cockpit_ink"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+        <TextView
+            android:id="@+id/tvStep2Title"
+            style="@style/Br80.Text.RowTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Categoria" />
+    </LinearLayout>
+
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="360dp">
+        android:layout_height="400dp">
 
-        <LinearLayout
-            android:id="@+id/llActionsContainer"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:layout_height="wrap_content">
+
+            <GridLayout
+                android:id="@+id/gridCategories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2" />
+
+            <LinearLayout
+                android:id="@+id/llActionsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+        </FrameLayout>
     </ScrollView>
 
 </LinearLayout>

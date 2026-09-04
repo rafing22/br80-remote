@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cockpit_screen_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvGroupFrequent"
+            style="@style/Br80.Text.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="USO FREQUENTE"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/rowProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="9dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="🎛️" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Profilo di Mappatura" />
+                <TextView android:id="@+id/tvRowProfileStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/status_highlight" android:layout_marginTop="2dp" android:text="Standard" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowTapRhythm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="9dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="⏱️" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ritmo Tap" />
+                <TextView android:id="@+id/tvRowTapRhythmStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/status_highlight" android:layout_marginTop="2dp" android:text="420 ms · Standard" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowVolumeFeedback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="20dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="🔊" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Volume &amp; Feedback" />
+                <TextView android:id="@+id/tvRowVolumeFeedbackStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Vibrazione, beep, TTS" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SETUP (UNA TANTUM)"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/rowConnection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="9dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="🔗" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connessione &amp; Automazione" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="2dp">
+                    <View android:id="@+id/dotConnection" android:layout_width="6dp" android:layout_height="6dp" android:background="@color/status_warning" android:layout_marginEnd="5dp" />
+                    <TextView android:id="@+id/tvRowConnectionStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Accessibilità da attivare" />
+                </LinearLayout>
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowAudioRouting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="20dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="🎧" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Audio Interfono" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="2dp">
+                    <View android:id="@+id/dotAudioRouting" android:layout_width="6dp" android:layout_height="6dp" android:background="@color/cockpit_muted_dim" android:layout_marginEnd="5dp" />
+                    <TextView android:id="@+id/tvRowAudioRoutingStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Non configurato" />
+                </LinearLayout>
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AVANZATE"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/rowTtsLabels"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="9dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="🔊" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Testi Annuncio Vocale" />
+                <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Personalizza per gesto" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="ℹ️" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Info &amp; Aggiornamenti" />
+                <TextView android:id="@+id/tvRowInfoStatus" style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="v3.4" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

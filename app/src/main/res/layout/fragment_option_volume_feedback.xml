@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cockpit_screen_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include layout="@layout/partial_detail_header" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔊 Volume Preciso"
+                style="@style/Br80.Text.RowTitle"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvPreferredVolumeLevel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Livello attuale: 70%"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/status_highlight"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="20dp">
+
+                <Button android:id="@+id/btnVolPreset25" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="25%" android:textSize="12sp" android:backgroundTint="@color/cockpit_card" android:textColor="@color/cockpit_ink" />
+                <Button android:id="@+id/btnVolPreset50" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="50%" android:textSize="12sp" android:backgroundTint="@color/cockpit_card" android:textColor="@color/cockpit_ink" />
+                <Button android:id="@+id/btnVolPreset75" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="75%" android:textSize="12sp" android:backgroundTint="@color/cockpit_card" android:textColor="@color/cockpit_ink" />
+                <Button android:id="@+id/btnVolPreset100" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="100%" android:textSize="12sp" android:backgroundTint="@color/cockpit_card" android:textColor="@color/cockpit_ink" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Feedback alla Pressione (Guanti)"
+                style="@style/Br80.Text.RowTitle"
+                android:layout_marginBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptHaptic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vibrazione breve di conferma"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptSound"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Beep audio di conferma"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptTts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Annuncio vocale (TTS) delle azioni"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pronuncia ad alta voce ogni azione eseguita, utile con interfono/casco."
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -11,4 +11,28 @@
         <item name="android:textColorAlertDialogListItem">@color/cockpit_ink</item>
     </style>
 
+    <!-- Scala tipografica a 3 livelli per le schermate Opzioni: prima erano sparse
+         10-17sp senza una vera gerarchia (segnalato dalla revisione di stile). -->
+    <style name="Br80.Text.ScreenTitle" parent="">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/cockpit_ink</item>
+    </style>
+
+    <style name="Br80.Text.RowTitle" parent="">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/cockpit_ink</item>
+    </style>
+
+    <style name="Br80.Text.Body" parent="">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/cockpit_muted</item>
+    </style>
+
+    <style name="Br80.Text.Caption" parent="">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/cockpit_muted_dim</item>
+    </style>
+
 </resources>

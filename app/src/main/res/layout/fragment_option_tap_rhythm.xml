@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/cockpit_screen_bg">
+
+    <include layout="@layout/partial_detail_header" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvCurrentTapSpeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Finestra Doppio Tap: 420 ms (Standard)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/status_highlight"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            style="@style/Br80.Text.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scegli un profilo rapido:"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnPresetFast"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="280ms\nSport"
+                android:textSize="10sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/btnPresetStd"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="420ms\nNormale"
+                android:textSize="10sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/btnPresetGloves"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="550ms\nGuanti"
+                android:textSize="10sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <Button
+                android:id="@+id/btnPresetSlow"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="700ms\nLento"
+                android:textSize="10sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

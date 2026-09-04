@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cockpit_screen_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include layout="@layout/partial_detail_header" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVVIO &amp; ALWAYS-ON" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptBoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Avvio automatico all'accensione del telefono"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptKeepAlive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Keep-Alive / Always-On (Anti-Standby BR80)"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Invia un ping periodico per evitare il deep sleep del BR80."
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="12dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptConditionalBt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Keep-Alive condizionale a dispositivo BT specifico"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                android:id="@+id/tvConditionalBtDevice"
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Nessun dispositivo selezionato"
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptChooseBtDevice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scegli Dispositivo BT (Interfono / Casco)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="24dp" />
+
+            <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PERMESSI DI SISTEMA" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptDoze"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Disattiva Ottimizzazione Batteria (Doze)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Consenti Avvio su Altre App (Gemini / Mappe)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptAccessibility"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attiva Servizio Accessibilità (Indietro / Home / Blocca Schermo)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink" />
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
