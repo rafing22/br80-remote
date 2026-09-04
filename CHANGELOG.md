@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.2](https://github.com/rafing22/br80-remote/compare/v3.3.1...v3.3.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* richiede i permessi anche quando l'app si auto-connette all'avvio ([1054020](https://github.com/rafing22/br80-remote/commit/105402049dab06c7fee388b0d69fe6970a59af13))
+
 ## [3.3.1](https://github.com/rafing22/br80-remote/compare/v3.3.0...v3.3.1) (2026-09-03)
 
 
