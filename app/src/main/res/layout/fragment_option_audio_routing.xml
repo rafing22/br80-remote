@@ -7,6 +7,11 @@
 
     <include layout="@layout/partial_detail_header" />
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -86,5 +91,46 @@
             android:layout_marginTop="8dp"
             android:text="Ritardo attivo: 0 ms" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/cockpit_border"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="16dp" />
+
+        <CheckBox
+            android:id="@+id/cbGeminiCleanupBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Chiudi Gemini prima di rilanciarlo (Indietro)"
+            android:textSize="14sp"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Se Gemini è già aperto, invia &quot;Indietro&quot; (richiede il Servizio di Accessibilità attivo) prima di rilanciarlo, così il nuovo comando non resta bloccato dall'overlay precedente."
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnApplyGeminiCleanupDelay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Imposta Ritardo Pulizia"
+            android:textSize="13sp"
+            android:backgroundTint="@color/cockpit_card"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            android:id="@+id/tvGeminiCleanupDelay"
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Ritardo attivo: 300 ms" />
+
     </LinearLayout>
+    </ScrollView>
 </LinearLayout>

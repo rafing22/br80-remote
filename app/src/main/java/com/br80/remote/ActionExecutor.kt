@@ -215,6 +215,32 @@ class ActionExecutor(
     }
 
     private fun launchVoiceAssistantGemini() {
+        // Se Gemini è già aperto (overlay di una richiesta precedente ancora in primo piano),
+        // rilanciarlo direttamente spesso non ha effetto: l'overlay esistente blocca il nuovo
+        // lancio. "Indietro" lo chiude senza uscire dall'app sottostante (a differenza di
+        // "Home", che porterebbe l'utente fuori anche dall'app che stava usando prima).
+        // Opt-in perché cambia il comportamento standard e richiede il Servizio di Accessibilità.
+        if (mappingStorage.isGeminiCleanupBackEnabled()) {
+            val service = Br80AccessibilityService.instance
+            if (service != null) {
+                val success = service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                onLog(if (success) "Pulizia pre-lancio: Indietro eseguito." else "Pulizia pre-lancio: Indietro non riuscito.")
+                val cleanupDelayMs = mappingStorage.getGeminiCleanupDelayMs()
+                if (cleanupDelayMs > 0) {
+                    Handler(Looper.getMainLooper()).postDelayed({ launchVoiceAssistantGeminiAfterCleanup() }, cleanupDelayMs)
+                } else {
+                    launchVoiceAssistantGeminiAfterCleanup()
+                }
+            } else {
+                onLog("Pulizia pre-lancio saltata: Servizio di Accessibilità non attivo (abilitalo in Opzioni).")
+                launchVoiceAssistantGeminiAfterCleanup()
+            }
+        } else {
+            launchVoiceAssistantGeminiAfterCleanup()
+        }
+    }
+
+    private fun launchVoiceAssistantGeminiAfterCleanup() {
         wakeUpScreenBriefly()
 
         val shouldUseScoGateway = mappingStorage.isAudioBtRoutingEnabled() &&

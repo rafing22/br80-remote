@@ -212,6 +212,28 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putLong(KEY_GEMINI_LAUNCH_DELAY, clamped).apply()
     }
 
+    // Se attivo, invia "Indietro" (richiede Servizio di Accessibilità) prima di rilanciare
+    // Gemini, per chiudere un eventuale overlay già aperto che altrimenti bloccherebbe il
+    // nuovo lancio. Disattivato di default: cambia il comportamento standard del tasto.
+    fun isGeminiCleanupBackEnabled(): Boolean {
+        return prefs.getBoolean(KEY_GEMINI_CLEANUP_BACK, false)
+    }
+
+    fun setGeminiCleanupBackEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GEMINI_CLEANUP_BACK, enabled).apply()
+    }
+
+    // Attesa dopo "Indietro" prima di rilanciare Gemini, in millisecondi (tempo per lasciare
+    // che l'overlay si chiuda davvero). Configurabile per test empirici.
+    fun getGeminiCleanupDelayMs(): Long {
+        return prefs.getLong(KEY_GEMINI_CLEANUP_DELAY, 300L)
+    }
+
+    fun setGeminiCleanupDelayMs(ms: Long) {
+        val clamped = ms.coerceIn(0L, 3000L)
+        prefs.edit().putLong(KEY_GEMINI_CLEANUP_DELAY, clamped).apply()
+    }
+
     // Soglia minima pressione lunga in millisecondi (default 550ms)
     fun getLongPressThresholdMs(): Long {
         return prefs.getLong(KEY_LONG_PRESS_THRESHOLD, 550L)
@@ -495,6 +517,8 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_KEEP_ALIVE = "pref_keep_alive"
         private const val KEY_MULTI_TAP_WINDOW = "pref_multi_tap_window_ms"
         private const val KEY_GEMINI_LAUNCH_DELAY = "pref_gemini_launch_delay_ms"
+        private const val KEY_GEMINI_CLEANUP_BACK = "pref_gemini_cleanup_back"
+        private const val KEY_GEMINI_CLEANUP_DELAY = "pref_gemini_cleanup_delay_ms"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"

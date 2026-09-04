@@ -15,6 +15,7 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
     private lateinit var tvAudioBtDevice: TextView
     private lateinit var tvGeminiLaunchDelay: TextView
+    private lateinit var tvGeminiCleanupDelay: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -23,6 +24,9 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
         val btnOptChooseAudioBtDevice = view.findViewById<Button>(R.id.btnOptChooseAudioBtDevice)
         val btnApplyGeminiLaunchDelay = view.findViewById<Button>(R.id.btnApplyGeminiLaunchDelay)
         tvGeminiLaunchDelay = view.findViewById(R.id.tvGeminiLaunchDelay)
+        val cbGeminiCleanupBack = view.findViewById<CheckBox>(R.id.cbGeminiCleanupBack)
+        val btnApplyGeminiCleanupDelay = view.findViewById<Button>(R.id.btnApplyGeminiCleanupDelay)
+        tvGeminiCleanupDelay = view.findViewById(R.id.tvGeminiCleanupDelay)
 
         cbOptAudioBtRouting.isChecked = mappingStorage.isAudioBtRoutingEnabled()
         updateAudioBtDeviceLabel()
@@ -49,6 +53,18 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
         btnApplyGeminiLaunchDelay.setOnClickListener {
             showGeminiLaunchDelayDialog()
+        }
+
+        cbGeminiCleanupBack.isChecked = mappingStorage.isGeminiCleanupBackEnabled()
+        updateGeminiCleanupDelayLabel()
+
+        cbGeminiCleanupBack.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setGeminiCleanupBackEnabled(isChecked)
+            host.appendLog("Pulizia Gemini (Indietro) prima del rilancio: " + if (isChecked) "ATTIVA" else "DISATTIVA")
+        }
+
+        btnApplyGeminiCleanupDelay.setOnClickListener {
+            showGeminiCleanupDelayDialog()
         }
     }
 
@@ -84,6 +100,40 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
     private fun updateGeminiLaunchDelayLabel() {
         tvGeminiLaunchDelay.text = "Ritardo attivo: ${mappingStorage.getGeminiLaunchDelayMs()} ms"
+    }
+
+    private fun showGeminiCleanupDelayDialog() {
+        val context = requireContext()
+        val input = EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "0-3000"
+            setText(mappingStorage.getGeminiCleanupDelayMs().toString())
+            setSelection(text.length)
+            setTextColor(ContextCompat.getColor(context, R.color.cockpit_ink))
+            setHintTextColor(ContextCompat.getColor(context, R.color.cockpit_muted))
+        }
+
+        AlertDialog.Builder(context, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Ritardo Pulizia Gemini")
+            .setMessage("Attesa (in millisecondi) dopo \"Indietro\" prima di rilanciare Gemini, per dare tempo all'overlay precedente di chiudersi davvero.")
+            .setView(input)
+            .setPositiveButton("Applica") { _, _ ->
+                val requested = input.text.toString().toLongOrNull()
+                if (requested == null) {
+                    Toast.makeText(context, "Inserisci un numero valido di millisecondi.", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                mappingStorage.setGeminiCleanupDelayMs(requested)
+                updateGeminiCleanupDelayLabel()
+                host.appendLog("Ritardo pulizia Gemini impostato a ${mappingStorage.getGeminiCleanupDelayMs()} ms")
+                Toast.makeText(context, "Ritardo applicato: ${mappingStorage.getGeminiCleanupDelayMs()} ms", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun updateGeminiCleanupDelayLabel() {
+        tvGeminiCleanupDelay.text = "Ritardo attivo: ${mappingStorage.getGeminiCleanupDelayMs()} ms"
     }
 
     private fun updateAudioBtDeviceLabel() {
