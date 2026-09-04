@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.0](https://github.com/rafing22/br80-remote/compare/v4.1.0...v4.2.0) (2026-09-04)
+
+
+### Features
+
+* pre-riscaldamento canale interfono prima di Gemini ([10e9bd2](https://github.com/rafing22/br80-remote/commit/10e9bd2e932510952266f191db1b439149296e1c))
+
 ## [4.1.0](https://github.com/rafing22/br80-remote/compare/v4.0.0...v4.1.0) (2026-09-04)
 
 
