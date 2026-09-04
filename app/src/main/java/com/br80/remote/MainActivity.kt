@@ -179,10 +179,14 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         updateBatteryOptButtonState()
         updateTapSpeedText()
 
-        // Auto-avvio servizio e ascolto se c'è un telecomando già associato
+        // Auto-avvio servizio e ascolto se c'è un telecomando già associato. Passa da
+        // checkPermissionsAndConnect() (non direttamente startAndBindBleService()) perché
+        // altrimenti un permesso aggiunto in un aggiornamento successivo (es. CALL_PHONE,
+        // READ_CALL_LOG) non veniva mai richiesto per chi aveva già un telecomando salvato:
+        // l'utente non passa mai dal pulsante Connetti manuale dove la richiesta avviene.
         if (!mappingStorage.getLastConnectedMac().isNullOrEmpty()) {
             pendingConnectOnBind = true
-            startAndBindBleService()
+            checkPermissionsAndConnect()
         }
 
         // Controllo aggiornamenti all'avvio
