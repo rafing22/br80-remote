@@ -44,7 +44,7 @@ class ActionExecutor(
         val action = mappingStorage.getAction(button, gesture)
         val eventId = "${button.name}_${gesture.name}"
 
-        onLog("[GESTO] $eventId -> ${action.getReadableDescription()}")
+        onLog("[GESTO] $eventId -> ${mappingStorage.describeAction(action)}")
 
         // 1. Emette sempre il broadcast per Tasker e altre app di automazione
         sendTaskerBroadcast(button, gesture, eventId, batteryLevel)
@@ -53,9 +53,15 @@ class ActionExecutor(
         // Per Indietro/Home/Blocca Schermo, niente feedback se il Servizio di Accessibilità
         // non è attivo: l'azione fallirà silenziosamente (vedi performGlobalAction()), e senza
         // questo controllo l'utente sentirebbe comunque una "falsa conferma" aptica/vocale.
+        // TASKER_TRIGGER_EVENT ORA riceve feedback: prima ne era escluso a prescindere, ma il
+        // nome del Tasto Virtuale è un'informazione utile da sentire/vedere, non solo rumore.
         val isGlobalActionWithoutService = requiresAccessibilityService(action.type) && !Br80AccessibilityService.isRunning()
-        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && action.type != ActionType.TASKER_TRIGGER_EVENT && !isGlobalActionWithoutService) {
-            val ttsText = mappingStorage.getCustomTtsLabel(button, gesture) ?: action.getReadableDescription()
+        if (action.type != ActionType.NONE && action.type != ActionType.TASKER_ONLY && !isGlobalActionWithoutService) {
+            val ttsText = if (action.type == ActionType.TASKER_TRIGGER_EVENT) {
+                mappingStorage.getTaskerVirtualSlotName(action.parameter.toIntOrNull()) ?: action.getReadableDescription()
+            } else {
+                mappingStorage.getCustomTtsLabelForActionType(action.type) ?: action.getReadableDescription()
+            }
             // Per Gemini, se il canale voce verso l'interfono sta per aprirsi (SCO), niente
             // TTS né beep immediati: partirebbero sul percorso audio ancora predefinito
             // (telefono) un istante prima che il canale passi all'interfono, risultando in
@@ -80,7 +86,12 @@ class ActionExecutor(
                     // Solo broadcast emesso
                 }
                 ActionType.TASKER_TRIGGER_EVENT -> {
-                    notifyBr80TaskerEvent(context, button, gesture, batteryLevel)
+                    val slotId = action.parameter.toIntOrNull()
+                    if (slotId != null) {
+                        notifyBr80TaskerEvent(context, mappingStorage, slotId, button, gesture, batteryLevel)
+                    } else {
+                        onLog("Attiva Trigger Tasker: nessun Tasto Virtuale scelto per questa mappatura.")
+                    }
                 }
                 ActionType.VOLUME_UP -> {
                     adjustVolume(AudioManager.ADJUST_RAISE)

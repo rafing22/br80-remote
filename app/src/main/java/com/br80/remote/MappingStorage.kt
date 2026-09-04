@@ -90,7 +90,7 @@ enum class ActionType(
 
     // Automation
     TASKER_ONLY("tasker_only", "Broadcast Tasker / MacroDroid", "Invia broadcast globale 'com.br80.remote.BUTTON_EVENT'", ActionCategory.AUTOMATION),
-    TASKER_TRIGGER_EVENT("tasker_trigger_event", "Attiva Trigger Tasker", "Attiva l'evento plugin nativo per Tasker: usa questo tasto/gesto come trigger di un Profilo Tasker (Evento > Plugin > Livall BR80 Remote)", ActionCategory.AUTOMATION),
+    TASKER_TRIGGER_EVENT("tasker_trigger_event", "Attiva Trigger Tasker", "Attiva l'evento plugin nativo per Tasker: scegli un Tasto Virtuale come identificatore dell'automazione (Evento > Plugin > Livall BR80 Remote, scegli lo stesso Tasto Virtuale)", ActionCategory.AUTOMATION, true, "Scegli Tasto Virtuale"),
     NONE("none", "Nessuna Azione", "Disattiva qualsiasi azione per questo gesto", ActionCategory.AUTOMATION);
 
     companion object {
@@ -129,6 +129,8 @@ data class ButtonAction(val type: ActionType, val parameter: String = "") {
     }
 }
 
+data class TaskerVirtualSlot(val id: Int, val name: String)
+
 class MappingStorage private constructor(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -144,6 +146,7 @@ class MappingStorage private constructor(context: Context) {
         dao.getAll().forEach { entity ->
             mappingCache[cacheKey(entity.profileName, entity.button, entity.gesture)] = entity
         }
+        migrateTtsLabelsToPerActionIfNeeded()
     }
 
     private fun cacheKey(profile: String, button: String, gesture: String) = "$profile|$button|$gesture"
@@ -242,6 +245,100 @@ class MappingStorage private constructor(context: Context) {
     fun setLongPressThresholdMs(ms: Long) {
         val clamped = ms.coerceIn(300L, 1500L)
         prefs.edit().putLong(KEY_LONG_PRESS_THRESHOLD, clamped).apply()
+    }
+
+    // --- Tasti Virtuali Tasker ---
+    // Identificano un'automazione Tasker indipendentemente dal tasto/gesto fisico che la
+    // attiva: sia l'app (mappatura "Attiva Trigger Tasker") sia la configurazione del Profilo
+    // dentro Tasker scelgono lo stesso Tasto Virtuale. Rinominarlo aggiorna in un solo posto
+    // sia l'etichetta nei menu sia il testo pronunciato via TTS.
+    fun getTaskerVirtualSlots(): List<TaskerVirtualSlot> {
+        val raw = prefs.getString(KEY_TASKER_VIRTUAL_SLOTS, null)
+        if (raw.isNullOrEmpty()) {
+            val defaults = (1..5).map { TaskerVirtualSlot(it, "Tasker $it") }
+            saveTaskerVirtualSlots(defaults)
+            return defaults
+        }
+        return raw.split(";;").mapNotNull { entry ->
+            val parts = entry.split("|", limit = 2)
+            val id = parts.getOrNull(0)?.toIntOrNull()
+            val name = parts.getOrNull(1)
+            if (id != null && name != null) TaskerVirtualSlot(id, name) else null
+        }
+    }
+
+    private fun saveTaskerVirtualSlots(slots: List<TaskerVirtualSlot>) {
+        val raw = slots.joinToString(";;") { "${it.id}|${it.name}" }
+        prefs.edit().putString(KEY_TASKER_VIRTUAL_SLOTS, raw).apply()
+    }
+
+    fun addTaskerVirtualSlot(): TaskerVirtualSlot {
+        val slots = getTaskerVirtualSlots()
+        val nextId = (slots.maxOfOrNull { it.id } ?: 0) + 1
+        val newSlot = TaskerVirtualSlot(nextId, "Tasker $nextId")
+        saveTaskerVirtualSlots(slots + newSlot)
+        return newSlot
+    }
+
+    fun renameTaskerVirtualSlot(id: Int, name: String) {
+        val updated = getTaskerVirtualSlots().map { if (it.id == id) it.copy(name = name) else it }
+        saveTaskerVirtualSlots(updated)
+    }
+
+    fun getTaskerVirtualSlotName(id: Int?): String? {
+        if (id == null) return null
+        return getTaskerVirtualSlots().firstOrNull { it.id == id }?.name
+    }
+
+    // Descrizione leggibile di un'azione per la UI/log: per "Attiva Trigger Tasker" risolve il
+    // nome del Tasto Virtuale scelto invece della label generica type.displayName (richiede lo
+    // storage degli slot, per questo vive qui e non su ButtonAction.getReadableDescription()).
+    fun describeAction(action: ButtonAction): String {
+        if (action.type == ActionType.TASKER_TRIGGER_EVENT) {
+            val slotName = getTaskerVirtualSlotName(action.parameter.toIntOrNull())
+            if (slotName != null) return slotName
+        }
+        return action.getReadableDescription()
+    }
+
+    // --- Testi TTS per-azione ---
+    // Un solo testo condiviso da qualunque tasto/gesto esegua quella azione (sostituisce il
+    // vecchio schema per tasto+gesto, ancora presente in prefs ma non più letto per questi
+    // tipi). TASKER_TRIGGER_EVENT non passa da qui: usa il nome del Tasto Virtuale (vedi sopra).
+    fun getCustomTtsLabelForActionType(type: ActionType): String? {
+        return prefs.getString(KEY_TTS_LABEL_PREFIX + type.id, null)
+    }
+
+    fun setCustomTtsLabelForActionType(type: ActionType, label: String?) {
+        val edit = prefs.edit()
+        if (label.isNullOrBlank()) {
+            edit.remove(KEY_TTS_LABEL_PREFIX + type.id)
+        } else {
+            edit.putString(KEY_TTS_LABEL_PREFIX + type.id, label)
+        }
+        edit.apply()
+    }
+
+    // Migrazione una tantum dal vecchio schema per tasto+gesto: per ogni azione non ancora
+    // migrata, prende il primo testo personalizzato trovato scorrendo tasti/gesti in ordine.
+    private fun migrateTtsLabelsToPerActionIfNeeded() {
+        if (prefs.getBoolean(KEY_TTS_LABELS_MIGRATED, false)) return
+        for (type in ActionType.values()) {
+            if (type == ActionType.TASKER_TRIGGER_EVENT || type == ActionType.NONE) continue
+            if (getCustomTtsLabelForActionType(type) != null) continue
+            for (button in Br80Button.values()) {
+                for (gesture in GestureType.values()) {
+                    if (getAction(button, gesture).type != type) continue
+                    val legacyLabel = getCustomTtsLabel(button, gesture)
+                    if (legacyLabel != null) {
+                        setCustomTtsLabelForActionType(type, legacyLabel)
+                        break
+                    }
+                }
+                if (getCustomTtsLabelForActionType(type) != null) break
+            }
+        }
+        prefs.edit().putBoolean(KEY_TTS_LABELS_MIGRATED, true).apply()
     }
 
     fun isAutoStartOnBootEnabled(): Boolean {
@@ -520,6 +617,9 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_GEMINI_CLEANUP_BACK = "pref_gemini_cleanup_back"
         private const val KEY_GEMINI_CLEANUP_DELAY = "pref_gemini_cleanup_delay_ms"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
+        private const val KEY_TASKER_VIRTUAL_SLOTS = "pref_tasker_virtual_slots"
+        private const val KEY_TTS_LABEL_PREFIX = "pref_tts_label_action_"
+        private const val KEY_TTS_LABELS_MIGRATED = "pref_tts_labels_migrated"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
         private const val KEY_CONDITIONAL_BT_DEVICES = "pref_conditional_bt_devices"

@@ -4,8 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.ArrayAdapter
-import com.br80.remote.Br80Button
-import com.br80.remote.GestureType
+import com.br80.remote.MappingStorage
 import com.br80.remote.R
 import com.br80.remote.databinding.ActivityConfigBr80EventBinding
 import com.joaomgcd.taskerpluginlibrary.config.TaskerPluginConfig
@@ -13,7 +12,7 @@ import com.joaomgcd.taskerpluginlibrary.input.TaskerInput
 
 /**
  * Schermata mostrata da Tasker quando l'utente crea/modifica l'Evento plugin
- * "Livall BR80 Remote" in un Profilo: sceglie tasto+gesto da due Spinner, poi
+ * "Livall BR80 Remote" in un Profilo: sceglie un Tasto Virtuale da uno Spinner, poi
  * conferma con il tasto Indietro di sistema (convenzione standard dei plugin
  * Tasker, gestita da TaskerPluginConfigHelper.onBackPressed()).
  */
@@ -21,6 +20,7 @@ class Br80EventConfigActivity : Activity(), TaskerPluginConfig<Br80EventFilter> 
 
     private lateinit var binding: ActivityConfigBr80EventBinding
     private val taskerHelper by lazy { Br80EventHelper(this) }
+    private lateinit var slots: List<com.br80.remote.TaskerVirtualSlot>
 
     override val context get() = applicationContext
 
@@ -29,38 +29,30 @@ class Br80EventConfigActivity : Activity(), TaskerPluginConfig<Br80EventFilter> 
         binding = ActivityConfigBr80EventBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        slots = MappingStorage.getInstance(applicationContext).getTaskerVirtualSlots()
+
         // Layout custom con testo chiaro: quello di sistema (simple_spinner_dropdown_item)
         // usa testo nero, illeggibile sullo sfondo scuro dei menu Tasker.
-        binding.spinnerButton.adapter = ArrayAdapter(
+        binding.spinnerVirtualSlot.adapter = ArrayAdapter(
             this,
             R.layout.spinner_item_br80,
-            Br80Button.values().map { it.displayName }
-        ).apply { setDropDownViewResource(R.layout.spinner_item_br80) }
-        binding.spinnerGesture.adapter = ArrayAdapter(
-            this,
-            R.layout.spinner_item_br80,
-            GestureType.values().map { it.displayName }
+            slots.map { it.name }
         ).apply { setDropDownViewResource(R.layout.spinner_item_br80) }
 
         taskerHelper.onCreate()
     }
 
     override fun assignFromInput(input: TaskerInput<Br80EventFilter>) {
-        input.regular.button?.let { saved ->
-            val index = Br80Button.values().indexOfFirst { it.name == saved }
-            if (index >= 0) binding.spinnerButton.setSelection(index)
-        }
-        input.regular.gesture?.let { saved ->
-            val index = GestureType.values().indexOfFirst { it.name == saved }
-            if (index >= 0) binding.spinnerGesture.setSelection(index)
+        input.regular.virtualSlotId?.let { savedId ->
+            val index = slots.indexOfFirst { it.id == savedId }
+            if (index >= 0) binding.spinnerVirtualSlot.setSelection(index)
         }
     }
 
     override val inputForTasker: TaskerInput<Br80EventFilter>
         get() {
-            val button = Br80Button.values()[binding.spinnerButton.selectedItemPosition]
-            val gesture = GestureType.values()[binding.spinnerGesture.selectedItemPosition]
-            return TaskerInput(Br80EventFilter(button.name, gesture.name))
+            val slot = slots.getOrNull(binding.spinnerVirtualSlot.selectedItemPosition)
+            return TaskerInput(Br80EventFilter(slot?.id))
         }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

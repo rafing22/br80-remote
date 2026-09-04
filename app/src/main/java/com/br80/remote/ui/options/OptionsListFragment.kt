@@ -30,6 +30,7 @@ class OptionsListFragment : Fragment(R.layout.fragment_options_list) {
         view.findViewById<View>(R.id.rowConnection).setOnClickListener { optionsHost.navigateToDetail(ConnectionFragment()) }
         view.findViewById<View>(R.id.rowAudioRouting).setOnClickListener { optionsHost.navigateToDetail(AudioRoutingFragment()) }
         view.findViewById<View>(R.id.rowTtsLabels).setOnClickListener { optionsHost.navigateToDetail(TtsLabelsFragment()) }
+        view.findViewById<View>(R.id.rowTaskerSlots).setOnClickListener { optionsHost.navigateToDetail(TaskerSlotsFragment()) }
         view.findViewById<View>(R.id.rowInfo).setOnClickListener { optionsHost.navigateToDetail(InfoFragment()) }
     }
 

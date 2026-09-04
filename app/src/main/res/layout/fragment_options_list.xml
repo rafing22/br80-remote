@@ -162,7 +162,28 @@
                 android:gravity="center" android:textSize="15sp" android:text="🔊" android:layout_marginEnd="12dp" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
                 <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Testi Annuncio Vocale" />
-                <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Personalizza per gesto" />
+                <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Personalizza per azione" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowTaskerSlots"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_cockpit_card"
+            android:padding="13dp"
+            android:layout_marginBottom="9dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView android:layout_width="34dp" android:layout_height="34dp" android:background="@color/cockpit_bg"
+                android:gravity="center" android:textSize="15sp" android:text="⚡" android:layout_marginEnd="12dp" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView style="@style/Br80.Text.RowTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gestisci Tasti Tasker" />
+                <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Nomi delle automazioni" />
             </LinearLayout>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textSize="18sp" android:textColor="@color/cockpit_muted_dim" />
         </LinearLayout>

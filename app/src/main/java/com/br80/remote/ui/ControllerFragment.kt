@@ -122,19 +122,19 @@ class ControllerFragment : Fragment(R.layout.fragment_controller) {
         tvSelectedButtonTitle.text = "${button.displayName} (${button.name})"
 
         val actSingle = mappingStorage.getAction(button, GestureType.SINGLE)
-        tvActionSingle.text = actSingle.getReadableDescription()
+        tvActionSingle.text = mappingStorage.describeAction(actSingle)
         tvActionSingle.setTextColor(if (actSingle.type == ActionType.NONE) ContextCompat.getColor(ctx, R.color.cockpit_muted) else ContextCompat.getColor(ctx, R.color.cockpit_accent))
 
         val actDouble = mappingStorage.getAction(button, GestureType.DOUBLE)
-        tvActionDouble.text = actDouble.getReadableDescription()
+        tvActionDouble.text = mappingStorage.describeAction(actDouble)
         tvActionDouble.setTextColor(if (actDouble.type == ActionType.NONE) ContextCompat.getColor(ctx, R.color.cockpit_muted) else ContextCompat.getColor(ctx, R.color.cockpit_accent))
 
         val actTriple = mappingStorage.getAction(button, GestureType.TRIPLE)
-        tvActionTriple.text = actTriple.getReadableDescription()
+        tvActionTriple.text = mappingStorage.describeAction(actTriple)
         tvActionTriple.setTextColor(if (actTriple.type == ActionType.NONE) ContextCompat.getColor(ctx, R.color.cockpit_muted) else ContextCompat.getColor(ctx, R.color.cockpit_accent))
 
         val actLong = mappingStorage.getAction(button, GestureType.LONG)
-        tvActionLong.text = actLong.getReadableDescription()
+        tvActionLong.text = mappingStorage.describeAction(actLong)
         tvActionLong.setTextColor(if (actLong.type == ActionType.NONE) ContextCompat.getColor(ctx, R.color.cockpit_muted) else ContextCompat.getColor(ctx, R.color.cockpit_accent))
     }
 
@@ -157,7 +157,7 @@ class ControllerFragment : Fragment(R.layout.fragment_controller) {
     fun showLastAction(button: Br80Button, gesture: GestureType) {
         val action = mappingStorage.getAction(button, gesture)
         tvLastActionTitle.text = "${button.name} — ${gesture.displayName}"
-        tvLastActionSub.text = "→ ${action.getReadableDescription().uppercase(java.util.Locale.getDefault())}"
+        tvLastActionSub.text = "→ ${mappingStorage.describeAction(action).uppercase(java.util.Locale.getDefault())}"
     }
 
     // Selezione azione a due passi (categoria → azione), vedi ActionPickerDialog.
@@ -172,6 +172,7 @@ class ControllerFragment : Fragment(R.layout.fragment_controller) {
             ActionType.OPEN_APP -> showAppPicker(button, gesture)
             ActionType.START_NAVIGATION -> showDestinationPicker(button, gesture)
             ActionType.PHONE_SPEED_DIAL -> showSpeedDialPicker(button, gesture)
+            ActionType.TASKER_TRIGGER_EVENT -> showTaskerSlotPicker(button, gesture)
             else -> {
                 mappingStorage.setAction(button, gesture, ButtonAction(action))
                 selectButton(button)
@@ -244,6 +245,33 @@ class ControllerFragment : Fragment(R.layout.fragment_controller) {
                 mappingStorage.setAction(button, gesture, ButtonAction(ActionType.PHONE_SPEED_DIAL, num))
                 selectButton(button)
                 host.appendLog("Mappatura: ${button.name}_${gesture.name} -> Chiama '$num'")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showTaskerSlotPicker(button: Br80Button, gesture: GestureType) {
+        val ctx = requireContext()
+        val slots = mappingStorage.getTaskerVirtualSlots()
+        val addNewLabel = "+ Nuovo Tasto Virtuale"
+        val items = (slots.map { it.name } + addNewLabel).toTypedArray()
+
+        // AlertDialog non supporta setMessage() insieme a setItems(): la lista verrebbe
+        // scartata in favore del messaggio. La spiegazione va quindi nel titolo.
+        AlertDialog.Builder(ctx, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Scegli Tasto Virtuale Tasker\n(va scelto lo stesso anche in Tasker)")
+            .setItems(items) { _, which ->
+                if (which == slots.size) {
+                    val newSlot = mappingStorage.addTaskerVirtualSlot()
+                    mappingStorage.setAction(button, gesture, ButtonAction(ActionType.TASKER_TRIGGER_EVENT, newSlot.id.toString()))
+                    selectButton(button)
+                    host.appendLog("Mappatura: ${button.name}_${gesture.name} -> ${newSlot.name} (nuovo Tasto Virtuale)")
+                } else {
+                    val slot = slots[which]
+                    mappingStorage.setAction(button, gesture, ButtonAction(ActionType.TASKER_TRIGGER_EVENT, slot.id.toString()))
+                    selectButton(button)
+                    host.appendLog("Mappatura: ${button.name}_${gesture.name} -> ${slot.name}")
+                }
             }
             .setNegativeButton("Annulla", null)
             .show()

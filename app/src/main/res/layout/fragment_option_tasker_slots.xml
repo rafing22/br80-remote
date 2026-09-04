@@ -11,7 +11,7 @@
         style="@style/Br80.Text.Caption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Personalizza la frase pronunciata dal TTS per ogni azione (condivisa da qualunque tasto/gesto la esegua), al posto del testo automatico."
+        android:text="Ogni Tasto Virtuale identifica un'automazione Tasker: mappalo su un tasto/gesto qui nell'app e scegli lo stesso nome nella configurazione dell'Evento dentro Tasker. Rinominarlo aggiorna anche il testo pronunciato via TTS."
         android:padding="16dp" />
 
     <ScrollView
@@ -20,7 +20,7 @@
         android:layout_weight="1">
 
         <LinearLayout
-            android:id="@+id/llTtsLabelsContainer"
+            android:id="@+id/llTaskerSlotsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -28,4 +28,15 @@
             android:paddingBottom="16dp" />
 
     </ScrollView>
+
+    <Button
+        android:id="@+id/btnAddTaskerSlot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="+ Aggiungi Tasto Virtuale"
+        android:textSize="13sp"
+        android:backgroundTint="@color/cockpit_card"
+        android:textColor="@color/cockpit_ink" />
+
 </LinearLayout>

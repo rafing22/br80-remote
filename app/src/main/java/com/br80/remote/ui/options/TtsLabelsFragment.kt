@@ -7,15 +7,17 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.br80.remote.ActionCategory
 import com.br80.remote.ActionType
 import com.br80.remote.Br80Button
 import com.br80.remote.GestureType
 import com.br80.remote.R
-import com.br80.remote.ui.showCustomTtsLabelDialog
+import com.br80.remote.ui.showCustomTtsLabelForActionDialog
 
-/** Schermata "Gestisci Testi TTS", raggruppata per tasto fisico (badge UP/CALL/CAMERA...),
- * tag di gesto in monospace (1x/2x/3x/LONG) e chip "personalizzato" solo quando serve.
- * Prima era un AlertDialog lanciato da un pulsante in Opzioni, ora è la schermata stessa. */
+/** Schermata "Gestisci Testi TTS": un testo per AZIONE (condiviso da qualunque tasto/gesto
+ * la esegua), raggruppato per categoria. I trigger Tasker non compaiono qui: hanno la loro
+ * schermata dedicata "Gestisci Tasti Tasker", dove il nome del Tasto Virtuale è anche il
+ * testo pronunciato. */
 class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_labels, "Testi Annuncio Vocale") {
 
     private lateinit var container: LinearLayout
@@ -28,19 +30,20 @@ class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_lab
 
     private fun populateTtsList() {
         val ctx = requireContext()
-        val entries = mutableListOf<Pair<Br80Button, GestureType>>()
+
+        val mappedTypes = mutableSetOf<ActionType>()
         for (button in Br80Button.values()) {
             for (gesture in GestureType.values()) {
-                val action = mappingStorage.getAction(button, gesture)
-                if (action.type != ActionType.NONE) {
-                    entries.add(button to gesture)
+                val type = mappingStorage.getAction(button, gesture).type
+                if (type != ActionType.NONE && type != ActionType.TASKER_TRIGGER_EVENT && type != ActionType.TASKER_ONLY) {
+                    mappedTypes.add(type)
                 }
             }
         }
 
         container.removeAllViews()
 
-        if (entries.isEmpty()) {
+        if (mappedTypes.isEmpty()) {
             val empty = TextView(ctx).apply {
                 text = "Nessuna azione mappata su cui personalizzare il TTS."
                 textSize = 13f
@@ -51,39 +54,36 @@ class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_lab
             return
         }
 
-        val grouped = entries.groupBy({ it.first }, { it.second })
+        val grouped = mappedTypes.groupBy { it.category }
 
-        for ((button, gestures) in grouped) {
+        for (category in ActionCategory.values()) {
+            val types = grouped[category] ?: continue
+
             val groupHead = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(8, 20, 8, 8)
             }
 
-            val badge = TextView(ctx).apply {
-                text = button.name
-                textSize = 11f
-                setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(ctx, R.color.cockpit_card))
-                background = ContextCompat.getDrawable(ctx, R.drawable.bg_tts_button_badge)
-                setPadding(14, 4, 14, 4)
+            val icon = TextView(ctx).apply {
+                text = category.icon
+                textSize = 14f
             }
 
             val name = TextView(ctx).apply {
-                text = "  ${button.displayName}"
+                text = "  ${category.displayName}"
                 textSize = 13f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(ContextCompat.getColor(ctx, R.color.cockpit_ink))
             }
 
-            groupHead.addView(badge)
+            groupHead.addView(icon)
             groupHead.addView(name)
             container.addView(groupHead)
 
-            for (gesture in gestures) {
-                val action = mappingStorage.getAction(button, gesture)
-                val custom = mappingStorage.getCustomTtsLabel(button, gesture)
-                val ttsText = custom ?: action.getReadableDescription()
+            for (type in types.sortedBy { it.displayName }) {
+                val custom = mappingStorage.getCustomTtsLabelForActionType(type)
+                val ttsText = custom ?: type.displayName
 
                 val row = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -99,19 +99,8 @@ class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_lab
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
-                        showCustomTtsLabelDialog(ctx, mappingStorage, button, gesture, host::appendLog) { populateTtsList() }
+                        showCustomTtsLabelForActionDialog(ctx, mappingStorage, type, host::appendLog) { populateTtsList() }
                     }
-                }
-
-                val gestureTag = TextView(ctx).apply {
-                    text = gesture.tag
-                    textSize = 10.5f
-                    setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
-                    setTextColor(ContextCompat.getColor(ctx, R.color.cockpit_accent_bright))
-                    background = ContextCompat.getDrawable(ctx, R.drawable.bg_tts_gesture_tag)
-                    setPadding(10, 4, 10, 4)
-                    minWidth = 60
-                    gravity = Gravity.CENTER
                 }
 
                 val mainCol = LinearLayout(ctx).apply {
@@ -120,6 +109,13 @@ class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_lab
                     p.setMargins(16, 0, 8, 0)
                     layoutParams = p
                 }
+
+                val actionName = TextView(ctx).apply {
+                    text = type.displayName
+                    textSize = 11f
+                    setTextColor(ContextCompat.getColor(ctx, R.color.cockpit_muted))
+                }
+                mainCol.addView(actionName)
 
                 val phrase = TextView(ctx).apply {
                     text = "“$ttsText”"
@@ -148,7 +144,6 @@ class TtsLabelsFragment : OptionsDetailFragment(R.layout.fragment_option_tts_lab
                     textSize = 15f
                 }
 
-                row.addView(gestureTag)
                 row.addView(mainCol)
                 row.addView(pencil)
                 container.addView(row)
