@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.3](https://github.com/rafing22/br80-remote/compare/v3.3.2...v3.3.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* esportazione Tasker non funzionante (intent sbagliato + XML non valido) ([a5ce81b](https://github.com/rafing22/br80-remote/commit/a5ce81bc441a8d3d68b12777a4ee19d4329b7af3))
+
 ## [3.3.2](https://github.com/rafing22/br80-remote/compare/v3.3.1...v3.3.2) (2026-09-04)
 
 
