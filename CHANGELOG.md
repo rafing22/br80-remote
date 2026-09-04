@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/rafing22/br80-remote/compare/v3.3.3...v3.4.0) (2026-09-04)
+
+
+### Features
+
+* vero plugin Tasker (Evento) al posto dell'export XML ([cf1cc5e](https://github.com/rafing22/br80-remote/commit/cf1cc5e25f3ae396999724b1b6c5bf80cb725839))
+
 ## [3.3.3](https://github.com/rafing22/br80-remote/compare/v3.3.2...v3.3.3) (2026-09-04)
 
 
