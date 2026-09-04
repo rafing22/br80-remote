@@ -1,6 +1,52 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.2)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.5)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+
+---
+
+## 🎨 Novità Versione 3.5 — Redesign interfaccia, mappature su database, nuovo picker azioni
+
+Basato su una revisione indipendente di architettura e stile (analisi di un modello diverso, senza il contesto di sviluppo, per un parere davvero imparziale) e su un mockup discusso e approvato prima di partire con il codice.
+
+### Opzioni riorganizzata
+- Da un unico scroll infinito con 9 card impilate a un **elenco di 6 voci navigabili**, raggruppate per frequenza d'uso (Profilo/Ritmo Tap/Volume & Feedback in evidenza, Connessione & Automazione/Audio Interfono come setup una tantum, Testi TTS/Info come voci avanzate).
+- Ogni voce mostra lo **stato corrente subito visibile** (es. "Accessibilità da attivare", "Attivo · 2 dispositivi") invece di doverci entrare per scoprirlo.
+- Navigazione a sotto-schermate dedicate: il tasto Indietro chiude solo la sotto-schermata aperta, mai l'intera app.
+
+### Nuovo flusso di mappatura azione
+- Da un'unica lista lunga con categorie collassabili e ricerca sempre aperta, a una selezione **a due passi**: categoria a griglia (icone grandi) → lista azioni della categoria (righe larghe, pensate per l'uso con i guanti in moto). La ricerca testuale resta disponibile ma dietro un'icona opzionale.
+
+### Sotto il cofano
+- Le mappature tasto/gesto sono passate da `SharedPreferences` con chiavi concatenate a un vero database (**Room**), con cache in memoria per non introdurre latenza alla pressione fisica del tasto. Aggiunta la **rinomina profilo**, prima impossibile. Migrazione automatica e trasparente delle mappature esistenti al primo avvio.
+- `MainActivity` (1400+ righe) suddivisa in Fragment separati (Controller/Opzioni/Log), più facile da mantenere ed estendere.
+- Sistema colori reso coerente per ruolo semantico (nessun colore nuovo): il rosso di accento è ora riservato alle sole azioni toccabili, i valori/stati salvati usano un ambra dedicato, gli stati "da configurare" usano un colore della palette invece di uno estraneo.
+- Sostituito il pulsante "Esci / Chiudi Applicazione" con il doppio tasto Indietro (stesso comportamento: ferma il servizio in background).
+- Corretti alcuni bug emersi dalla stessa revisione: doppio evento sulla lettura batteria via BLE su Android 13+, una query del registro chiamate che girava sul thread principale (rischio di blocco dell'interfaccia), e un falso "vibra di conferma" quando Indietro/Home/Blocca Schermo fallivano silenziosamente per servizio di accessibilità non attivo.
+
+---
+
+## 🤖 Novità Versione 3.4 — Plugin Tasker nativo
+
+- **Niente più file XML da esportare e importare a mano**: l'app espone un vero plugin **Evento** per Tasker (libreria ufficiale `com.joaomgcd:taskerpluginlibrary`). Nei Profili Tasker compare "Evento → Plugin → Livall BR80 Remote": si sceglie tasto e gesto da un menu nativo, si collega un Task, fine.
+- Nuova azione mappabile **"Attiva Trigger Tasker"**: solo i tasti/gesti che mappi esplicitamente su questa azione attivano il Profilo Tasker collegato, esponendo le variabili `%bt_button`, `%bt_gesture`, `%bt_battery`.
+- Il vecchio broadcast grezzo `com.br80.remote.BUTTON_EVENT` resta comunque attivo per ogni gesto, per chi usa ancora MacroDroid o altre app di automazione.
+
+---
+
+## ⚙️ Novità Versione 3.3 — 6 nuove azioni, correzioni dal vivo su device reale
+
+Sessione di debug dal vivo su un dispositivo reale (telecomando fisico + interfono Bluetooth) che ha confermato diversi bug concreti, alcuni dei quali spiegavano insoddisfazioni reali sull'uso di Google Gemini in moto.
+
+### Nuove azioni mappabili
+Tasto Indietro, Tasto Home, Blocca Schermo (tramite Servizio di Accessibilità), Imposta Volume Preciso, Richiama Ultima Chiamata Ricevuta/Effettuata.
+
+### Bugfix confermati dal vivo
+- Il rilevamento di dispositivi audio/BT connessi (interfono, cuffie) usava un'API che supporta solo il profilo GATT: per Bluetooth audio (A2DP/HEADSET) falliva sempre silenziosamente — causa concreta di "Gemini non mi sente sull'interfono".
+- Una scrittura BLE senza risposta (tipico a schermo spento) poteva bloccare per sempre la coda dei comandi, risolvibile solo riavviando l'app.
+- Il downgrade automatico di priorità della connessione BLE introdotto in precedenza causava disconnessioni pochi secondi dopo: rimosso.
+- Un tocco ravvicinato sul pulsante Connetti durante l'handshake lo interrompeva per errore.
+- Le azioni Chiamata Rapida e Richiama Ultimo Numero aprivano solo il compositore invece di avviare davvero la chiamata (permesso mai richiesto a runtime).
+- Il registratore vocale non si apriva mai su Android 11+ per le restrizioni di visibilità dei pacchetti.
 
 ---
 
