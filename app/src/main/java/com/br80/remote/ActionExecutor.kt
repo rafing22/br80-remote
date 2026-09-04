@@ -264,6 +264,15 @@ class ActionExecutor(
             ScoAudioGateway.openScoAndAwait(context) { connected ->
                 if (connected) {
                     onLog("Canale voce interfono aperto. Attivo Gemini...")
+                    // Pre-riscaldamento: un canale SCO appena aperto "a freddo" può partire
+                    // con qualità audio non ancora stabilizzata. Osservato empiricamente che
+                    // un annuncio TTS appena prima di Gemini (es. un "Volume +" premuto poco
+                    // prima) sembra migliorarla — questa frase replica volutamente l'effetto.
+                    if (mappingStorage.isGeminiPrimingEnabled()) {
+                        val phrase = mappingStorage.getGeminiPrimingPhrase()
+                        ttsFeedbackManager?.speak(phrase)
+                        onLog("Pre-riscaldamento canale: pronunciata \"$phrase\"")
+                    }
                 } else {
                     onLog("Canale voce interfono non disponibile (dispositivo non ha risposto in tempo): attivo Gemini sul percorso audio predefinito.")
                 }

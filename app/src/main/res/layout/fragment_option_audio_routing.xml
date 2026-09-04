@@ -131,6 +131,46 @@
             android:layout_marginTop="8dp"
             android:text="Ritardo attivo: 300 ms" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/cockpit_border"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="16dp" />
+
+        <CheckBox
+            android:id="@+id/cbGeminiPriming"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pre-riscalda canale con una frase prima di Gemini"
+            android:textSize="14sp"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pronuncia una breve frase TTS subito dopo l'apertura del canale, prima di attivare Gemini: un canale appena aperto può partire con qualità audio non ancora stabilizzata. Regola il tempo tra la frase e Gemini con &quot;Ritardo Lancio Gemini&quot; qui sopra."
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnApplyGeminiPrimingPhrase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Imposta Frase"
+            android:textSize="13sp"
+            android:backgroundTint="@color/cockpit_card"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            android:id="@+id/tvGeminiPrimingPhrase"
+            style="@style/Br80.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Frase attiva: &quot;Ok&quot;" />
+
     </LinearLayout>
     </ScrollView>
 </LinearLayout>

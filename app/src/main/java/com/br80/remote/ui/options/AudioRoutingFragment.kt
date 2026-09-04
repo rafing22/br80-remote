@@ -16,6 +16,7 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
     private lateinit var tvAudioBtDevice: TextView
     private lateinit var tvGeminiLaunchDelay: TextView
     private lateinit var tvGeminiCleanupDelay: TextView
+    private lateinit var tvGeminiPrimingPhrase: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -27,6 +28,9 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
         val cbGeminiCleanupBack = view.findViewById<CheckBox>(R.id.cbGeminiCleanupBack)
         val btnApplyGeminiCleanupDelay = view.findViewById<Button>(R.id.btnApplyGeminiCleanupDelay)
         tvGeminiCleanupDelay = view.findViewById(R.id.tvGeminiCleanupDelay)
+        val cbGeminiPriming = view.findViewById<CheckBox>(R.id.cbGeminiPriming)
+        val btnApplyGeminiPrimingPhrase = view.findViewById<Button>(R.id.btnApplyGeminiPrimingPhrase)
+        tvGeminiPrimingPhrase = view.findViewById(R.id.tvGeminiPrimingPhrase)
 
         cbOptAudioBtRouting.isChecked = mappingStorage.isAudioBtRoutingEnabled()
         updateAudioBtDeviceLabel()
@@ -65,6 +69,18 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
         btnApplyGeminiCleanupDelay.setOnClickListener {
             showGeminiCleanupDelayDialog()
+        }
+
+        cbGeminiPriming.isChecked = mappingStorage.isGeminiPrimingEnabled()
+        updateGeminiPrimingPhraseLabel()
+
+        cbGeminiPriming.setOnCheckedChangeListener { _, isChecked ->
+            mappingStorage.setGeminiPrimingEnabled(isChecked)
+            host.appendLog("Pre-riscaldamento canale prima di Gemini: " + if (isChecked) "ATTIVO" else "DISATTIVO")
+        }
+
+        btnApplyGeminiPrimingPhrase.setOnClickListener {
+            showGeminiPrimingPhraseDialog()
         }
     }
 
@@ -134,6 +150,34 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
     private fun updateGeminiCleanupDelayLabel() {
         tvGeminiCleanupDelay.text = "Ritardo attivo: ${mappingStorage.getGeminiCleanupDelayMs()} ms"
+    }
+
+    private fun showGeminiPrimingPhraseDialog() {
+        val context = requireContext()
+        val input = EditText(context).apply {
+            hint = "Ok"
+            setText(mappingStorage.getGeminiPrimingPhrase())
+            setSelection(text.length)
+            setTextColor(ContextCompat.getColor(context, R.color.cockpit_ink))
+            setHintTextColor(ContextCompat.getColor(context, R.color.cockpit_muted))
+        }
+
+        AlertDialog.Builder(context, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Frase Pre-riscaldamento")
+            .setMessage("Testo pronunciato subito dopo l'apertura del canale interfono, prima di lanciare Gemini. Il ritardo tra la frase e Gemini si regola con \"Ritardo Lancio Gemini\" qui sopra.")
+            .setView(input)
+            .setPositiveButton("Salva") { _, _ ->
+                val phrase = input.text.toString().trim()
+                mappingStorage.setGeminiPrimingPhrase(phrase)
+                updateGeminiPrimingPhraseLabel()
+                host.appendLog("Frase pre-riscaldamento impostata: \"${mappingStorage.getGeminiPrimingPhrase()}\"")
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun updateGeminiPrimingPhraseLabel() {
+        tvGeminiPrimingPhrase.text = "Frase attiva: \"${mappingStorage.getGeminiPrimingPhrase()}\""
     }
 
     private fun updateAudioBtDeviceLabel() {

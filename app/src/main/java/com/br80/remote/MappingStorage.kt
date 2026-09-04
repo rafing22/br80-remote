@@ -237,6 +237,29 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putLong(KEY_GEMINI_CLEANUP_DELAY, clamped).apply()
     }
 
+    // Se attivo, pronuncia una breve frase TTS subito dopo l'apertura del canale SCO e
+    // prima di lanciare Gemini: un canale interfono appena aperto "a freddo" può partire
+    // con qualità audio non ancora stabilizzata, mentre un canale già "riscaldato" da un
+    // annuncio TTS precedente (osservato empiricamente, es. dopo un "Volume +") sembra
+    // suonare meglio. Disattivato di default. Il ritardo tra la frase e Gemini riusa
+    // getGeminiLaunchDelayMs(), già configurabile.
+    fun isGeminiPrimingEnabled(): Boolean {
+        return prefs.getBoolean(KEY_GEMINI_PRIMING_ENABLED, false)
+    }
+
+    fun setGeminiPrimingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GEMINI_PRIMING_ENABLED, enabled).apply()
+    }
+
+    fun getGeminiPrimingPhrase(): String {
+        return prefs.getString(KEY_GEMINI_PRIMING_PHRASE, "Ok") ?: "Ok"
+    }
+
+    fun setGeminiPrimingPhrase(phrase: String) {
+        val value = phrase.trim().ifEmpty { "Ok" }
+        prefs.edit().putString(KEY_GEMINI_PRIMING_PHRASE, value).apply()
+    }
+
     // Soglia minima pressione lunga in millisecondi (default 550ms)
     fun getLongPressThresholdMs(): Long {
         return prefs.getLong(KEY_LONG_PRESS_THRESHOLD, 550L)
@@ -630,6 +653,8 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_GEMINI_LAUNCH_DELAY = "pref_gemini_launch_delay_ms"
         private const val KEY_GEMINI_CLEANUP_BACK = "pref_gemini_cleanup_back"
         private const val KEY_GEMINI_CLEANUP_DELAY = "pref_gemini_cleanup_delay_ms"
+        private const val KEY_GEMINI_PRIMING_ENABLED = "pref_gemini_priming_enabled"
+        private const val KEY_GEMINI_PRIMING_PHRASE = "pref_gemini_priming_phrase"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_TASKER_VIRTUAL_SLOTS = "pref_tasker_virtual_slots"
         private const val KEY_TTS_LABEL_PREFIX = "pref_tts_label_action_"
