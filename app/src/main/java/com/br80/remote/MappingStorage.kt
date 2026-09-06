@@ -425,7 +425,7 @@ class MappingStorage private constructor(context: Context) {
     }
 
     fun isKeepAliveEnabled(): Boolean {
-        return prefs.getBoolean(KEY_KEEP_ALIVE, true)
+        return prefs.getBoolean(KEY_KEEP_ALIVE, false)
     }
 
     fun setKeepAliveEnabled(enabled: Boolean) {

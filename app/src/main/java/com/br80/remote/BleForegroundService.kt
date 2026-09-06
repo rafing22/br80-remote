@@ -209,11 +209,13 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     override fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?) {
         val name = deviceName ?: "Interfono/Casco"
         if (isConnected) {
+            mappingStorage.setKeepAliveEnabled(true)
             onLog("Dispositivo BT Target ($name) connesso! Attivo Keep-Alive e ascolto reattivo...")
             connectDevice()
         } else {
             onLog("Dispositivo BT Target ($name) disconnesso. Arresto Keep-Alive e ascolto reattivo.")
             if (mappingStorage.isConditionalBtEnabled()) {
+                mappingStorage.setKeepAliveEnabled(false)
                 disconnectDevice()
             }
         }
