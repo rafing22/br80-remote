@@ -185,9 +185,9 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             activeFragment = target
         }
 
-        tvNavTextController.setTextColor(toColorStateList(if (tabIndex == 0) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)))
-        tvNavTextOptions.setTextColor(toColorStateList(if (tabIndex == 1) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)))
-        tvNavTextLog.setTextColor(toColorStateList(if (tabIndex == 2) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)))
+        tvNavTextController.setTextColor((if (tabIndex == 0) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)).toColorStateList())
+        tvNavTextOptions.setTextColor((if (tabIndex == 1) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)).toColorStateList())
+        tvNavTextLog.setTextColor((if (tabIndex == 2) ContextCompat.getColor(this, R.color.cockpit_accent) else ContextCompat.getColor(this, R.color.cockpit_muted)).toColorStateList())
 
     }
 
@@ -320,34 +320,34 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 BleGattManager.ConnectionState.DISCONNECTED -> {
                     val hasSaved = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
                     if (hasSaved) {
-                        viewStatusDot.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_warning))
+                        viewStatusDot.backgroundTintList = (ContextCompat.getColor(this, R.color.status_warning)).toColorStateList()
                         tvHeaderStatus.text = "In ascolto (Premi un tasto)"
                         tvHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.status_warning_dark))
                         tvHeaderBattery.text = ""
                         btnQuickConnect.text = "Riconnetti"
-                        btnQuickConnect.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.cockpit_accent))
+                        btnQuickConnect.backgroundTintList = (ContextCompat.getColor(this, R.color.cockpit_accent)).toColorStateList()
                     } else {
-                        viewStatusDot.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_error))
+                        viewStatusDot.backgroundTintList = (ContextCompat.getColor(this, R.color.status_error)).toColorStateList()
                         tvHeaderStatus.text = "Disconnesso"
                         tvHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.cockpit_muted))
                         tvHeaderBattery.text = ""
                         btnQuickConnect.text = "Connetti"
-                        btnQuickConnect.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.cockpit_accent))
+                        btnQuickConnect.backgroundTintList = (ContextCompat.getColor(this, R.color.cockpit_accent)).toColorStateList()
                     }
                 }
                 BleGattManager.ConnectionState.CONNECTING -> {
-                    viewStatusDot.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_warning))
+                    viewStatusDot.backgroundTintList = (ContextCompat.getColor(this, R.color.status_warning)).toColorStateList()
                     tvHeaderStatus.text = "Connessione in corso..."
                     tvHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.status_warning_dark))
                     btnQuickConnect.text = "Annulla"
-                    btnQuickConnect.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_warning_dark))
+                    btnQuickConnect.backgroundTintList = (ContextCompat.getColor(this, R.color.status_warning_dark)).toColorStateList()
                 }
                 BleGattManager.ConnectionState.CONNECTED -> {
-                    viewStatusDot.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_success))
+                    viewStatusDot.backgroundTintList = (ContextCompat.getColor(this, R.color.status_success)).toColorStateList()
                     tvHeaderStatus.text = "Connesso"
                     tvHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.status_success))
                     btnQuickConnect.text = "Disconnetti"
-                    btnQuickConnect.backgroundTintList = toColorStateList(ContextCompat.getColor(this, R.color.status_error))
+                    btnQuickConnect.backgroundTintList = (ContextCompat.getColor(this, R.color.status_error)).toColorStateList()
                 }
             }
         }
@@ -363,8 +363,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
 
     override fun onGestureExecuted(button: Br80Button, gesture: GestureType) {
         runOnUiThread {
-            val time = timeFormat.format(Date())
-            appendLog("[$time] AZIONE ESEGUITA -> ${button.name} [${gesture.name}]")
+            appendLog("AZIONE ESEGUITA -> ${button.name} [${gesture.name}]")
             controllerFragment.showLastAction(button, gesture)
         }
     }
@@ -388,8 +387,6 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
             appendLog(message)
         }
     }
-
-    private fun toColorStateList(color: Int) = android.content.res.ColorStateList.valueOf(color)
 
     companion object {
         private const val PERMISSIONS_REQUEST_CODE = 100

@@ -3,7 +3,6 @@ package com.br80.remote.ui.options
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,6 +16,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.br80.remote.Br80AccessibilityService
 import com.br80.remote.R
+import com.br80.remote.toColorStateList
 
 class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connection, "Connessione & Automazione") {
 
@@ -131,11 +131,11 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
             if (isIgnoring) {
                 btnOptDoze.text = "Doze: Escluso con Successo ✓"
                 btnOptDoze.isEnabled = false
-                btnOptDoze.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_success))
+                btnOptDoze.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_success)).toColorStateList()
             } else {
                 btnOptDoze.text = "Disattiva Ottimizzazione Batteria (Doze)"
                 btnOptDoze.isEnabled = true
-                btnOptDoze.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_warning))
+                btnOptDoze.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_warning)).toColorStateList()
             }
         }
     }
@@ -162,11 +162,11 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
             if (canDraw) {
                 btnOptOverlay.text = "Avvio su Altre App: Autorizzato ✓"
                 btnOptOverlay.isEnabled = false
-                btnOptOverlay.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_success))
+                btnOptOverlay.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_success)).toColorStateList()
             } else {
                 btnOptOverlay.text = "Consenti Avvio su Altre App (Gemini / Mappe)"
                 btnOptOverlay.isEnabled = true
-                btnOptOverlay.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_warning))
+                btnOptOverlay.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_warning)).toColorStateList()
             }
         }
     }
@@ -176,11 +176,11 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         if (Br80AccessibilityService.isRunning()) {
             btnOptAccessibility.text = "Servizio Accessibilità: Attivo ✓"
             btnOptAccessibility.isEnabled = false
-            btnOptAccessibility.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_success))
+            btnOptAccessibility.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_success)).toColorStateList()
         } else {
             btnOptAccessibility.text = "Attiva Servizio Accessibilità (Indietro / Home / Blocca Schermo)"
             btnOptAccessibility.isEnabled = true
-            btnOptAccessibility.backgroundTintList = toColorStateList(ContextCompat.getColor(ctx, R.color.status_warning))
+            btnOptAccessibility.backgroundTintList = (ContextCompat.getColor(ctx, R.color.status_warning)).toColorStateList()
         }
     }
 
@@ -192,5 +192,4 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         }
     }
 
-    private fun toColorStateList(color: Int) = ColorStateList.valueOf(color)
 }

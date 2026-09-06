@@ -46,13 +46,7 @@ class OptionsListFragment : Fragment(R.layout.fragment_options_list) {
         view.findViewById<TextView>(R.id.tvRowProfileStatus).text = mappingStorage.getActiveProfileName()
 
         val tapMs = mappingStorage.getMultiTapWindowMs()
-        val tapDesc = when {
-            tapMs <= 300L -> "Sportivo"
-            tapMs <= 450L -> "Standard"
-            tapMs <= 600L -> "Guanti"
-            else -> "Personalizzato"
-        }
-        view.findViewById<TextView>(R.id.tvRowTapRhythmStatus).text = "$tapMs ms · $tapDesc"
+        view.findViewById<TextView>(R.id.tvRowTapRhythmStatus).text = "$tapMs ms · ${TapRhythmFragment.describeTapSpeed(tapMs)}"
 
         // Connessione & Automazione: primo permesso mancante tra Accessibilità/Overlay/Doze,
         // "Tutto configurato" se sono tutti a posto.

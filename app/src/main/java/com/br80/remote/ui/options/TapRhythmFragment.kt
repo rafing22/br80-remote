@@ -32,12 +32,17 @@ class TapRhythmFragment : OptionsDetailFragment(R.layout.fragment_option_tap_rhy
 
     private fun updateTapSpeedText() {
         val current = mappingStorage.getMultiTapWindowMs()
-        val desc = when {
-            current <= 300L -> "Sportivo"
-            current <= 450L -> "Standard"
-            current <= 600L -> "Guanti"
+        tvCurrentTapSpeed.text = "Finestra Doppio Tap: $current ms (${describeTapSpeed(current)})"
+    }
+
+    companion object {
+        /** Nome del preset più vicino alla finestra multi-tap corrente (in ms), condiviso
+         * con il sottotitolo della riga "Ritmo Tap" nell'elenco Opzioni. */
+        fun describeTapSpeed(ms: Long): String = when {
+            ms <= 300L -> "Sportivo"
+            ms <= 450L -> "Standard"
+            ms <= 600L -> "Guanti"
             else -> "Personalizzato"
         }
-        tvCurrentTapSpeed.text = "Finestra Doppio Tap: $current ms ($desc)"
     }
 }

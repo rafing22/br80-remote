@@ -577,22 +577,6 @@ class MappingStorage private constructor(context: Context) {
         return mappingCache[cacheKey(getActiveProfileName(), button.name, gesture.name)]?.customTtsLabel
     }
 
-    fun setCustomTtsLabel(button: Br80Button, gesture: GestureType, label: String?) {
-        val profile = getActiveProfileName()
-        val key = cacheKey(profile, button.name, gesture.name)
-        val trimmed = if (label.isNullOrBlank()) null else label.trim()
-        // Se non esiste ancora una entità per questo tasto/gesto (azione mai mappata
-        // esplicitamente, sta usando il default), la crea con l'azione di default corrente
-        // così il testo personalizzato ha comunque un'azione a cui riferirsi.
-        val existing = mappingCache[key] ?: run {
-            val default = getDefaultAction(button, gesture)
-            ButtonMappingEntity(profile, button.name, gesture.name, default.type.id, default.parameter)
-        }
-        val updated = existing.copy(customTtsLabel = trimmed)
-        mappingCache[key] = updated
-        writeAsync(updated)
-    }
-
     // Migrazione una tantum dal vecchio schema SharedPreferences (chiavi composite
     // "map_..."/"map_profile_X_..."/"tts_label_...") al database Room, per non perdere le
     // mappature di chi aggiorna l'app da una versione precedente a questa migrazione.

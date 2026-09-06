@@ -4,4 +4,6 @@
     <string name="tasker_var_label_button">Tasto BR80</string>
     <string name="tasker_var_label_gesture">Gesto BR80</string>
     <string name="tasker_var_label_battery">Batteria BR80</string>
+    <string name="tasker_var_label_slot_id">ID Tasto Virtuale BR80</string>
+    <string name="tasker_var_label_slot_name">Nome Tasto Virtuale BR80</string>
 </resources>
