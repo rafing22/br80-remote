@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.4](https://github.com/rafing22/br80-remote/compare/v4.2.3...v4.2.4) (2026-09-06)
+
+
+### Bug Fixes
+
+* Keep-Alive off by default, auto-enabled by conditional BT device ([0abdd41](https://github.com/rafing22/br80-remote/commit/0abdd41820c4e14233e826ebce65bc25d0202d2c))
+
 ## [4.2.3](https://github.com/rafing22/br80-remote/compare/v4.2.2...v4.2.3) (2026-09-06)
 
 
