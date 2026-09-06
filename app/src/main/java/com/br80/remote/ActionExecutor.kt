@@ -261,7 +261,7 @@ class ActionExecutor(
             onLog("Canale voce interfono ancora impegnato da una richiesta precedente: attivo Gemini sul percorso audio predefinito. Riprova tra qualche secondo.")
             fireGeminiIntents()
         } else if (shouldUseScoGateway) {
-            ScoAudioGateway.openScoAndAwait(context) { connected ->
+            ScoAudioGateway.openScoAndAwait(context, mappingStorage.getScoOpenTimeoutMs()) { connected ->
                 fun proceedToGemini() {
                     fireGeminiIntents()
                     if (connected) {

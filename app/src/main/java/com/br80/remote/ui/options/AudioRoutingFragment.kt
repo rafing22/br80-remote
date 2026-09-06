@@ -17,6 +17,7 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
     private lateinit var tvGeminiLaunchDelay: TextView
     private lateinit var tvGeminiCleanupDelay: TextView
     private lateinit var tvGeminiPrimingPhrase: TextView
+    private lateinit var tvScoOpenTimeout: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -51,6 +52,13 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
                 updateAudioBtDeviceLabel()
                 host.appendLog("Dispositivi audio per TTS/Comandi impostati: ${selected.joinToString(", ") { it.second }}")
             }
+        }
+
+        val btnApplyScoOpenTimeout = view.findViewById<Button>(R.id.btnApplyScoOpenTimeout)
+        tvScoOpenTimeout = view.findViewById(R.id.tvScoOpenTimeout)
+        updateScoOpenTimeoutLabel()
+        btnApplyScoOpenTimeout.setOnClickListener {
+            showScoOpenTimeoutDialog()
         }
 
         updateGeminiLaunchDelayLabel()
@@ -178,6 +186,40 @@ class AudioRoutingFragment : OptionsDetailFragment(R.layout.fragment_option_audi
 
     private fun updateGeminiPrimingPhraseLabel() {
         tvGeminiPrimingPhrase.text = "Frase attiva: \"${mappingStorage.getGeminiPrimingPhrase()}\""
+    }
+
+    private fun showScoOpenTimeoutDialog() {
+        val context = requireContext()
+        val input = EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "1000-8000"
+            setText(mappingStorage.getScoOpenTimeoutMs().toString())
+            setSelection(text.length)
+            setTextColor(ContextCompat.getColor(context, R.color.cockpit_ink))
+            setHintTextColor(ContextCompat.getColor(context, R.color.cockpit_muted))
+        }
+
+        AlertDialog.Builder(context, R.style.Theme_Br80_CockpitDialog)
+            .setTitle("Timeout Apertura Canale")
+            .setMessage("Tempo massimo (in millisecondi) di attesa per l'apertura del canale voce prima di rinunciare e usare il percorso audio predefinito. Il primo tentativo dopo un'inattività Bluetooth può richiedere più tempo del previsto.")
+            .setView(input)
+            .setPositiveButton("Applica") { _, _ ->
+                val requested = input.text.toString().toLongOrNull()
+                if (requested == null) {
+                    Toast.makeText(context, "Inserisci un numero valido di millisecondi.", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                mappingStorage.setScoOpenTimeoutMs(requested)
+                updateScoOpenTimeoutLabel()
+                host.appendLog("Timeout apertura canale impostato a ${mappingStorage.getScoOpenTimeoutMs()} ms")
+                Toast.makeText(context, "Timeout applicato: ${mappingStorage.getScoOpenTimeoutMs()} ms", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun updateScoOpenTimeoutLabel() {
+        tvScoOpenTimeout.text = "Timeout attivo: ${mappingStorage.getScoOpenTimeoutMs()} ms"
     }
 
     private fun updateAudioBtDeviceLabel() {
