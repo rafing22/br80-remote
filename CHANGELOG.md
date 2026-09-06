@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.2](https://github.com/rafing22/br80-remote/compare/v4.2.1...v4.2.2) (2026-09-06)
+
+
+### Bug Fixes
+
+* improve interfono SCO channel reliability after BLE reconnects ([393e133](https://github.com/rafing22/br80-remote/commit/393e1331c9df7518b768c920dd4076ff623f6de1))
+
 ## [4.2.1](https://github.com/rafing22/br80-remote/compare/v4.2.0...v4.2.1) (2026-09-06)
 
 
