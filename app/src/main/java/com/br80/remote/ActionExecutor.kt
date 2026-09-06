@@ -32,6 +32,7 @@ class ActionExecutor(
     private val context: Context,
     private val mappingStorage: MappingStorage,
     var ttsFeedbackManager: TtsFeedbackManager? = null,
+    private val isRecentReconnectRocky: (() -> Boolean)? = null,
     private val onLog: (String) -> Unit
 ) {
 
@@ -261,6 +262,11 @@ class ActionExecutor(
             onLog("Canale voce interfono ancora impegnato da una richiesta precedente: attivo Gemini sul percorso audio predefinito. Riprova tra qualche secondo.")
             fireGeminiIntents()
         } else if (shouldUseScoGateway) {
+            val proactiveDelayMs = if (isRecentReconnectRocky?.invoke() == true) PROACTIVE_ROCKY_DELAY_MS else 0L
+            if (proactiveDelayMs > 0) {
+                onLog("Riconnessione BLE recente instabile: attendo ${proactiveDelayMs}ms prima di aprire il canale voce.")
+            }
+            Handler(Looper.getMainLooper()).postDelayed({
             ScoAudioGateway.openScoAndAwait(context, mappingStorage.getScoOpenTimeoutMs()) { connected ->
                 fun proceedToGemini() {
                     fireGeminiIntents()
@@ -298,6 +304,7 @@ class ActionExecutor(
                     proceedToGemini()
                 }
             }
+            }, proactiveDelayMs)
         } else {
             fireGeminiIntents()
         }
@@ -607,5 +614,11 @@ class ActionExecutor(
         // mai il completamento della frase (onDone/onError), Gemini parte comunque dopo
         // questo tempo invece di restare bloccato in attesa indefinitamente.
         private const val PRIMING_MAX_WAIT_MS = 3000L
+
+        // Se l'ultima riconnessione BLE del telecomando ha richiesto retry/errori GATT,
+        // il radio Bluetooth del telefono può restare occupato/instabile più a lungo:
+        // diamogli questo margine in più prima di tentare l'apertura del canale SCO,
+        // invece di scoprire il fallimento e ritentare alla cieca.
+        private const val PROACTIVE_ROCKY_DELAY_MS = 1200L
     }
 }

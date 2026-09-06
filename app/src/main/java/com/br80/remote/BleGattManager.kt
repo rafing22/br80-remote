@@ -62,6 +62,14 @@ class BleGattManager(
 
     private var reconnectAttempts = 0
     private val reconnectDelays = listOf(1000L, 2500L, 5000L, 10000L)
+
+    // Segnale per chi deve decidere se "aspettare un po' di più" prima di usare il radio
+    // Bluetooth per altro (es. apertura canale SCO) subito dopo una riconnessione: se
+    // l'ultima riconnessione ha richiesto retry/errori GATT, il radio potrebbe restare
+    // occupato/instabile per qualche secondo in più rispetto a una riconnessione pulita.
+    var lastConnectWasRocky: Boolean = false
+        private set
+    private var lastSuccessfulConnectAtMs: Long = 0L
     private var reconnectRunnable: Runnable? = null
     private var scanTimeoutRunnable: Runnable? = null
     private var connectionWatchdogRunnable: Runnable? = null
@@ -473,6 +481,13 @@ class BleGattManager(
         keepAliveRunnable = null
     }
 
+    /** True se l'ultima riconnessione riuscita ha richiesto retry/errori GATT ed è avvenuta
+     * negli ultimi [withinMs] ms: segnale per chi deve decidere se dare al radio Bluetooth
+     * un momento in più prima di un'altra operazione (es. apertura canale SCO). */
+    fun wasRecentReconnectRocky(withinMs: Long = 5000L): Boolean {
+        return lastConnectWasRocky && (System.currentTimeMillis() - lastSuccessfulConnectAtMs) < withinMs
+    }
+
     private fun gattStatusString(status: Int): String {
         return when (status) {
             BluetoothGatt.GATT_SUCCESS -> "SUCCESS (0)"
@@ -503,6 +518,8 @@ class BleGattManager(
                 }
 
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    lastConnectWasRocky = reconnectAttempts > 0
+                    lastSuccessfulConnectAtMs = System.currentTimeMillis()
                     reconnectAttempts = 0
                     stopConnectionWatchdog()
                     stopLeScan()
