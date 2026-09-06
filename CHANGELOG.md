@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.1](https://github.com/rafing22/br80-remote/compare/v4.2.0...v4.2.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* lancia Gemini a completamento reale della frase di pre-riscaldamento ([25e1ccd](https://github.com/rafing22/br80-remote/commit/25e1ccd06c60f4649eb4d0f670950b961b81aa6a))
+
 ## [4.2.0](https://github.com/rafing22/br80-remote/compare/v4.1.0...v4.2.0) (2026-09-04)
 
 
