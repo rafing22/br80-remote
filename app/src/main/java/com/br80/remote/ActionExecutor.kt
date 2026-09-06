@@ -262,6 +262,13 @@ class ActionExecutor(
             fireGeminiIntents()
         } else if (shouldUseScoGateway) {
             ScoAudioGateway.openScoAndAwait(context) { connected ->
+                fun proceedToGemini() {
+                    fireGeminiIntents()
+                    if (connected) {
+                        ScoAudioGateway.releaseScoWhenGeminiFinishes(context, onLog = onLog)
+                    }
+                }
+
                 if (connected) {
                     onLog("Canale voce interfono aperto. Attivo Gemini...")
                     // Pre-riscaldamento: un canale SCO appena aperto "a freddo" può partire
@@ -270,20 +277,25 @@ class ActionExecutor(
                     // prima) sembra migliorarla — questa frase replica volutamente l'effetto.
                     if (mappingStorage.isGeminiPrimingEnabled()) {
                         val phrase = mappingStorage.getGeminiPrimingPhrase()
-                        ttsFeedbackManager?.speak(phrase)
                         onLog("Pre-riscaldamento canale: pronunciata \"$phrase\"")
+                        // Lancia Gemini quando la frase ha DAVVERO finito di essere pronunciata
+                        // (non un ritardo fisso indovinato, che tagliava la frase a metà in modo
+                        // incostante): PRIMING_MAX_WAIT_MS è solo una rete di sicurezza se il
+                        // motore TTS non conferma mai il completamento.
+                        ttsFeedbackManager?.speakAndAwaitCompletion(phrase, PRIMING_MAX_WAIT_MS) {
+                            proceedToGemini()
+                        } ?: proceedToGemini()
+                        return@openScoAndAwait
                     }
                 } else {
                     onLog("Canale voce interfono non disponibile (dispositivo non ha risposto in tempo): attivo Gemini sul percorso audio predefinito.")
                 }
+
                 val delayMs = mappingStorage.getGeminiLaunchDelayMs()
                 if (delayMs > 0) {
-                    Handler(Looper.getMainLooper()).postDelayed({ fireGeminiIntents() }, delayMs)
+                    Handler(Looper.getMainLooper()).postDelayed({ proceedToGemini() }, delayMs)
                 } else {
-                    fireGeminiIntents()
-                }
-                if (connected) {
-                    ScoAudioGateway.releaseScoWhenGeminiFinishes(context, onLog = onLog)
+                    proceedToGemini()
                 }
             }
         } else {
@@ -590,5 +602,10 @@ class ActionExecutor(
 
     companion object {
         const val ACTION_BUTTON_EVENT = "com.br80.remote.BUTTON_EVENT"
+
+        // Rete di sicurezza per il pre-riscaldamento Gemini: se il motore TTS non conferma
+        // mai il completamento della frase (onDone/onError), Gemini parte comunque dopo
+        // questo tempo invece di restare bloccato in attesa indefinitamente.
+        private const val PRIMING_MAX_WAIT_MS = 3000L
     }
 }
