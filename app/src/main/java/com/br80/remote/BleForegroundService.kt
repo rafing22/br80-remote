@@ -111,7 +111,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         mappingStorage = MappingStorage.getInstance(this)
         ttsFeedbackManager = TtsFeedbackManager(this, mappingStorage)
         actionExecutor = ActionExecutor(this, mappingStorage, ttsFeedbackManager,
-            isRecentReconnectRocky = { gattManager.wasRecentReconnectRocky() }) { logMsg ->
+            recentReconnectErrorCount = { gattManager.recentReconnectErrorCount() }) { logMsg ->
             listener?.onLog(logMsg)
         }
         gestureDetector = GestureDetector(mappingStorage) { button, gesture ->

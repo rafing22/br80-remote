@@ -32,7 +32,7 @@ class ActionExecutor(
     private val context: Context,
     private val mappingStorage: MappingStorage,
     var ttsFeedbackManager: TtsFeedbackManager? = null,
-    private val isRecentReconnectRocky: (() -> Boolean)? = null,
+    private val recentReconnectErrorCount: (() -> Int)? = null,
     private val onLog: (String) -> Unit
 ) {
 
@@ -262,9 +262,14 @@ class ActionExecutor(
             onLog("Canale voce interfono ancora impegnato da una richiesta precedente: attivo Gemini sul percorso audio predefinito. Riprova tra qualche secondo.")
             fireGeminiIntents()
         } else if (shouldUseScoGateway) {
-            val proactiveDelayMs = if (isRecentReconnectRocky?.invoke() == true) PROACTIVE_ROCKY_DELAY_MS else 0L
+            val errorCount = recentReconnectErrorCount?.invoke() ?: 0
+            val proactiveDelayMs = when {
+                errorCount <= 0 -> 0L
+                errorCount == 1 -> PROACTIVE_ROCKY_DELAY_MS
+                else -> PROACTIVE_ROCKY_DELAY_MS_SEVERE
+            }
             if (proactiveDelayMs > 0) {
-                onLog("Riconnessione BLE recente instabile: attendo ${proactiveDelayMs}ms prima di aprire il canale voce.")
+                onLog("Riconnessione BLE recente instabile ($errorCount errori): attendo ${proactiveDelayMs}ms prima di aprire il canale voce.")
             }
             Handler(Looper.getMainLooper()).postDelayed({
             ScoAudioGateway.openScoAndAwait(context, mappingStorage.getScoOpenTimeoutMs()) { connected ->
@@ -620,5 +625,8 @@ class ActionExecutor(
         // diamogli questo margine in più prima di tentare l'apertura del canale SCO,
         // invece di scoprire il fallimento e ritentare alla cieca.
         private const val PROACTIVE_ROCKY_DELAY_MS = 1200L
+        // Più di un errore radio prima della riconnessione (es. GATT_ERROR + timeout impilati):
+        // osservato dal vivo che 1200ms non bastano in questi casi più gravi.
+        private const val PROACTIVE_ROCKY_DELAY_MS_SEVERE = 2500L
     }
 }
