@@ -1,10 +1,41 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v3.5)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v4.2)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
 ---
 
-## 🎨 Novità Versione 3.5 — Redesign interfaccia, mappature su database, nuovo picker azioni
+## 🎙️ Novità Versione 4.2 — Pre-riscaldamento canale audio prima di Gemini
+
+Emerso da una sessione di debug dal vivo con telecomando + interfono Bluetooth reali, confrontando log di sistema Bluetooth e persino il codice decompilato dell'app companion dell'interfono per capire l'origine di un comportamento audio incostante.
+
+- **Pre-riscaldamento canale interfono**: opzione (disattivata di default) che pronuncia una breve frase configurabile (default "Ok") subito dopo l'apertura del canale voce (SCO) e prima di attivare Gemini — un canale aperto "a freddo" può partire con qualità audio non ancora stabilizzata; una frase appena prima sembra risolverlo.
+- **Lancio sincronizzato al completamento reale del parlato** (fix 4.2.1): il primo tentativo usava un ritardo fisso indovinato tra la frase e il lancio di Gemini, che tagliava la frase in modo incostante. Ora si usa `UtteranceProgressListener` per lanciare Gemini esattamente a fine pronuncia, con un timeout di sicurezza (3s) se il motore TTS non conferma mai il completamento.
+- Diagnosticato (non risolvibile lato app): l'app companion di alcuni interfoni Bluetooth mesh (es. ASMAX World) gestisce in autonomia il canale SCO in background e può chiuderlo attivamente se non si è in una sessione di gruppo attiva — spiega gran parte dell'instabilità osservata quando quelle app girano in background.
+
+---
+
+## 🔁 Novità Versione 4.1 — Chiudi Gemini prima di rilanciarlo
+
+- Se Gemini è già aperto (overlay di un'attivazione precedente ancora in primo piano), rilanciarlo spesso non aveva effetto. Nuova opzione (disattivata di default, richiede il Servizio di Accessibilità) che invia "Indietro" prima di ogni lancio di Gemini per chiudere l'overlay residuo, con ritardo configurabile tra "Indietro" e il rilancio effettivo.
+
+---
+
+## ⚡ Novità Versione 4.0 — Tasti Virtuali Tasker e Testi TTS per-azione
+
+> ⚠️ **Breaking change**: i Profili Tasker già configurati con il vecchio abbinamento tasto+gesto smettono di scattare (fallimento silenzioso, nessun crash) finché non vengono riconfigurati scegliendo un Tasto Virtuale, sia nell'app sia nella configurazione dell'Evento dentro Tasker.
+
+- **Tasti Virtuali Tasker**: 5 slot rinominabili di partenza ("Tasker 1".."Tasker 5", se ne possono aggiungere/eliminare altri da Opzioni → Gestisci Tasti Tasker), veri identificatori di automazione scelti sia nell'app sia dentro Tasker — al posto del vecchio abbinamento diretto su tasto+gesto fisico, che non permetteva di distinguere più Profili Tasker legittimamente sullo stesso trigger. Rinominare uno slot aggiorna anche il testo pronunciato via TTS.
+- **Testi TTS per-azione**: un solo testo condiviso da qualunque tasto/gesto esegua quella azione (Opzioni → Testi Annuncio Vocale), al posto del vecchio schema per singola combinazione tasto+gesto — con migrazione automatica dei testi già personalizzati al primo avvio.
+- **Bugfix**: i trigger Tasker non ricevevano mai feedback vocale/aptico/sonoro, nemmeno con un nome personalizzato — corretto.
+
+---
+
+## 🖋️ Novità Versione 3.6-3.7 — Icona, firma di release dedicata, correzioni mappature
+
+- **Nuova icona coerente con il tema "Cruscotto"** dell'app (era rimasta su una palette blu/verde/arancione scollegata dal resto dell'interfaccia).
+- **Firma di release dedicata**: le build allegate alle Release GitHub sono ora firmate con una chiave di release propria invece della `debug.keystore` condivisa, per ridurre gli avvisi di Play Protect. **Nota**: passare a una nuova release da un'installazione firmata con la vecchia chiave richiede di disinstallare prima l'app esistente (Android rifiuta l'aggiornamento per firma diversa), con perdita delle mappature/profili salvati localmente.
+- **Fix**: mappature tasto non applicate alle pressioni fisiche reali (causa: `MappingStorage` non era condiviso tra Activity e Service, ognuno con la propria cache non sincronizzata — ora è un singleton), e doppio bip percepito attivando Gemini con l'interfono.
+- **Ritardo lancio Gemini configurabile** dopo l'apertura del canale voce, per test empirici.
 
 Basato su una revisione indipendente di architettura e stile (analisi di un modello diverso, senza il contesto di sviluppo, per un parere davvero imparziale) e su un mockup discusso e approvato prima di partire con il codice.
 
@@ -178,9 +209,11 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 ## 📲 Installazione e Aggiornamento
 
 ### 1. Download Diretto
-Puoi scaricare l'APK da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-v3.0.apk`**)
+Puoi scaricare l'ultimo APK (firmato con la chiave di release dedicata) da:
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-vX.Y.Z.apk`**, con X.Y.Z l'ultima versione)
 - **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
+
+Se hai installata una versione precedente alla 3.6, disinstallala prima di aggiornare: da quella versione le Release sono firmate con una chiave dedicata diversa dalla vecchia `debug.keystore`, e Android rifiuta l'aggiornamento in-place per firma diversa (con perdita delle mappature/profili salvati localmente).
 
 ### 2. Aggiornamenti In-App
 Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"**: l'app rileva le nuove versioni e installa l'aggiornamento automaticamente.
@@ -189,7 +222,7 @@ Dalla scheda **⚙️ Opzioni**, tocca **"🔄 Verifica Aggiornamenti su GitHub"
 
 ## 🛠️ Compilazione da Sorgente
 
-Il repository include il wrapper Gradle e un keystore di debug condiviso, per build riproducibili identiche tra CI e macchine locali.
+Il repository include il wrapper Gradle e un keystore di debug condiviso (per build di sviluppo riproducibili identiche tra CI e macchine locali). Le build **debug** restano firmate con quello; le build **release** (quelle allegate alle GitHub Release) usano invece una chiave dedicata non versionata nel repository, popolata in CI tramite GitHub Secrets.
 
 ```bash
 # Compilazione APK Debug
