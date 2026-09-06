@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.3](https://github.com/rafing22/br80-remote/compare/v4.2.2...v4.2.3) (2026-09-06)
+
+
+### Bug Fixes
+
+* clean up dead code, duplicated log timestamp, missing Tasker strings ([d1d19a2](https://github.com/rafing22/br80-remote/commit/d1d19a2b603ef4c45f3c59ca221db1001ede0296))
+
 ## [4.2.2](https://github.com/rafing22/br80-remote/compare/v4.2.1...v4.2.2) (2026-09-06)
 
 
