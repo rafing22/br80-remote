@@ -237,6 +237,20 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putLong(KEY_GEMINI_CLEANUP_DELAY, clamped).apply()
     }
 
+    // Tempo massimo di attesa per l'apertura del canale voce (SCO) verso l'interfono prima
+    // di rinunciare e ripiegare sul percorso audio predefinito. Osservato empiricamente che
+    // il primo tentativo "a freddo" dopo un periodo di inattività Bluetooth può richiedere
+    // più dei 2500ms di default: negoziazione ancora in corso in background, tanto che il
+    // tentativo successivo (subito dopo) trova spesso il canale già pronto.
+    fun getScoOpenTimeoutMs(): Long {
+        return prefs.getLong(KEY_SCO_OPEN_TIMEOUT, 2500L)
+    }
+
+    fun setScoOpenTimeoutMs(ms: Long) {
+        val clamped = ms.coerceIn(1000L, 8000L)
+        prefs.edit().putLong(KEY_SCO_OPEN_TIMEOUT, clamped).apply()
+    }
+
     // Se attivo, pronuncia una breve frase TTS subito dopo l'apertura del canale SCO e
     // prima di lanciare Gemini: un canale interfono appena aperto "a freddo" può partire
     // con qualità audio non ancora stabilizzata, mentre un canale già "riscaldato" da un
@@ -655,6 +669,7 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_GEMINI_CLEANUP_DELAY = "pref_gemini_cleanup_delay_ms"
         private const val KEY_GEMINI_PRIMING_ENABLED = "pref_gemini_priming_enabled"
         private const val KEY_GEMINI_PRIMING_PHRASE = "pref_gemini_priming_phrase"
+        private const val KEY_SCO_OPEN_TIMEOUT = "pref_sco_open_timeout_ms"
         private const val KEY_LONG_PRESS_THRESHOLD = "pref_long_press_threshold_ms"
         private const val KEY_TASKER_VIRTUAL_SLOTS = "pref_tasker_virtual_slots"
         private const val KEY_TTS_LABEL_PREFIX = "pref_tts_label_action_"

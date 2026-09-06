@@ -62,6 +62,17 @@ class BleGattManager(
 
     private var reconnectAttempts = 0
     private val reconnectDelays = listOf(1000L, 2500L, 5000L, 10000L)
+
+    // Segnale per chi deve decidere se "aspettare un po' di più" prima di usare il radio
+    // Bluetooth per altro (es. apertura canale SCO) subito dopo una riconnessione. Conta
+    // solo i VERI errori radio (GATT_ERROR, timeout operazione) verificatisi prima della
+    // riconnessione riuscita — NON ogni ciclo di riconnessione (il telecomando va in
+    // standby e si riconnette da solo ad ogni pressione: quello è normale, non "rocky",
+    // e non deve far scattare il ritardo proattivo).
+    private var radioErrorCount = 0
+    var lastReconnectErrorCount: Int = 0
+        private set
+    private var lastSuccessfulConnectAtMs: Long = 0L
     private var reconnectRunnable: Runnable? = null
     private var scanTimeoutRunnable: Runnable? = null
     private var connectionWatchdogRunnable: Runnable? = null
@@ -370,6 +381,7 @@ class BleGattManager(
         next()
         gattOperationTimeoutRunnable = Runnable {
             log("Timeout operazione GATT (nessuna risposta dopo ${gattOperationTimeoutMs / 1000}s). Ripristino auto-healing...")
+            radioErrorCount++
             closeGatt(refresh = true)
             updateState(ConnectionState.DISCONNECTED)
             scheduleAutoReconnect()
@@ -473,6 +485,15 @@ class BleGattManager(
         keepAliveRunnable = null
     }
 
+    /** Quanti errori radio (GATT_ERROR, timeout operazione) hanno preceduto l'ultima
+     * riconnessione riuscita, se avvenuta negli ultimi [withinMs] ms — 0 se la riconnessione
+     * è stata pulita o troppo lontana nel tempo. Segnale per chi deve decidere se dare al
+     * radio Bluetooth un momento in più prima di un'altra operazione (es. apertura SCO). */
+    fun recentReconnectErrorCount(withinMs: Long = 5000L): Int {
+        if (System.currentTimeMillis() - lastSuccessfulConnectAtMs >= withinMs) return 0
+        return lastReconnectErrorCount
+    }
+
     private fun gattStatusString(status: Int): String {
         return when (status) {
             BluetoothGatt.GATT_SUCCESS -> "SUCCESS (0)"
@@ -495,6 +516,7 @@ class BleGattManager(
 
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     log("Errore GATT rilevato ($status). Ripristino automatico stack...")
+                    radioErrorCount++
                     stopConnectionWatchdog()
                     closeGatt(refresh = true)
                     updateState(ConnectionState.DISCONNECTED)
@@ -503,6 +525,9 @@ class BleGattManager(
                 }
 
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    lastReconnectErrorCount = radioErrorCount
+                    lastSuccessfulConnectAtMs = System.currentTimeMillis()
+                    radioErrorCount = 0
                     reconnectAttempts = 0
                     stopConnectionWatchdog()
                     stopLeScan()

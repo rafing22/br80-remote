@@ -28,6 +28,12 @@ object ScoAudioGateway {
     // del beep/prompt di Gemini.
     private const val AUDIO_SETTLE_DELAY_MS = 350L
 
+    // Subito dopo una riconnessione BLE del telecomando, il radio Bluetooth del telefono può
+    // rifiutare l'apertura SCO all'istante (SCO_AUDIO_STATE_ERROR, non un timeout scaduto):
+    // un secondo tentativo poco dopo quasi sempre riesce, quindi lo facciamo automaticamente
+    // invece di far ricadere subito sull'audio del telefono.
+    private const val RETRY_DELAY_MS = 700L
+
     private var scoReceiver: BroadcastReceiver? = null
     private var scoTimeoutRunnable: Runnable? = null
     private var settleRunnable: Runnable? = null
@@ -73,6 +79,10 @@ object ScoAudioGateway {
         }
 
         val appContext = context.applicationContext
+        attemptOpenSco(appContext, audioManager, timeoutMs, attempt = 1, onResult = onResult)
+    }
+
+    private fun attemptOpenSco(appContext: Context, audioManager: AudioManager, timeoutMs: Long, attempt: Int, onResult: (Boolean) -> Unit) {
         var resolved = false
 
         fun resolve(success: Boolean) {
@@ -80,17 +90,31 @@ object ScoAudioGateway {
             resolved = true
             cleanupScoWait(appContext)
             if (!success) {
+                try {
+                    audioManager.isBluetoothScoOn = false
+                    @Suppress("DEPRECATION")
+                    audioManager.stopBluetoothSco()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Errore ripristino audio dopo fallimento SCO: ${e.message}")
+                }
+                if (attempt < 2) {
+                    // Subito dopo una riconnessione BLE del telecomando il radio Bluetooth
+                    // può rifiutare la SCO all'istante: ritentiamo una volta sola dopo una
+                    // breve pausa prima di rinunciare e ricadere sull'audio del telefono.
+                    Log.w(TAG, "Apertura SCO fallita (tentativo $attempt), ritento tra ${RETRY_DELAY_MS}ms.")
+                    handler.postDelayed({
+                        attemptOpenSco(appContext, audioManager, timeoutMs, attempt + 1, onResult)
+                    }, RETRY_DELAY_MS)
+                    return
+                }
                 // Il chiamante non aprirà mai una sessione da rilasciare in caso di fallimento
                 // (ActionExecutor procede solo su successo): ripristiniamo qui lo stato audio
                 // che avevamo alterato per il tentativo, altrimenti resta bloccato su
                 // MODE_IN_COMMUNICATION indefinitamente.
                 try {
-                    audioManager.isBluetoothScoOn = false
-                    @Suppress("DEPRECATION")
-                    audioManager.stopBluetoothSco()
                     audioManager.mode = previousAudioMode ?: AudioManager.MODE_NORMAL
                 } catch (e: Exception) {
-                    Log.w(TAG, "Errore ripristino audio dopo fallimento SCO: ${e.message}")
+                    Log.w(TAG, "Errore ripristino modalità audio dopo fallimento SCO: ${e.message}")
                 }
                 previousAudioMode = null
             }
@@ -119,13 +143,15 @@ object ScoAudioGateway {
         }
 
         scoTimeoutRunnable = Runnable {
-            Log.w(TAG, "Timeout apertura canale SCO: interfono non pronto entro ${timeoutMs}ms.")
+            Log.w(TAG, "Timeout apertura canale SCO: interfono non pronto entro ${timeoutMs}ms (tentativo $attempt).")
             resolve(false)
         }
         handler.postDelayed(scoTimeoutRunnable!!, timeoutMs)
 
         try {
-            previousAudioMode = audioManager.mode
+            if (attempt == 1) {
+                previousAudioMode = audioManager.mode
+            }
             // MODE_IN_COMMUNICATION è necessario su diversi OEM perché l'audio venga
             // effettivamente instradato sul canale SCO invece che restare sullo speaker/A2DP.
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
