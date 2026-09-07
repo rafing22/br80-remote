@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.2](https://github.com/rafing22/br80-remote/compare/v4.3.1...v4.3.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* crash on first launch when Log/Options fragments hidden in same transaction ([3d8d9d5](https://github.com/rafing22/br80-remote/commit/3d8d9d59456a2018ff63af1cd0082027333587df))
+
 ## [4.3.1](https://github.com/rafing22/br80-remote/compare/v4.3.0...v4.3.1) (2026-09-07)
 
 
