@@ -44,8 +44,8 @@ class Br80WidgetProvider : AppWidgetProvider() {
 
         val connected = BleServiceStateHolder.currentState == BleGattManager.ConnectionState.CONNECTED
         views.setTextViewText(R.id.tvWidgetStatus, if (connected) "Connesso" else "In attesa")
-        views.setInt(
-            R.id.viewWidgetStatusDot, "setBackgroundResource",
+        views.setImageViewResource(
+            R.id.viewWidgetStatusDot,
             if (connected) R.drawable.widget_dot_success else R.drawable.widget_dot_muted
         )
 
