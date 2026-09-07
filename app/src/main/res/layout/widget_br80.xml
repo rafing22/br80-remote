@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <View
+            android:id="@+id/viewWidgetStatusDot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:background="@drawable/widget_dot_muted"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/tvWidgetStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="In attesa"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/cockpit_ink" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvWidgetBattery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Batteria: --"
+        android:textSize="11sp"
+        android:textColor="@color/cockpit_muted" />
+
+    <TextView
+        android:id="@+id/tvWidgetAudioDevice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Interfono non connesso"
+        android:textSize="11sp"
+        android:textColor="@color/cockpit_muted" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/btnWidgetProfile"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:gravity="center"
+            android:padding="8dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:text="Standard"
+            android:textSize="11sp"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            android:id="@+id/btnWidgetReconnect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:gravity="center"
+            android:padding="8dp"
+            android:text="Riconnetti"
+            android:textSize="11sp"
+            android:textColor="@color/cockpit_ink" />
+
+        <TextView
+            android:id="@+id/btnWidgetExit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/widget_button_bg"
+            android:gravity="center"
+            android:padding="8dp"
+            android:text="Esci"
+            android:textSize="11sp"
+            android:textColor="@color/cockpit_accent_bright" />
+
+    </LinearLayout>
+
+</LinearLayout>

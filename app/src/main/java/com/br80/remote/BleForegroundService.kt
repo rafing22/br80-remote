@@ -126,6 +126,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         createNotificationChannel()
         registerDebugButtonSimulator()
         BtProfileConnectionChecker.initialize(this)
+
+        BleServiceStateHolder.currentState = gattManager.currentState
+        BleServiceStateHolder.batteryLevel = gattManager.batteryLevel
+        Br80WidgetProvider.updateAllWidgets(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -219,6 +223,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
                 disconnectDevice()
             }
         }
+        Br80WidgetProvider.updateAllWidgets(this)
     }
 
     override fun onBluetoothStateChanged(isBtOn: Boolean) {
@@ -235,6 +240,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     // Callbacks da BleGattManager
     override fun onStateChanged(state: BleGattManager.ConnectionState) {
         updateNotification()
+        BleServiceStateHolder.currentState = state
+        Br80WidgetProvider.updateAllWidgets(this)
         listener?.onStateChanged(state)
     }
 
@@ -246,6 +253,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     override fun onBatteryUpdated(level: Int) {
         updateNotification()
+        BleServiceStateHolder.batteryLevel = level
+        Br80WidgetProvider.updateAllWidgets(this)
         listener?.onBatteryUpdated(level)
     }
 

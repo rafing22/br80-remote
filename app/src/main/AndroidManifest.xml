@@ -109,6 +109,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Widget home screen: stato, riconnessione, cambio profilo, uscita -->
+        <receiver
+            android:name=".Br80WidgetProvider"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.br80.remote.widget.ACTION_CYCLE_PROFILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/br80_widget_info" />
+        </receiver>
+
         <!-- FileProvider per esportazione file Tasker e aggiornamenti APK -->
         <provider
             android:name="androidx.core.content.FileProvider"
