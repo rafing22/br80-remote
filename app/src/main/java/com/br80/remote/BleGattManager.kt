@@ -461,12 +461,21 @@ class BleGattManager(
         maxAttempts: Int,
         delayMs: Long
     ): Boolean {
+        // Due filosofie DIVERSE, come in main, non un unico meccanismo: uno status di
+        // fallimento ESPLICITO e pronto (il callback ha risposto, dicendo "no") è ritentato
+        // sulla stessa connessione. Un TIMEOUT (nessuna risposta entro gattOperationTimeoutMs)
+        // NON viene ritentato con una nuova scrittura: significa che l'operazione precedente
+        // potrebbe essere ancora pendente lato stack Android, e riemettere subito un'altra
+        // scrittura sopra rischia di confondere lo stack (riprodotto dal vivo: retry-su-timeout
+        // ripetuti hanno preceduto un GATT_ERROR/disconnessione vera). Un timeout esce subito
+        // e lascia che il chiamante faccia un reset pieno (chiudi+riconnetti), esattamente come
+        // il timeout di coda in main.
         var attempt = 0
         while (attempt < maxAttempts) {
             val status = try {
                 withTimeout(gattOperationTimeoutMs) {
                     gattOperationMutex.withLock {
-                        suspendCancellableCoroutine { cont ->
+                        suspendCancellableCoroutine<Int> { cont ->
                             pendingWriteContinuation = cont
                             cont.invokeOnCancellation { pendingWriteContinuation = null }
                             try {
@@ -486,8 +495,9 @@ class BleGattManager(
                     }
                 }
             } catch (e: TimeoutCancellationException) {
+                log("Timeout scrittura (nessuna risposta dopo ${gattOperationTimeoutMs / 1000}s). Ripristino auto-healing...")
                 radioErrorCount++
-                -1
+                return false
             }
             if (status == BluetoothGatt.GATT_SUCCESS) return true
             attempt++
