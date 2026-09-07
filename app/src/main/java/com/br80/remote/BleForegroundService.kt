@@ -213,15 +213,23 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     override fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?) {
         val name = deviceName ?: "Interfono/Casco"
         if (isConnected) {
-            mappingStorage.setKeepAliveEnabled(true)
             onLog("Dispositivo BT Target ($name) connesso! Attivo Keep-Alive e ascolto reattivo...")
             connectDevice()
-            // connectDevice() non fa nulla se il telecomando è già connesso ("richiesta
-            // duplicata ignorata" in BleGattManager.connect()): in quel caso non scatta mai
-            // l'evento di connessione riuscita che avvierebbe il ping periodico da solo, quindi
-            // va avviato esplicitamente qui — altrimenti il flag risulta true ma il Keep-Alive
-            // resta di fatto spento finché non capita una vera nuova (ri)connessione.
-            gattManager.startKeepAliveIfEnabled()
+            // Il Keep-Alive si attiva solo se "Dispositivo BT Condizionale" è davvero abilitato:
+            // simmetrico al ramo di disconnessione sotto, che lo spegne solo con la stessa
+            // condizione. Senza questo controllo, con il checkbox disattivato il Keep-Alive si
+            // accendeva alla prima connessione e non si spegneva mai più (asimmetria — il ramo
+            // "connesso" non aveva mai avuto questo controllo, invisibile finché il rilevamento
+            // della connessione non funzionava correttamente; ora che funziona, il problema è
+            // emerso dal vivo).
+            if (mappingStorage.isConditionalBtEnabled()) {
+                mappingStorage.setKeepAliveEnabled(true)
+                // connectDevice() non fa nulla se il telecomando è già connesso ("richiesta
+                // duplicata ignorata" in BleGattManager.connect()): in quel caso non scatta mai
+                // l'evento di connessione riuscita che avvierebbe il ping periodico da solo,
+                // quindi va avviato esplicitamente qui.
+                gattManager.startKeepAliveIfEnabled()
+            }
         } else {
             onLog("Dispositivo BT Target ($name) disconnesso. Arresto Keep-Alive e ascolto reattivo.")
             if (mappingStorage.isConditionalBtEnabled()) {
