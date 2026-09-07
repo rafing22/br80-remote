@@ -11,6 +11,18 @@
         <item name="android:textColorAlertDialogListItem">@color/cockpit_ink</item>
     </style>
 
+    <!-- Tema dell'Activity "guscio" che ospita un solo AlertDialog (es. conferma Esci dal
+         widget): trasparente e senza finestra propria, per non impilare due finestre floating
+         (l'Activity stessa + il dialog dentro) se le si desse per errore Theme.Br80.CockpitDialog,
+         che è pensato solo come stile per AlertDialog.Builder, non come tema di un'Activity. -->
+    <style name="Theme.Br80.TransparentActivity" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- Scala tipografica a 3 livelli per le schermate Opzioni: prima erano sparse
          10-17sp senza una vera gerarchia (segnalato dalla revisione di stile). -->
     <style name="Br80.Text.ScreenTitle" parent="">

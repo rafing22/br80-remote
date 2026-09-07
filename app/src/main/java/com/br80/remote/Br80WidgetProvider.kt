@@ -59,11 +59,21 @@ class Br80WidgetProvider : AppWidgetProvider() {
 
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
 
-        val connectIntent = Intent(context, BleForegroundService::class.java).apply { action = BleForegroundService.ACTION_CONNECT }
-        views.setOnClickPendingIntent(R.id.btnWidgetReconnect, PendingIntent.getService(context, 10, connectIntent, flags))
+        // Etichetta/azione dipendono dallo stato, come il toggle già presente nella notifica:
+        // "Connetti" quando serve avviare la connessione, "Disconnetti" quando è già attiva.
+        // Prima era sempre "Riconnetti" con un'unica azione (ACTION_CONNECT), poco chiaro
+        // quando la connessione era già up.
+        views.setTextViewText(R.id.btnWidgetReconnect, if (connected) "Disconnetti" else "Connetti")
+        val toggleIntent = Intent(context, BleForegroundService::class.java).apply {
+            action = if (connected) BleForegroundService.ACTION_DISCONNECT else BleForegroundService.ACTION_CONNECT
+        }
+        views.setOnClickPendingIntent(R.id.btnWidgetReconnect, PendingIntent.getService(context, 10, toggleIntent, flags))
 
-        val stopIntent = Intent(context, BleForegroundService::class.java).apply { action = BleForegroundService.ACTION_STOP_SERVICE }
-        views.setOnClickPendingIntent(R.id.btnWidgetExit, PendingIntent.getService(context, 11, stopIntent, flags))
+        // "Esci" apre un'attività di conferma invece di fermare subito il servizio: un widget
+        // non può mostrare un dialog direttamente, e getActivity (a differenza di getService)
+        // funziona anche quando il servizio non è già vivo in foreground.
+        val exitConfirmIntent = Intent(context, Br80WidgetExitConfirmActivity::class.java)
+        views.setOnClickPendingIntent(R.id.btnWidgetExit, PendingIntent.getActivity(context, 11, exitConfirmIntent, flags))
 
         val cycleIntent = Intent(context, Br80WidgetProvider::class.java).apply { action = ACTION_CYCLE_PROFILE }
         views.setOnClickPendingIntent(R.id.btnWidgetProfile, PendingIntent.getBroadcast(context, 12, cycleIntent, flags))

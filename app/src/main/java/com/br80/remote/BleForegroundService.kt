@@ -133,6 +133,23 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // startForeground() va chiamato SEMPRE qui, non solo nel ramo "else": un avvio da
+        // widget (PendingIntent.getService, possibile a servizio non ancora vivo, es. dopo
+        // che il sistema l'ha ucciso) con ACTION_CONNECT/ACTION_STOP_SERVICE falliva
+        // silenziosamente perché quei due rami non lo chiamavano mai — solo il fallback lo
+        // faceva, percorso che il widget non attraversa mai avendo un'action esplicita.
+        val notification = createNotification(getNotificationContentText())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+
         when (intent?.action) {
             ACTION_CONNECT -> {
                 connectDevice()
@@ -145,18 +162,6 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
                 return START_NOT_STICKY
             }
             else -> {
-                val notification = createNotification(getNotificationContentText())
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceCompat.startForeground(
-                        this,
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-                    )
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
-
                 if (intent?.getBooleanExtra(EXTRA_CONNECT_NOW, false) == true) {
                     if (!mappingStorage.isConditionalBtEnabled() || btDeviceMonitor.isTargetCurrentlyConnected()) {
                         connectDevice()
@@ -185,6 +190,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         // di far ripubblicare la notifica dopo che l'abbiamo già rimossa qui sotto.
         isStopping = true
         gattManager.disconnect(enterPassiveListening = false)
+        // Senza questo il widget restava con l'ultimo stato "Connesso"/batteria noti anche a
+        // servizio ormai fermato, perché nessun punto di stopServiceCompletely() lo ridisegnava.
+        BleServiceStateHolder.currentState = BleGattManager.ConnectionState.DISCONNECTED
+        Br80WidgetProvider.updateAllWidgets(this)
         gestureDetector.reset()
         btDeviceMonitor.stopMonitoring()
         ttsFeedbackManager.shutdown()

@@ -77,6 +77,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Attività di conferma per il tasto "Esci" del widget home screen: un widget non può
+             mostrare un dialog direttamente, quindi apre questa attività trasparente. -->
+        <activity
+            android:name=".Br80WidgetExitConfirmActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Br80.TransparentActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
         <!-- Foreground Service per mantenere attiva la connessione BLE in background -->
         <service
             android:name=".BleForegroundService"
