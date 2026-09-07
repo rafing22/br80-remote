@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.8](https://github.com/rafing22/br80-remote/compare/v4.3.7...v4.3.8) (2026-09-07)
+
+
+### Bug Fixes
+
+* widget Esci non funzionante e Riconnetti poco chiaro ([c4194cc](https://github.com/rafing22/br80-remote/commit/c4194cc1933fe1b93876dac17af0669bce2f4eac))
+
 ## [4.3.7](https://github.com/rafing22/br80-remote/compare/v4.3.6...v4.3.7) (2026-09-07)
 
 
