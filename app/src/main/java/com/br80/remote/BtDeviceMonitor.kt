@@ -1,7 +1,9 @@
 package com.br80.remote
 
+import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
@@ -30,7 +32,15 @@ class BtDeviceMonitor(
             val action = intent?.action ?: return
 
             when (action) {
-                BluetoothDevice.ACTION_ACL_CONNECTED, BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                BluetoothDevice.ACTION_ACL_DISCONNECTED,
+                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
+                BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
+                    // ACL_CONNECTED (sotto) resta solo per la disconnessione totale del link:
+                    // per il momento in cui il dispositivo è DAVVERO pronto (usato per Keep-Alive
+                    // condizionale) serve il broadcast di stato del profilo A2DP/HFP, non l'evento
+                    // ACL grezzo — quest'ultimo scatta quando il link radio si forma, PRIMA che la
+                    // negoziazione del profilo audio sia completa: un controllo sincrono su ACL
+                    // trovava sempre "non connesso" anche a cuffie già accoppiate (visto dal vivo).
                     val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
                     val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
 
@@ -44,6 +54,15 @@ class BtDeviceMonitor(
                             ?: "Dispositivo BT"
                         Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
                         listener.onTargetDeviceConnectionChanged(stillConnected, name)
+                    }
+                }
+                BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                    // Solo log/diagnostica: non attendibile per decidere lo stato "connesso"
+                    // (vedi sopra). Lo stato aggregato reale arriva dai broadcast di profilo.
+                    val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                    val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
+                    if (device != null && isTargetDevice(device, targetMacs)) {
+                        Log.d(tag, "Link ACL formato con ${device.address}, in attesa della negoziazione profilo A2DP/HFP...")
                     }
                 }
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
@@ -62,6 +81,8 @@ class BtDeviceMonitor(
             val filter = IntentFilter().apply {
                 addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
                 addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+                addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
+                addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
                 addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
             }
             context.registerReceiver(receiver, filter)

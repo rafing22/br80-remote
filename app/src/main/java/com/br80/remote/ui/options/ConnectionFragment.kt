@@ -94,6 +94,10 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         updateBatteryOptButtonState()
         updateOverlayButtonState()
         updateAccessibilityButtonState()
+        // Il Keep-Alive condizionale può accendersi/spegnersi da solo in background (in base
+        // alla connessione del dispositivo BT scelto) mentre questa schermata resta aperta:
+        // senza questo refresh il checkbox restava fermo allo stato letto solo in onViewCreated.
+        cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
     }
 
     private fun updateConditionalBtDeviceLabel() {

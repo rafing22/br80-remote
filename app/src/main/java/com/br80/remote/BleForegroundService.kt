@@ -216,6 +216,12 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
             mappingStorage.setKeepAliveEnabled(true)
             onLog("Dispositivo BT Target ($name) connesso! Attivo Keep-Alive e ascolto reattivo...")
             connectDevice()
+            // connectDevice() non fa nulla se il telecomando è già connesso ("richiesta
+            // duplicata ignorata" in BleGattManager.connect()): in quel caso non scatta mai
+            // l'evento di connessione riuscita che avvierebbe il ping periodico da solo, quindi
+            // va avviato esplicitamente qui — altrimenti il flag risulta true ma il Keep-Alive
+            // resta di fatto spento finché non capita una vera nuova (ri)connessione.
+            gattManager.startKeepAliveIfEnabled()
         } else {
             onLog("Dispositivo BT Target ($name) disconnesso. Arresto Keep-Alive e ascolto reattivo.")
             if (mappingStorage.isConditionalBtEnabled()) {
