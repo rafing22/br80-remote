@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.6](https://github.com/rafing22/br80-remote/compare/v4.3.5...v4.3.6) (2026-09-07)
+
+
+### Bug Fixes
+
+* don't retry GATT write on timeout, only on explicit failure status ([5e87606](https://github.com/rafing22/br80-remote/commit/5e876062d7a5eb760fe5d93901d5cd79dede8b5a))
+
 ## [4.3.5](https://github.com/rafing22/br80-remote/compare/v4.3.4...v4.3.5) (2026-09-07)
 
 
