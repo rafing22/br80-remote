@@ -1,6 +1,14 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v4.2)
+# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v4.3)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+
+---
+
+## 🔧 Novità Versione 4.3 — Widget home screen, Keep-Alive condizionale, connessione BLE più stabile
+
+- **Widget home screen**: stato connessione, batteria, dispositivo audio interfono e profilo attivo (tap per ciclarlo), con tasti Riconnetti ed Esci.
+- **Keep-Alive condizionale**: spento di default, si attiva/disattiva da solo quando il dispositivo Bluetooth scelto (es. interfono) si connette/disconnette.
+- **Connessione BLE riscritta a coroutine** per maggiore stabilità (era a callback incatenate), con retry automatico su rilevamento profilo audio e apertura canale SCO più robusta dopo riconnessioni instabili.
 
 ---
 
