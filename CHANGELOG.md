@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.7](https://github.com/rafing22/br80-remote/compare/v4.3.6...v4.3.7) (2026-09-07)
+
+
+### Bug Fixes
+
+* BLE handshake deadlock and silent auto-heal drop, add diagnostic phase ([bd7d0b1](https://github.com/rafing22/br80-remote/commit/bd7d0b1c577e50cbe2fdcc793f8cac886ffc4527))
+
 ## [4.3.6](https://github.com/rafing22/br80-remote/compare/v4.3.5...v4.3.6) (2026-09-07)
 
 
