@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.4](https://github.com/rafing22/br80-remote/compare/v4.3.3...v4.3.4) (2026-09-07)
+
+
+### Bug Fixes
+
+* gate conditional Keep-Alive activation behind its own toggle ([3049541](https://github.com/rafing22/br80-remote/commit/30495415153b34929b8c7d1e5d23872e28d70057))
+
 ## [4.3.3](https://github.com/rafing22/br80-remote/compare/v4.3.2...v4.3.3) (2026-09-07)
 
 
