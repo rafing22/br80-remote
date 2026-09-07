@@ -358,70 +358,92 @@ class BleGattManager(
 
     /** Scoperta servizi → wake → abilitazione notifiche, ciascuno con il proprio timeout. */
     @SuppressLint("MissingPermission")
+    /** Fase interna dell'handshake per la sola diagnostica (Log/screen di debug): NON
+     * espone un quarto valore nel `ConnectionState` pubblico (che resterebbe DISCONNECTED/
+     * CONNECTING/CONNECTED com'è oggi, invariato per tutti i chiamanti esistenti — UI,
+     * widget, notifica), così nessun `when` esaustivo altrove nell'app va toccato. */
+    enum class HandshakePhase {
+        DISCOVERING_SERVICES,
+        WAKING,
+        ENABLING_NOTIFICATIONS
+    }
+
+    var handshakePhase: HandshakePhase? = null
+        private set
+
+    /** Un solo punto per "fallimento durante l'handshake": pulisce, aggiorna lo stato e fa
+     * scattare davvero l'auto-healing — a differenza di prima, dove la maggior parte dei rami
+     * di fallimento qui sotto si limitava a loggare "Ripristino auto-healing..." senza in
+     * realtà richiamare scheduleAutoReconnect() (bug trovato in revisione: l'app restava
+     * silenziosamente disconnessa, senza scansione né riconnessione programmata). */
+    private fun failHandshake(message: String) {
+        log(message)
+        handshakePhase = null
+        closeGattInternal(refresh = true)
+        updateState(ConnectionState.DISCONNECTED)
+        if (!userRequestedDisconnect) scheduleAutoReconnect()
+    }
+
     private suspend fun performHandshake(gatt: BluetoothGatt) {
+        handshakePhase = HandshakePhase.DISCOVERING_SERVICES
         log("Connesso al BR80. Scoperta servizi GATT in corso...")
         delay(300L)
         val discoverStatus = try {
             withTimeout(gattOperationTimeoutMs) { awaitServicesDiscovered(gatt) }
         } catch (e: TimeoutCancellationException) {
-            log("Timeout scoperta servizi. Ripristino auto-healing...")
             radioErrorCount++
-            closeGattInternal(refresh = true)
-            updateState(ConnectionState.DISCONNECTED)
+            failHandshake("Timeout scoperta servizi. Ripristino auto-healing...")
             return
         }
         if (discoverStatus != BluetoothGatt.GATT_SUCCESS) {
-            log("Scoperta servizi fallita: status $discoverStatus. Riavvio auto-healing...")
-            closeGattInternal(refresh = true)
-            updateState(ConnectionState.DISCONNECTED)
+            failHandshake("Scoperta servizi fallita: status $discoverStatus. Riavvio auto-healing...")
             return
         }
 
         val service = gatt.getService(serviceUuid)
         if (service == null) {
-            log("Servizio a2a0 non trovato sul device.")
+            failHandshake("Servizio a2a0 non trovato sul device. Ripristino auto-healing...")
             return
         }
 
+        handshakePhase = HandshakePhase.WAKING
         log("Servizio a2a0 trovato. Invio comando Wake (0xFF su a2a3)...")
         val wakeChar = service.getCharacteristic(wakeUuid)
         if (wakeChar == null) {
-            log("Caratteristica a2a3 (Wake) non trovata.")
+            failHandshake("Caratteristica a2a3 (Wake) non trovata. Ripristino auto-healing...")
             return
         }
 
         val wakeOk = writeCharacteristicWithRetry(gatt, wakeChar, byteArrayOf(0xFF.toByte()), maxWakeRetries, wakeRetryDelayMillis)
         if (!wakeOk) {
-            log("Wake fallito dopo $maxWakeRetries tentativi. Reset auto-healing...")
-            closeGattInternal(refresh = true)
-            updateState(ConnectionState.DISCONNECTED)
+            failHandshake("Wake fallito dopo $maxWakeRetries tentativi. Reset auto-healing...")
             return
         }
         log("Wake inviato con successo. Abilito notifiche su a2a4...")
 
+        handshakePhase = HandshakePhase.ENABLING_NOTIFICATIONS
         val buttonChar = service.getCharacteristic(buttonUuid)
         if (buttonChar == null) {
-            log("Caratteristica a2a4 (Notifiche) non trovata.")
+            failHandshake("Caratteristica a2a4 (Notifiche) non trovata. Ripristino auto-healing...")
             return
         }
         val notifyStatus = try {
             withTimeout(gattOperationTimeoutMs) { enableCharacteristicNotifications(gatt, buttonChar) }
         } catch (e: TimeoutCancellationException) {
-            log("Timeout abilitazione notifiche. Ripristino auto-healing...")
             radioErrorCount++
-            closeGattInternal(refresh = true)
-            updateState(ConnectionState.DISCONNECTED)
+            failHandshake("Timeout abilitazione notifiche. Ripristino auto-healing...")
             return
         }
         if (notifyStatus == null) {
-            log("Descrittore CCCD (0x2902) non trovato su characteristic.")
+            failHandshake("Descrittore CCCD (0x2902) non trovato su characteristic. Ripristino auto-healing...")
             return
         }
         if (notifyStatus != BluetoothGatt.GATT_SUCCESS) {
-            log("Abilitazione descrittore notifiche fallita: status $notifyStatus")
+            failHandshake("Abilitazione descrittore notifiche fallita: status $notifyStatus. Ripristino auto-healing...")
             return
         }
         log("Notifiche abilitate su a2a4! Telecomando pronto.")
+        handshakePhase = null
 
         // Connessione riuscita: azzera i contatori di errore, marca lo stato, avvia il keep-alive.
         lastReconnectErrorCount = radioErrorCount
@@ -540,17 +562,30 @@ class BleGattManager(
         val batteryService = g.getService(batteryServiceUuid)
         val batteryChar = batteryService?.getCharacteristic(batteryLevelUuid) ?: return
         scope.launch {
-            val (status, value) = gattOperationMutex.withLock {
-                suspendCancellableCoroutine { cont ->
-                    pendingReadContinuation = cont
-                    cont.invokeOnCancellation { pendingReadContinuation = null }
-                    try {
-                        g.readCharacteristic(batteryChar)
-                    } catch (e: Exception) {
-                        pendingReadContinuation = null
-                        cont.resume(-1 to ByteArray(0))
+            // Come per le scritture: senza un timeout qui, una risposta che non arriva mai
+            // (scenario BLE normale, non esotico) sospenderebbe questa coroutine per sempre
+            // TENENDO BLOCCATO il Mutex condiviso — bloccando di conseguenza ogni futura
+            // operazione GATT in coda, incluso il ping periodico del Keep-Alive che chiama
+            // proprio questa funzione ogni 35s (bug reale trovato in revisione, non ipotetico).
+            val (status, value) = try {
+                withTimeout(gattOperationTimeoutMs) {
+                    gattOperationMutex.withLock {
+                        suspendCancellableCoroutine<Pair<Int, ByteArray>> { cont ->
+                            pendingReadContinuation = cont
+                            cont.invokeOnCancellation { pendingReadContinuation = null }
+                            try {
+                                g.readCharacteristic(batteryChar)
+                            } catch (e: Exception) {
+                                pendingReadContinuation = null
+                                cont.resume(-1 to ByteArray(0))
+                            }
+                        }
                     }
                 }
+            } catch (e: TimeoutCancellationException) {
+                log("Timeout lettura batteria (nessuna risposta dopo ${gattOperationTimeoutMs / 1000}s).")
+                radioErrorCount++
+                -1 to ByteArray(0)
             }
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val level = value.getOrNull(0)?.toInt()?.and(0xFF) ?: -1
