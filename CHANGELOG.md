@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.1](https://github.com/rafing22/br80-remote/compare/v4.3.0...v4.3.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* widget fails to load — plain View not allowed in RemoteViews ([27510fc](https://github.com/rafing22/br80-remote/commit/27510fcd728d5195c1a2b9198a6865464e303e72))
+
 ## [4.3.0](https://github.com/rafing22/br80-remote/compare/v4.2.4...v4.3.0) (2026-09-07)
 
 
