@@ -72,6 +72,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+    // [test/coroutine-ble] Sequenza di connessione BLE riscritta a coroutine invece che a
+    // callback+Handler incatenati — vedi BleGattManager.kt.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     // Libreria ufficiale di Tasker per costruire plugin veri (Evento/Azione/Condizione)
     // senza reimplementare a mano l'handshake Intent/BroadcastReceiver a messageID.
     implementation("com.joaomgcd:taskerpluginlibrary:0.4.10")

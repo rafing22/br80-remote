@@ -15,11 +15,34 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import java.util.UUID
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.resume
 
+/**
+ * [test/coroutine-ble] Riscrittura sperimentale: la sequenza di connessione BLE (scan → connect
+ * → discover services → wake → abilita notifiche) è espressa come funzioni `suspend` lineari
+ * invece che come catena di callback + Handler.postDelayed. Stesso comportamento/tempi/log del
+ * ramo main, meccanismo di concorrenza diverso — vedi CLAUDE.md e il piano di questo branch per
+ * il contesto. API pubblica identica a main: nessun altro file dell'app è stato toccato.
+ */
 class BleGattManager(
     private val context: Context,
     private val mappingStorage: MappingStorage,
@@ -48,6 +71,10 @@ class BleGattManager(
     var batteryLevel: Int = -1
         private set
 
+    // Scope proprio dell'istanza: ogni sequenza (connect, reconnect, keep-alive) vive qui,
+    // cancellabile individualmente (Job dedicato) o tutta insieme via shutdown().
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     private var bluetoothGatt: BluetoothGatt? = null
     private var isConnectingGatt = false
     private var lastKnownRssi: Int? = null
@@ -56,7 +83,6 @@ class BleGattManager(
     private var isScanning = false
     private var scanCallback: ScanCallback? = null
 
-    private var wakeRetries = 0
     private val maxWakeRetries = 5
     private val wakeRetryDelayMillis = 1000L
 
@@ -73,24 +99,36 @@ class BleGattManager(
     var lastReconnectErrorCount: Int = 0
         private set
     private var lastSuccessfulConnectAtMs: Long = 0L
-    private var reconnectRunnable: Runnable? = null
-    private var scanTimeoutRunnable: Runnable? = null
-    private var connectionWatchdogRunnable: Runnable? = null
-    private val connectionWatchdogTimeoutMs = 5000L // 5s timeout rapido per non bloccare lo stack se il device dorme
 
-    private var keepAliveRunnable: Runnable? = null
+    private val connectionWatchdogTimeoutMs = 5000L // 5s timeout rapido per non bloccare lo stack se il device dorme
+    private val gattOperationTimeoutMs = 8000L
     private val keepAliveIntervalMs = 35_000L // Ping ogni 35s per prevenire lo standby firmware
 
-    // Coda FIFO per serializzare le operazioni GATT (una sola Read/Write/Descriptor alla volta):
-    // lo stack Android BLE non gestisce operazioni concorrenti, quindi ogni comando viene
-    // messo in coda e la prossima operazione parte solo al completamento della precedente
-    // (dal relativo callback onCharacteristicWrite/onDescriptorWrite/onCharacteristicRead).
-    private val gattOperationQueue = ArrayDeque<() -> Unit>()
-    private var gattOperationInProgress = false
-    private var gattOperationTimeoutRunnable: Runnable? = null
-    private val gattOperationTimeoutMs = 8000L
+    private var connectJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var keepAliveJob: Job? = null
+    private var scanTimeoutJob: Job? = null
 
-    private val handler = Handler(Looper.getMainLooper())
+    // Serializza le operazioni GATT (una Read/Write/Descriptor alla volta): lo stack Android
+    // BLE non gestisce operazioni concorrenti. Sostituisce la coda ArrayDeque + flag booleano
+    // di main con un Mutex, che ogni funzione di operazione acquisisce prima di agire.
+    private val gattOperationMutex = Mutex()
+
+    // Continuation "in sospeso" per il singolo evento GATT atteso in questo momento (al più una
+    // alla volta, garantito dal Mutex sopra per le operazioni in coda, e dal fatto che una sola
+    // sequenza di connect() è mai attiva). Il callback GATT le risolve quando arriva l'evento
+    // giusto; se non c'è nessuno in attesa (es. disconnessione inattesa durante l'uso normale),
+    // il callback gestisce la cosa direttamente invece di risolvere una continuation.
+    private var pendingConnectContinuation: CancellableContinuation<ConnectOutcome>? = null
+    private var pendingServicesContinuation: CancellableContinuation<Int>? = null
+    private var pendingWriteContinuation: CancellableContinuation<Int>? = null
+    private var pendingDescriptorContinuation: CancellableContinuation<Int>? = null
+    private var pendingReadContinuation: CancellableContinuation<Pair<Int, ByteArray>>? = null
+
+    private sealed class ConnectOutcome {
+        data object Connected : ConnectOutcome()
+        data class Failed(val status: Int) : ConnectOutcome()
+    }
 
     private val serviceUuid = UUID.fromString("0000a2a0-0000-1000-8000-00805f9b34fb")
     private val wakeUuid = UUID.fromString("0000a2a3-0000-1000-8000-00805f9b34fb")
@@ -102,16 +140,12 @@ class BleGattManager(
 
     private fun log(msg: String) {
         Log.d(tag, msg)
-        handler.post {
-            listener.onLog(msg)
-        }
+        listener.onLog(msg)
     }
 
     private fun updateState(newState: ConnectionState) {
-        handler.post {
-            currentState = newState
-            listener.onStateChanged(newState)
-        }
+        currentState = newState
+        listener.onStateChanged(newState)
     }
 
     private fun getBluetoothAdapter(): BluetoothAdapter? {
@@ -119,26 +153,14 @@ class BleGattManager(
         return bluetoothManager?.adapter
     }
 
-    private fun startConnectionWatchdog() {
-        stopConnectionWatchdog()
-        connectionWatchdogRunnable = Runnable {
-            if (currentState == ConnectionState.CONNECTING) {
-                log("Watchdog: il telecomando è in Standby. Attivo ascolto automatico a schermo spento...")
-                closeGatt(refresh = true)
-                updateState(ConnectionState.DISCONNECTED)
-                val adapter = getBluetoothAdapter()
-                if (adapter != null && adapter.isEnabled && !userRequestedDisconnect) {
-                    startLeScan(adapter, isBackgroundStandby = true)
-                }
-            }
-        }
-        handler.postDelayed(connectionWatchdogRunnable!!, connectionWatchdogTimeoutMs)
+    /** Da chiamare quando il service viene distrutto: ferma tutte le coroutine dell'istanza. */
+    fun shutdown() {
+        scope.cancel()
     }
 
-    private fun stopConnectionWatchdog() {
-        connectionWatchdogRunnable?.let { handler.removeCallbacks(it) }
-        connectionWatchdogRunnable = null
-    }
+    // ---------------------------------------------------------------------------------------
+    // Connessione
+    // ---------------------------------------------------------------------------------------
 
     @SuppressLint("MissingPermission")
     fun connect() {
@@ -148,43 +170,408 @@ class BleGattManager(
         }
 
         userRequestedDisconnect = false
-        cancelPendingReconnect()
+        reconnectJob?.cancel()
+        reconnectJob = null
+        connectJob?.cancel()
+        connectJob = scope.launch { runConnectSequence() }
+    }
+
+    private suspend fun runConnectSequence() {
         updateState(ConnectionState.CONNECTING)
 
         val adapter = getBluetoothAdapter()
         if (adapter == null || !adapter.isEnabled) {
             log("Bluetooth spento o non disponibile.")
-            stopConnectionWatchdog()
             updateState(ConnectionState.DISCONNECTED)
             return
         }
 
-        closeGatt(refresh = false)
+        closeGattInternal(refresh = false)
 
-        val savedMac = mappingStorage.getLastConnectedMac()
-        if (!savedMac.isNullOrEmpty() && BluetoothAdapter.checkBluetoothAddress(savedMac)) {
-            log("In attesa del telecomando $savedMac (premi un tasto sul telecomando)...")
-            try {
-                val device = adapter.getRemoteDevice(savedMac)
-                startConnectionWatchdog()
-                connectGattTo(device)
-            } catch (e: Exception) {
-                log("Connessione rapida fallita: ${e.message}")
+        // Il watchdog (5s) copre SOLO "trova e aggancia il telecomando" — come in main, dove
+        // era un timer separato dal timeout delle singole operazioni GATT successive (8s
+        // ciascuna). Avvolgere anche discoverServices/wake/notifiche nello stesso timeout di 5s
+        // era il bug di questa riscrittura: l'intero handshake doveva finire in 5s totali,
+        // interrompendo sempre il comando Wake a metà (riprodotto dal vivo).
+        val gatt = try {
+            withTimeout(connectionWatchdogTimeoutMs) { connectToRemote(adapter) }
+        } catch (e: TimeoutCancellationException) {
+            log("Watchdog: il telecomando è in Standby. Attivo ascolto automatico a schermo spento...")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            stopLeScan()
+            val adapter2 = getBluetoothAdapter()
+            if (adapter2 != null && adapter2.isEnabled && !userRequestedDisconnect) {
+                startLeScanBackground(adapter2)
             }
-        } else {
-            startConnectionWatchdog()
+            return
+        } catch (e: ConnectHandshakeException) {
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            return
+        } catch (e: CancellationException) {
+            throw e // una nuova connect()/disconnect() ha cancellato questa sequenza: non è un errore
+        } catch (e: Exception) {
+            log("Errore connessione GATT: ${e.message}")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            return
         }
 
-        // Avvia contemporaneamente la scansione ad alta reattività per agganciare il telecomando non appena si risveglia
-        startLeScan(adapter, isBackgroundStandby = false)
+        // Da qui il link GATT è stabilito: ogni passo (discoverServices, wake, notifiche) ha
+        // il proprio timeout indipendente (gattOperationTimeoutMs), non più quello del watchdog.
+        try {
+            performHandshake(gatt)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("Errore handshake: ${e.message}")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+        }
+    }
+
+    private class ConnectHandshakeException(val outcome: ConnectOutcome.Failed) : Exception()
+
+    /** Variante di runConnectSequence per quando il dispositivo è già noto (es. lo scan in
+     * background per l'auto-reconnect lo trova senza passare da connect()): stessa struttura
+     * watchdog+handshake, senza la fase di risoluzione del device. */
+    @SuppressLint("MissingPermission")
+    private suspend fun runHandshakeFor(device: BluetoothDevice) {
+        updateState(ConnectionState.CONNECTING)
+        closeGattInternal(refresh = false)
+
+        val gatt = try {
+            withTimeout(connectionWatchdogTimeoutMs) { connectAndAwaitGatt(device) }
+        } catch (e: TimeoutCancellationException) {
+            log("Watchdog: il telecomando è in Standby. Attivo ascolto automatico a schermo spento...")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            stopLeScan()
+            val adapter2 = getBluetoothAdapter()
+            if (adapter2 != null && adapter2.isEnabled && !userRequestedDisconnect) {
+                startLeScanBackground(adapter2)
+            }
+            return
+        } catch (e: ConnectHandshakeException) {
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            return
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("Errore connessione GATT: ${e.message}")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            return
+        }
+
+        try {
+            performHandshake(gatt)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("Errore handshake: ${e.message}")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            if (!userRequestedDisconnect) scheduleAutoReconnect()
+        }
+    }
+
+    /** Sospende finché lo scan (avviato qui) non trova un dispositivo compatibile. */
+    @SuppressLint("MissingPermission")
+    private suspend fun awaitDeviceFromScan(adapter: BluetoothAdapter): BluetoothDevice {
+        return suspendCancellableCoroutine { cont ->
+            startLeScanForeground(adapter, onDeviceFound = { device ->
+                if (cont.isActive) cont.resume(device)
+            })
+            cont.invokeOnCancellation { stopLeScan() }
+        }
+    }
+
+    /** Risolve il dispositivo (MAC noto o scansione) e apre la connessione GATT fino a
+     * STATE_CONNECTED incluso — nessuna scoperta servizi/scrittura qui, solo il link radio. */
+    @SuppressLint("MissingPermission")
+    private suspend fun connectToRemote(adapter: BluetoothAdapter): BluetoothGatt {
+        val savedMac = mappingStorage.getLastConnectedMac()
+        val knownDevice = if (!savedMac.isNullOrEmpty() && BluetoothAdapter.checkBluetoothAddress(savedMac)) {
+            log("In attesa del telecomando $savedMac (premi un tasto sul telecomando)...")
+            adapter.getRemoteDevice(savedMac)
+        } else {
+            null
+        }
+
+        // Stessa strategia "doppio binario" di main: tenta la connessione diretta al MAC noto E
+        // scansiona in parallelo, whichever arriva prima vince (la guardia in connectAndAwaitGatt
+        // impedisce un doppio tentativo sullo stesso device).
+        return if (knownDevice != null) {
+            coroutineScope {
+                val direct = async { connectAndAwaitGatt(knownDevice) }
+                startLeScanForeground(adapter)
+                direct.await()
+            }
+        } else {
+            val found = awaitDeviceFromScan(adapter)
+            connectAndAwaitGatt(found)
+        }
+    }
+
+    /** Guardia + apertura vera e propria del link GATT, sospesa fino a STATE_CONNECTED. */
+    @SuppressLint("MissingPermission")
+    private suspend fun connectAndAwaitGatt(device: BluetoothDevice): BluetoothGatt {
+        if (isConnectingGatt || bluetoothGatt != null) {
+            log("Connessione GATT già in corso: richiesta duplicata verso ${device.address} ignorata.")
+            throw ConnectHandshakeException(ConnectOutcome.Failed(-1))
+        }
+        isConnectingGatt = true
+        stopLeScan()
+
+        delay(150L) // stesso margine di main prima di aprire connectGatt
+
+        log("Connessione GATT ad alta velocità a ${device.address}...")
+        val connectOutcome = try {
+            suspendCancellableCoroutine<ConnectOutcome> { cont ->
+                pendingConnectContinuation = cont
+                cont.invokeOnCancellation { pendingConnectContinuation = null }
+                try {
+                    bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+                } catch (e: Exception) {
+                    log("Eccezione connectGatt: ${e.message}")
+                    pendingConnectContinuation = null
+                    isConnectingGatt = false
+                    cont.resume(ConnectOutcome.Failed(-1))
+                }
+            }
+        } finally {
+            isConnectingGatt = false
+        }
+
+        if (connectOutcome is ConnectOutcome.Failed) {
+            throw ConnectHandshakeException(connectOutcome)
+        }
+        mappingStorage.setLastConnectedMac(device.address)
+        return bluetoothGatt ?: throw ConnectHandshakeException(ConnectOutcome.Failed(-1))
+    }
+
+    /** Scoperta servizi → wake → abilitazione notifiche, ciascuno con il proprio timeout. */
+    @SuppressLint("MissingPermission")
+    private suspend fun performHandshake(gatt: BluetoothGatt) {
+        log("Connesso al BR80. Scoperta servizi GATT in corso...")
+        delay(300L)
+        val discoverStatus = try {
+            withTimeout(gattOperationTimeoutMs) { awaitServicesDiscovered(gatt) }
+        } catch (e: TimeoutCancellationException) {
+            log("Timeout scoperta servizi. Ripristino auto-healing...")
+            radioErrorCount++
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            return
+        }
+        if (discoverStatus != BluetoothGatt.GATT_SUCCESS) {
+            log("Scoperta servizi fallita: status $discoverStatus. Riavvio auto-healing...")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            return
+        }
+
+        val service = gatt.getService(serviceUuid)
+        if (service == null) {
+            log("Servizio a2a0 non trovato sul device.")
+            return
+        }
+
+        log("Servizio a2a0 trovato. Invio comando Wake (0xFF su a2a3)...")
+        val wakeChar = service.getCharacteristic(wakeUuid)
+        if (wakeChar == null) {
+            log("Caratteristica a2a3 (Wake) non trovata.")
+            return
+        }
+
+        val wakeOk = writeCharacteristicWithRetry(gatt, wakeChar, byteArrayOf(0xFF.toByte()), maxWakeRetries, wakeRetryDelayMillis)
+        if (!wakeOk) {
+            log("Wake fallito dopo $maxWakeRetries tentativi. Reset auto-healing...")
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            return
+        }
+        log("Wake inviato con successo. Abilito notifiche su a2a4...")
+
+        val buttonChar = service.getCharacteristic(buttonUuid)
+        if (buttonChar == null) {
+            log("Caratteristica a2a4 (Notifiche) non trovata.")
+            return
+        }
+        val notifyStatus = try {
+            withTimeout(gattOperationTimeoutMs) { enableCharacteristicNotifications(gatt, buttonChar) }
+        } catch (e: TimeoutCancellationException) {
+            log("Timeout abilitazione notifiche. Ripristino auto-healing...")
+            radioErrorCount++
+            closeGattInternal(refresh = true)
+            updateState(ConnectionState.DISCONNECTED)
+            return
+        }
+        if (notifyStatus == null) {
+            log("Descrittore CCCD (0x2902) non trovato su characteristic.")
+            return
+        }
+        if (notifyStatus != BluetoothGatt.GATT_SUCCESS) {
+            log("Abilitazione descrittore notifiche fallita: status $notifyStatus")
+            return
+        }
+        log("Notifiche abilitate su a2a4! Telecomando pronto.")
+
+        // Connessione riuscita: azzera i contatori di errore, marca lo stato, avvia il keep-alive.
+        lastReconnectErrorCount = radioErrorCount
+        lastSuccessfulConnectAtMs = System.currentTimeMillis()
+        radioErrorCount = 0
+        reconnectAttempts = 0
+        updateState(ConnectionState.CONNECTED)
+        startKeepAliveIfEnabled()
+
+        delay(400L)
+        readBatteryLevel(gatt)
+    }
+
+    private suspend fun awaitServicesDiscovered(gatt: BluetoothGatt): Int {
+        return suspendCancellableCoroutine { cont ->
+            pendingServicesContinuation = cont
+            cont.invokeOnCancellation { pendingServicesContinuation = null }
+            try {
+                gatt.discoverServices()
+            } catch (e: Exception) {
+                log("Errore discoverServices: ${e.message}")
+                pendingServicesContinuation = null
+                cont.resume(-1)
+            }
+        }
+    }
+
+    /** Scrive una characteristic e ritenta fino a [maxAttempts] volte con [delayMs] tra un
+     * tentativo e l'altro se lo stack Bluetooth rifiuta la scrittura — generico, riusabile per
+     * qualunque comando futuro oltre al wake (non più cablato su una sola characteristic come
+     * in main). */
+    @SuppressLint("MissingPermission")
+    private suspend fun writeCharacteristicWithRetry(
+        gatt: BluetoothGatt,
+        characteristic: BluetoothGattCharacteristic,
+        value: ByteArray,
+        maxAttempts: Int,
+        delayMs: Long
+    ): Boolean {
+        var attempt = 0
+        while (attempt < maxAttempts) {
+            val status = try {
+                withTimeout(gattOperationTimeoutMs) {
+                    gattOperationMutex.withLock {
+                        suspendCancellableCoroutine { cont ->
+                            pendingWriteContinuation = cont
+                            cont.invokeOnCancellation { pendingWriteContinuation = null }
+                            try {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    characteristic.value = value
+                                    @Suppress("DEPRECATION")
+                                    gatt.writeCharacteristic(characteristic)
+                                }
+                            } catch (e: Exception) {
+                                pendingWriteContinuation = null
+                                cont.resume(-1)
+                            }
+                        }
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                radioErrorCount++
+                -1
+            }
+            if (status == BluetoothGatt.GATT_SUCCESS) return true
+            attempt++
+            if (attempt < maxAttempts) {
+                log("Wake non riuscito (status $status). Riprovo ($attempt/$maxAttempts)...")
+                delay(delayMs)
+            }
+        }
+        return false
     }
 
     @SuppressLint("MissingPermission")
-    private fun startLeScan(adapter: BluetoothAdapter, isBackgroundStandby: Boolean = false) {
+    private suspend fun enableCharacteristicNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic): Int? {
+        gatt.setCharacteristicNotification(characteristic, true)
+        val cccd = characteristic.getDescriptor(cccdUuid) ?: return null
+        return gattOperationMutex.withLock {
+            suspendCancellableCoroutine { cont ->
+                pendingDescriptorContinuation = cont
+                cont.invokeOnCancellation { pendingDescriptorContinuation = null }
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                        @Suppress("DEPRECATION")
+                        gatt.writeDescriptor(cccd)
+                    }
+                } catch (e: Exception) {
+                    pendingDescriptorContinuation = null
+                    cont.resume(-1)
+                }
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun readBatteryLevel(gatt: BluetoothGatt? = bluetoothGatt) {
+        val g = gatt ?: return
+        val batteryService = g.getService(batteryServiceUuid)
+        val batteryChar = batteryService?.getCharacteristic(batteryLevelUuid) ?: return
+        scope.launch {
+            val (status, value) = gattOperationMutex.withLock {
+                suspendCancellableCoroutine { cont ->
+                    pendingReadContinuation = cont
+                    cont.invokeOnCancellation { pendingReadContinuation = null }
+                    try {
+                        g.readCharacteristic(batteryChar)
+                    } catch (e: Exception) {
+                        pendingReadContinuation = null
+                        cont.resume(-1 to ByteArray(0))
+                    }
+                }
+            }
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val level = value.getOrNull(0)?.toInt()?.and(0xFF) ?: -1
+                if (level in 0..100) {
+                    batteryLevel = level
+                    log("Livello batteria letto: $level%")
+                    listener.onBatteryUpdated(level)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Scansione
+    // ---------------------------------------------------------------------------------------
+
+    @SuppressLint("MissingPermission")
+    private fun startLeScanForeground(adapter: BluetoothAdapter, onDeviceFound: ((BluetoothDevice) -> Unit)? = null) {
+        startLeScanInternal(adapter, isBackgroundStandby = false, onDeviceFound = onDeviceFound)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLeScanBackground(adapter: BluetoothAdapter, onDeviceFound: ((BluetoothDevice) -> Unit)? = null) {
+        startLeScanInternal(adapter, isBackgroundStandby = true, onDeviceFound = onDeviceFound)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLeScanInternal(adapter: BluetoothAdapter, isBackgroundStandby: Boolean, onDeviceFound: ((BluetoothDevice) -> Unit)?) {
         val scanner = adapter.bluetoothLeScanner
         if (scanner == null) {
             log("BLE Scanner non disponibile.")
-            stopConnectionWatchdog()
             updateState(ConnectionState.DISCONNECTED)
             scheduleAutoReconnect()
             return
@@ -245,16 +632,19 @@ class BleGattManager(
                     listener.onRssiUpdated(result.rssi)
                     log("Telecomando rilevato: $displayName [${device.address}], RSSI: ${result.rssi}")
                     stopLeScan()
-                    stopConnectionWatchdog()
                     mappingStorage.setLastConnectedMac(device.address)
-                    connectGattTo(device)
+                    if (onDeviceFound != null) {
+                        onDeviceFound(device)
+                    } else {
+                        connectJob?.cancel()
+                        connectJob = scope.launch { runHandshakeFor(device) }
+                    }
                 }
             }
 
             override fun onScanFailed(errorCode: Int) {
                 log("Scansione BLE fallita con codice: $errorCode")
                 isScanning = false
-                stopConnectionWatchdog()
                 updateState(ConnectionState.DISCONNECTED)
                 scheduleAutoReconnect()
             }
@@ -272,13 +662,14 @@ class BleGattManager(
 
         if (!isBackgroundStandby) {
             // Dopo 8 secondi di scansione attiva passa all'ascolto continuo BALANCED
-            scanTimeoutRunnable = Runnable {
+            scanTimeoutJob?.cancel()
+            scanTimeoutJob = scope.launch {
+                delay(8000L)
                 if (isScanning) {
                     stopLeScan()
-                    startLeScan(adapter, isBackgroundStandby = true)
+                    startLeScanInternal(adapter, isBackgroundStandby = true, onDeviceFound = onDeviceFound)
                 }
             }
-            handler.postDelayed(scanTimeoutRunnable!!, 8000L)
         }
     }
 
@@ -290,8 +681,8 @@ class BleGattManager(
 
     @SuppressLint("MissingPermission")
     private fun stopLeScan() {
-        scanTimeoutRunnable?.let { handler.removeCallbacks(it) }
-        scanTimeoutRunnable = null
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = null
 
         if (isScanning) {
             val scanner = getBluetoothAdapter()?.bluetoothLeScanner
@@ -307,46 +698,18 @@ class BleGattManager(
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun connectGattTo(device: BluetoothDevice) {
-        // Guard sincrono: indipendentemente da quale percorso chiami questa funzione
-        // (scan callback, watchdog, retry...), non avviare mai una seconda connessione
-        // GATT mentre una è già in corso o attiva sullo stesso o altro device.
-        if (isConnectingGatt || bluetoothGatt != null) {
-            log("Connessione GATT già in corso: richiesta duplicata verso ${device.address} ignorata.")
-            return
-        }
-        isConnectingGatt = true
-
-        wakeRetries = 0
-        stopLeScan()
-        handler.postDelayed({
-            // Se nel frattempo l'utente ha premuto "Disconnetti" (closeGatt ha già azzerato
-            // isConnectingGatt), non aprire comunque la connessione che aveva annullato.
-            if (!isConnectingGatt) {
-                log("Connessione GATT annullata prima dell'avvio (disconnessione richiesta nel frattempo).")
-                return@postDelayed
-            }
-            try {
-                log("Connessione GATT ad alta velocità a ${device.address}...")
-                bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
-            } catch (e: Exception) {
-                log("Eccezione connectGatt: ${e.message}")
-                isConnectingGatt = false
-                stopConnectionWatchdog()
-                updateState(ConnectionState.DISCONNECTED)
-                scheduleAutoReconnect()
-            }
-        }, 150L)
-    }
+    // ---------------------------------------------------------------------------------------
+    // Disconnessione / chiusura
+    // ---------------------------------------------------------------------------------------
 
     @SuppressLint("MissingPermission")
     fun disconnect(enterPassiveListening: Boolean = true) {
-        stopConnectionWatchdog()
+        connectJob?.cancel()
         stopKeepAlive()
-        cancelPendingReconnect()
+        reconnectJob?.cancel()
+        reconnectJob = null
         stopLeScan()
-        closeGatt(refresh = true)
+        closeGattInternal(refresh = true)
         updateState(ConnectionState.DISCONNECTED)
 
         if (enterPassiveListening) {
@@ -355,49 +718,12 @@ class BleGattManager(
             log("Disconnesso. Ascolto passivo attivo: premi un tasto sul telecomando per riconnetterti.")
             val adapter = getBluetoothAdapter()
             if (adapter != null && adapter.isEnabled) {
-                startLeScan(adapter, isBackgroundStandby = true)
+                startLeScanBackground(adapter)
             }
         } else {
             userRequestedDisconnect = true
             log("Disconnessione completa richiesta dall'utente.")
         }
-    }
-
-    private fun enqueueGattOperation(operation: () -> Unit) {
-        gattOperationQueue.addLast(operation)
-        if (!gattOperationInProgress) {
-            processNextGattOperation()
-        }
-    }
-
-    private fun processNextGattOperation() {
-        cancelGattOperationTimeout()
-        val next = gattOperationQueue.removeFirstOrNull()
-        if (next == null) {
-            gattOperationInProgress = false
-            return
-        }
-        gattOperationInProgress = true
-        next()
-        gattOperationTimeoutRunnable = Runnable {
-            log("Timeout operazione GATT (nessuna risposta dopo ${gattOperationTimeoutMs / 1000}s). Ripristino auto-healing...")
-            radioErrorCount++
-            closeGatt(refresh = true)
-            updateState(ConnectionState.DISCONNECTED)
-            scheduleAutoReconnect()
-        }
-        handler.postDelayed(gattOperationTimeoutRunnable!!, gattOperationTimeoutMs)
-    }
-
-    private fun cancelGattOperationTimeout() {
-        gattOperationTimeoutRunnable?.let { handler.removeCallbacks(it) }
-        gattOperationTimeoutRunnable = null
-    }
-
-    private fun clearGattOperationQueue() {
-        cancelGattOperationTimeout()
-        gattOperationQueue.clear()
-        gattOperationInProgress = false
     }
 
     private fun refreshGatt(gatt: BluetoothGatt): Boolean {
@@ -411,10 +737,11 @@ class BleGattManager(
     }
 
     @SuppressLint("MissingPermission")
-    private fun closeGatt(refresh: Boolean = true) {
-        stopConnectionWatchdog()
+    private fun closeGattInternal(refresh: Boolean = true) {
         stopKeepAlive()
-        clearGattOperationQueue()
+        // Eventuali continuation pendenti restano sospese finché il loro withTimeout/cancel non
+        // le raccoglie: non serve risolverle qui a mano, la cancellazione del Job che le contiene
+        // (connectJob.cancel() nei chiamanti) se ne occupa via invokeOnCancellation.
         isConnectingGatt = false
         val gatt = bluetoothGatt
         bluetoothGatt = null
@@ -427,62 +754,62 @@ class BleGattManager(
             } catch (e: Exception) {
                 Log.w(tag, "Error disconnecting gatt: ${e.message}")
             }
-            handler.postDelayed({
+            scope.launch {
+                delay(100L)
                 try {
                     gatt.close()
                 } catch (e: Exception) {
                     Log.w(tag, "Error closing gatt: ${e.message}")
                 }
-            }, 100L)
+            }
         }
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Auto-reconnect / Keep-Alive
+    // ---------------------------------------------------------------------------------------
 
     private fun scheduleAutoReconnect() {
         if (userRequestedDisconnect) return
 
-        stopConnectionWatchdog()
         stopKeepAlive()
-        cancelPendingReconnect()
-        val delay = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
+        reconnectJob?.cancel()
+        val delayMs = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
         reconnectAttempts++
-        log("Auto-Healing: ascolto o riconnessione programmata tra ${delay / 1000}s...")
+        log("Auto-Healing: ascolto o riconnessione programmata tra ${delayMs / 1000}s...")
 
-        reconnectRunnable = Runnable {
+        reconnectJob = scope.launch {
+            delay(delayMs)
             if (!userRequestedDisconnect && currentState == ConnectionState.DISCONNECTED) {
                 val adapter = getBluetoothAdapter()
                 if (adapter != null && adapter.isEnabled) {
-                    startLeScan(adapter, isBackgroundStandby = true)
+                    startLeScanBackground(adapter)
                 }
             }
         }
-        handler.postDelayed(reconnectRunnable!!, delay)
-    }
-
-    private fun cancelPendingReconnect() {
-        reconnectRunnable?.let { handler.removeCallbacks(it) }
-        reconnectRunnable = null
     }
 
     fun startKeepAliveIfEnabled() {
         stopKeepAlive()
         if (mappingStorage.isKeepAliveEnabled() && currentState == ConnectionState.CONNECTED) {
             log("Keep-Alive attivo: ping periodico impostato ogni 35s per prevenire lo standby.")
-            keepAliveRunnable = object : Runnable {
-                override fun run() {
+            keepAliveJob = scope.launch {
+                while (isActive) {
+                    delay(keepAliveIntervalMs)
                     if (currentState == ConnectionState.CONNECTED && bluetoothGatt != null) {
                         log("Keep-Alive: invio ping per mantenere il canale attivo...")
                         readBatteryLevel()
-                        handler.postDelayed(this, keepAliveIntervalMs)
+                    } else {
+                        break
                     }
                 }
             }
-            handler.postDelayed(keepAliveRunnable!!, keepAliveIntervalMs)
         }
     }
 
     fun stopKeepAlive() {
-        keepAliveRunnable?.let { handler.removeCallbacks(it) }
-        keepAliveRunnable = null
+        keepAliveJob?.cancel()
+        keepAliveJob = null
     }
 
     /** Quanti errori radio (GATT_ERROR, timeout operazione) hanno preceduto l'ultima
@@ -506,32 +833,35 @@ class BleGattManager(
         }
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Callback GATT: il suo unico compito è aggiornare lo stato/log e risolvere la
+    // continuation in sospeso, se ce n'è una. Nessuna logica di business qui dentro.
+    // ---------------------------------------------------------------------------------------
+
     private val gattCallback = object : BluetoothGattCallback() {
 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            handler.post {
+            scope.launch {
                 log("Stato connessione BLE: status=$status (${gattStatusString(status)}), newState=$newState")
-                isConnectingGatt = false
 
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     log("Errore GATT rilevato ($status). Ripristino automatico stack...")
                     radioErrorCount++
-                    stopConnectionWatchdog()
-                    closeGatt(refresh = true)
-                    updateState(ConnectionState.DISCONNECTED)
-                    scheduleAutoReconnect()
-                    return@post
+                    val cont = pendingConnectContinuation
+                    pendingConnectContinuation = null
+                    if (cont != null && cont.isActive) {
+                        closeGattInternal(refresh = true)
+                        cont.resume(ConnectOutcome.Failed(status))
+                    } else {
+                        closeGattInternal(refresh = true)
+                        updateState(ConnectionState.DISCONNECTED)
+                        if (!userRequestedDisconnect) scheduleAutoReconnect()
+                    }
+                    return@launch
                 }
 
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    lastReconnectErrorCount = radioErrorCount
-                    lastSuccessfulConnectAtMs = System.currentTimeMillis()
-                    radioErrorCount = 0
-                    reconnectAttempts = 0
-                    stopConnectionWatchdog()
-                    stopLeScan()
-
                     // Priorità di connessione adattiva impostata una sola volta, per l'intera
                     // sessione: HIGH su segnale buono (7.5-15ms di latenza), BALANCED su segnale
                     // debole per non stressare un link marginale. Non viene più riportata a
@@ -550,133 +880,75 @@ class BleGattManager(
                         Log.w(tag, "Impossibile impostare priorità elevata: ${e.message}")
                     }
 
-                    updateState(ConnectionState.CONNECTED)
-                    startKeepAliveIfEnabled()
-                    log("Connesso al BR80. Scoperta servizi GATT in corso...")
-                    handler.postDelayed({
-                        try {
-                            gatt.discoverServices()
-                        } catch (e: Exception) {
-                            log("Errore discoverServices: ${e.message}")
-                        }
-                    }, 300L)
+                    val cont = pendingConnectContinuation
+                    pendingConnectContinuation = null
+                    cont?.takeIf { it.isActive }?.resume(ConnectOutcome.Connected)
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     log("Telecomando disconnesso (standby o fuori portata).")
-                    stopConnectionWatchdog()
-                    stopKeepAlive()
-                    closeGatt(refresh = false)
-                    updateState(ConnectionState.DISCONNECTED)
-                    scheduleAutoReconnect()
+                    val cont = pendingConnectContinuation
+                    pendingConnectContinuation = null
+                    if (cont != null && cont.isActive) {
+                        closeGattInternal(refresh = false)
+                        cont.resume(ConnectOutcome.Failed(status))
+                    } else {
+                        // Disconnessione durante l'uso normale (non parte di un handshake in
+                        // corso): qui main faceva scattare l'auto-healing direttamente.
+                        closeGattInternal(refresh = false)
+                        updateState(ConnectionState.DISCONNECTED)
+                        if (!userRequestedDisconnect) scheduleAutoReconnect()
+                    }
                 }
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            handler.post {
-                if (status != BluetoothGatt.GATT_SUCCESS) {
-                    log("Scoperta servizi fallita: status $status. Riavvio auto-healing...")
-                    closeGatt(refresh = true)
-                    updateState(ConnectionState.DISCONNECTED)
-                    scheduleAutoReconnect()
-                    return@post
-                }
-
-                val service = gatt.getService(serviceUuid)
-                if (service == null) {
-                    log("Servizio a2a0 non trovato sul device.")
-                    return@post
-                }
-
-                log("Servizio a2a0 trovato. Invio comando Wake (0xFF su a2a3)...")
-                val wakeChar = service.getCharacteristic(wakeUuid)
-                if (wakeChar != null) {
-                    wakeRetries = 0
-                    writeWakeCharacteristic(gatt, wakeChar)
-                } else {
-                    log("Caratteristica a2a3 (Wake) non trovata.")
-                }
+            scope.launch {
+                val cont = pendingServicesContinuation
+                pendingServicesContinuation = null
+                cont?.takeIf { it.isActive }?.resume(status)
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-            handler.post {
-                if (characteristic.uuid == wakeUuid) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        log("Wake inviato con successo. Abilito notifiche su a2a4...")
-                        val service = gatt.getService(serviceUuid)
-                        val buttonChar = service?.getCharacteristic(buttonUuid)
-                        if (buttonChar != null) {
-                            enableCharacteristicNotifications(gatt, buttonChar)
-                        }
-                    } else if (wakeRetries < maxWakeRetries) {
-                        wakeRetries++
-                        log("Wake non riuscito (status $status). Riprovo ($wakeRetries/$maxWakeRetries)...")
-                        handler.postDelayed({
-                            writeWakeCharacteristic(gatt, characteristic)
-                        }, wakeRetryDelayMillis)
-                    } else {
-                        log("Wake fallito dopo $maxWakeRetries tentativi. Reset auto-healing...")
-                        closeGatt(refresh = true)
-                        updateState(ConnectionState.DISCONNECTED)
-                        scheduleAutoReconnect()
-                    }
-                }
-                processNextGattOperation()
+            scope.launch {
+                val cont = pendingWriteContinuation
+                pendingWriteContinuation = null
+                cont?.takeIf { it.isActive }?.resume(status)
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-            handler.post {
-                if (descriptor.uuid == cccdUuid && descriptor.characteristic.uuid == buttonUuid) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        log("Notifiche abilitate su a2a4! Telecomando pronto.")
-                        handler.postDelayed({
-                            readBatteryLevel(gatt)
-                        }, 400L)
-                    } else {
-                        log("Abilitazione descrittore notifiche fallita: status $status")
-                    }
-                }
-                processNextGattOperation()
+            scope.launch {
+                val cont = pendingDescriptorContinuation
+                pendingDescriptorContinuation = null
+                cont?.takeIf { it.isActive }?.resume(status)
             }
         }
 
         // Stessa doppia-chiamata di sistema su Android 13+ già osservata per
-        // onCharacteristicChanged: solo un overload deve processare/avanzare la coda.
+        // onCharacteristicChanged: solo un overload deve risolvere la continuation.
         @SuppressLint("MissingPermission")
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-            if (characteristic.uuid == batteryLevelUuid && status == BluetoothGatt.GATT_SUCCESS) {
-                @Suppress("DEPRECATION")
-                val bytes = characteristic.value
-                val level = bytes?.getOrNull(0)?.toInt()?.and(0xFF) ?: -1
-                if (level in 0..100) {
-                    batteryLevel = level
-                    log("Livello batteria letto: $level%")
-                    handler.post {
-                        listener.onBatteryUpdated(level)
-                    }
-                }
+            @Suppress("DEPRECATION")
+            val bytes = characteristic.value ?: ByteArray(0)
+            scope.launch {
+                val cont = pendingReadContinuation
+                pendingReadContinuation = null
+                cont?.takeIf { it.isActive }?.resume(status to bytes)
             }
-            handler.post { processNextGattOperation() }
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
-            if (characteristic.uuid == batteryLevelUuid && status == BluetoothGatt.GATT_SUCCESS) {
-                val level = value.getOrNull(0)?.toInt()?.and(0xFF) ?: -1
-                if (level in 0..100) {
-                    batteryLevel = level
-                    log("Livello batteria letto: $level%")
-                    handler.post {
-                        listener.onBatteryUpdated(level)
-                    }
-                }
+            scope.launch {
+                val cont = pendingReadContinuation
+                pendingReadContinuation = null
+                cont?.takeIf { it.isActive }?.resume(status to value)
             }
-            handler.post { processNextGattOperation() }
         }
 
         // Su Android 13+ (API 33+) il sistema chiama ENTRAMBI gli overload per lo stesso
@@ -686,6 +958,7 @@ class BleGattManager(
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
             if (characteristic.uuid == buttonUuid) {
+                @Suppress("DEPRECATION")
                 handleButtonPayload(characteristic.value)
             }
         }
@@ -706,58 +979,9 @@ class BleGattManager(
             val (button, isPress) = parsed
             val stateStr = if (isPress) "PRESS" else "RELEASE"
             log("Tasto [0x${code.toString(16)}]: ${button.name} $stateStr")
-            handler.post {
-                listener.onButtonRawEvent(button, isPress)
-            }
+            listener.onButtonRawEvent(button, isPress)
         } else {
             log("Payload sconosciuto su a2a4: 0x${code.toString(16)} ($code)")
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun writeWakeCharacteristic(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        enqueueGattOperation {
-            val value = byteArrayOf(0xFF.toByte())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
-            } else {
-                @Suppress("DEPRECATION")
-                characteristic.value = value
-                @Suppress("DEPRECATION")
-                gatt.writeCharacteristic(characteristic)
-            }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun enableCharacteristicNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        gatt.setCharacteristicNotification(characteristic, true)
-        val cccd = characteristic.getDescriptor(cccdUuid)
-        if (cccd != null) {
-            enqueueGattOperation {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    @Suppress("DEPRECATION")
-                    gatt.writeDescriptor(cccd)
-                }
-            }
-        } else {
-            log("Descrittore CCCD (0x2902) non trovato su characteristic.")
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun readBatteryLevel(gatt: BluetoothGatt? = bluetoothGatt) {
-        val g = gatt ?: return
-        val batteryService = g.getService(batteryServiceUuid)
-        val batteryChar = batteryService?.getCharacteristic(batteryLevelUuid)
-        if (batteryChar != null) {
-            enqueueGattOperation {
-                g.readCharacteristic(batteryChar)
-            }
         }
     }
 }

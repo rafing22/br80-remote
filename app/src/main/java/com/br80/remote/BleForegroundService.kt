@@ -363,6 +363,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
             }
         }
         gattManager.disconnect(enterPassiveListening = false)
+        gattManager.shutdown()
         gestureDetector.reset()
         btDeviceMonitor.stopMonitoring()
         ttsFeedbackManager.shutdown()
