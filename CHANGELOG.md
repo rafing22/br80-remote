@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.0](https://github.com/rafing22/br80-remote/compare/v4.2.4...v4.3.0) (2026-09-07)
+
+
+### Features
+
+* add home screen widget for status and quick controls ([35a4dab](https://github.com/rafing22/br80-remote/commit/35a4dab6dda98d554763d65552c4bd72fdfaf164))
+
 ## [4.2.4](https://github.com/rafing22/br80-remote/compare/v4.2.3...v4.2.4) (2026-09-06)
 
 
