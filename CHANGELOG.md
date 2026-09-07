@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.3](https://github.com/rafing22/br80-remote/compare/v4.3.2...v4.3.3) (2026-09-07)
+
+
+### Bug Fixes
+
+* conditional Keep-Alive never activated on headset connect ([7ba8e15](https://github.com/rafing22/br80-remote/commit/7ba8e151e04b5f7e7f959793c24e3566a3352d82))
+
 ## [4.3.2](https://github.com/rafing22/br80-remote/compare/v4.3.1...v4.3.2) (2026-09-07)
 
 
