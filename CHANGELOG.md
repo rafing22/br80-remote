@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.5](https://github.com/rafing22/br80-remote/compare/v4.3.4...v4.3.5) (2026-09-07)
+
+
+### Bug Fixes
+
+* rewrite BLE connection handling with coroutines for stability ([936af3d](https://github.com/rafing22/br80-remote/commit/936af3d14cece42b36735dc144b2d2fe4f02d881))
+
 ## [4.3.4](https://github.com/rafing22/br80-remote/compare/v4.3.3...v4.3.4) (2026-09-07)
 
 
