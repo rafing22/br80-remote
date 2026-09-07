@@ -55,6 +55,10 @@ class LogFragment : Fragment(R.layout.fragment_log) {
     /** Aggiunge una riga al registro. Chiamato da MainActivity.appendLog(), che a sua volta
      * viene invocato da qualsiasi punto dell'app (fragment o callback del servizio BLE). */
     fun appendLog(line: String) {
+        // Rete di sicurezza: se per qualche motivo viene chiamato prima che la view esista
+        // (visto dal vivo un caso limite legato a add()+hide() nella stessa transazione),
+        // meglio perdere silenziosamente questa riga di log che far crashare l'app.
+        if (!::tvLogFull.isInitialized) return
         tvLogFull.append("\n$line")
         svLogFull.post {
             svLogFull.fullScroll(View.FOCUS_DOWN)

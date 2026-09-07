@@ -160,12 +160,20 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
     // distruggerebbe la view dei fragment nascosti ad ogni cambio tab, perdendo lo stato
     // di scroll/input e soprattutto la cronologia del Log (tvLogFull verrebbe ricreato vuoto).
     private fun setupFragments() {
+        // add() e hide() SEPARATI in due transazioni: su alcuni dispositivi
+        // (riprodotto dal vivo, Samsung One UI) un fragment aggiunto e nascosto
+        // nella STESSA transazione non ha la view creata in modo sincrono
+        // nonostante commitNow() — un accesso immediato (es. appendLog() da
+        // onCreate() quando mancano permessi runtime) crashava con
+        // UninitializedPropertyAccessException sulla view del fragment nascosto.
         supportFragmentManager.beginTransaction()
             .add(R.id.fragmentContainer, logFragment, "log")
-            .hide(logFragment)
             .add(R.id.fragmentContainer, optionsFragment, "options")
-            .hide(optionsFragment)
             .add(R.id.fragmentContainer, controllerFragment, "controller")
+            .commitNow()
+        supportFragmentManager.beginTransaction()
+            .hide(logFragment)
+            .hide(optionsFragment)
             .commitNow()
         activeFragment = controllerFragment
     }
