@@ -305,12 +305,22 @@ class BleGattManager(
         }
 
         // Stessa strategia "doppio binario" di main: tenta la connessione diretta al MAC noto E
-        // scansiona in parallelo, whichever arriva prima vince (la guardia in connectAndAwaitGatt
-        // impedisce un doppio tentativo sullo stesso device).
+        // scansiona in parallelo, solo per aggiornare RSSI/MAC prima possibile — la connessione
+        // vera e propria resta sempre quella diretta (`direct`). onDeviceFound qui è
+        // deliberatamente no-op: senza, il ramo di default dello scan (pensato per l'ascolto
+        // passivo standalone in disconnect()/scheduleAutoReconnect) cancella connectJob e ne
+        // lancia uno nuovo se lo scan trova il device prima che connectAndAwaitGatt() faccia il
+        // proprio stopLeScan() interno — una race reale (più probabile dopo un lungo standby,
+        // quando connectGatt() è più lento a rispondere) che interrompe a metà un connectGatt()
+        // già in volo verso lo stesso MAC: due connectGatt() sovrapposti sullo stesso device
+        // possono bloccarsi silenziosamente nello stack Bluetooth di sistema, senza più
+        // richiamare alcun callback — nemmeno il watchdog riesce più a intervenire perché il
+        // job che lo conteneva è già stato cancellato. Riprodotto dal vivo: connessione riuscita
+        // silenziosamente bloccata dopo un risveglio da standby prolungato.
         return if (knownDevice != null) {
             coroutineScope {
                 val direct = async { connectAndAwaitGatt(knownDevice) }
-                startLeScanForeground(adapter)
+                startLeScanForeground(adapter, onDeviceFound = { /* no-op: vedi commento sopra */ })
                 direct.await()
             }
         } else {
