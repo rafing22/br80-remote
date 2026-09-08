@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.9](https://github.com/rafing22/br80-remote/compare/v4.3.8...v4.3.9) (2026-09-08)
+
+
+### Bug Fixes
+
+* race condition nella riconnessione BLE dopo standby prolungato ([4a8019e](https://github.com/rafing22/br80-remote/commit/4a8019e625712f8f50add30d4a527db9e8a3520a))
+
 ## [4.3.8](https://github.com/rafing22/br80-remote/compare/v4.3.7...v4.3.8) (2026-09-07)
 
 
