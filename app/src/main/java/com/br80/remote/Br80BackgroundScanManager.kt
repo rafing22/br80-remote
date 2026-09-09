@@ -44,8 +44,13 @@ object Br80BackgroundScanManager {
 
     private fun scanResultPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, Br80RemoteScanReceiver::class.java)
+        // FLAG_MUTABLE, non FLAG_IMMUTABLE come altrove nel progetto: lo stack Bluetooth deve
+        // poter "riempire" questo PendingIntent con l'Intent contenente i veri risultati dello
+        // scan (EXTRA_LIST_SCAN_RESULT) al momento dell'invio — con FLAG_IMMUTABLE quel
+        // riempimento viene ignorato e l'Intent arriva sempre senza extra (bug riprodotto dal
+        // vivo: onReceive riceveva il broadcast ma intent.extras era sempre null).
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
         return PendingIntent.getBroadcast(context, REQUEST_CODE, intent, flags)
     }
 }
