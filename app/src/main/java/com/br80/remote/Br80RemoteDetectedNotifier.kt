@@ -26,23 +26,23 @@ object Br80RemoteDetectedNotifier {
                 ?.createNotificationChannel(channel)
         }
 
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+        val pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT or
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
 
-        // Tap → avvia direttamente ACTION_CONNECT sul service, come il tasto "Connetti" già
-        // esistente nella notifica ongoing, invece di aprire MainActivity: riconnessione più
-        // rapida, nessuna UI necessaria solo per riconnettersi.
-        val connectIntent = Intent(context, BleForegroundService::class.java).apply {
-            action = BleForegroundService.ACTION_CONNECT
+        // La connessione è già stata avviata da Br80RemoteScanReceiver prima di chiamare questa
+        // funzione: qui il tap serve solo ad aprire l'app per vedere lo stato, non a innescare
+        // di nuovo la connessione (che sarebbe ridondante).
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        val pendingConnect = PendingIntent.getService(context, 20, connectIntent, flags)
+        val pendingOpen = PendingIntent.getActivity(context, 20, openIntent, pendingIntentFlags)
 
         val notification = NotificationCompat.Builder(context, HEADSUP_CHANNEL_ID)
             .setContentTitle("Livall BR80 Remote")
-            .setContentText("Telecomando rilevato. Tocca per connettere.")
+            .setContentText("Telecomando rilevato, connessione in corso...")
             .setSmallIcon(R.drawable.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingConnect)
+            .setContentIntent(pendingOpen)
             .setAutoCancel(true)
             .setTimeoutAfter(15_000L)
             .build()
