@@ -118,6 +118,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Riceve i risultati di uno scan BLE "offloaded" (PendingIntent-based) registrato via
+             BluetoothLeScanner.startScan(filters, settings, pendingIntent): questo scan è gestito
+             dallo stack Bluetooth di sistema, sopravvive alla morte del processo dell'app, e
+             consegna qui i risultati (filtrati sul MAC del BR80) anche ad app completamente
+             chiusa. Invocato solo tramite il PendingIntent esplicito creato da noi stessi
+             (Br80BackgroundScanManager), non serve exported=true. -->
+        <receiver
+            android:name=".Br80RemoteScanReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Widget home screen: stato, riconnessione, cambio profilo, uscita -->
         <receiver
             android:name=".Br80WidgetProvider"

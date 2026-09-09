@@ -103,4 +103,9 @@ class Br80WidgetProvider : AppWidgetProvider() {
 object BleServiceStateHolder {
     var currentState: BleGattManager.ConnectionState = BleGattManager.ConnectionState.DISCONNECTED
     var batteryLevel: Int = -1
+    // Distingue "processo vivo, il service gestisce già la riconnessione da solo" da "processo
+    // appena avviato a freddo da Br80AclConnectReceiver" — nel primo caso il nostro stesso
+    // connectGatt() genera comunque un evento ACL_CONNECTED, da ignorare per non spammare la
+    // notifica heads-up mentre l'app ci sta già pensando da sola.
+    var isServiceRunning: Boolean = false
 }

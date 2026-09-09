@@ -108,6 +108,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     override fun onCreate() {
         super.onCreate()
+        // Impostato presto, prima di qualunque tentativo di connessione: Br80AclConnectReceiver
+        // lo legge per non mostrare il popup "telecomando rilevato" mentre il service è già
+        // vivo e sta gestendo da solo la propria riconnessione.
+        BleServiceStateHolder.isServiceRunning = true
         mappingStorage = MappingStorage.getInstance(this)
         ttsFeedbackManager = TtsFeedbackManager(this, mappingStorage)
         actionExecutor = ActionExecutor(this, mappingStorage, ttsFeedbackManager,
@@ -130,6 +134,8 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         BleServiceStateHolder.currentState = gattManager.currentState
         BleServiceStateHolder.batteryLevel = gattManager.batteryLevel
         Br80WidgetProvider.updateAllWidgets(this)
+
+        Br80BackgroundScanManager.ensureRegistered(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -364,6 +370,7 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
 
     override fun onDestroy() {
         super.onDestroy()
+        BleServiceStateHolder.isServiceRunning = false
         debugSimulatorReceiver?.let {
             try {
                 unregisterReceiver(it)
