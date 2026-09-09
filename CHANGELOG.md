@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.0](https://github.com/rafing22/br80-remote/compare/v4.4.1...v4.5.0) (2026-09-09)
+
+
+### Features
+
+* avvia subito la connessione al rilevamento, notifica solo informativa ([626d090](https://github.com/rafing22/br80-remote/commit/626d09061b60f77d93674b49ae360ef87a1b16e0))
+
 ## [4.4.1](https://github.com/rafing22/br80-remote/compare/v4.4.0...v4.4.1) (2026-09-09)
 
 
