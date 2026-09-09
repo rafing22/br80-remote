@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.1](https://github.com/rafing22/br80-remote/compare/v4.4.0...v4.4.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* popup "telecomando rilevato" mai mostrato per FLAG_IMMUTABLE sul PendingIntent ([af52071](https://github.com/rafing22/br80-remote/commit/af52071a0074e5bbc53652ea9eac07ed4afec551))
+
 ## [4.4.0](https://github.com/rafing22/br80-remote/compare/v4.3.9...v4.4.0) (2026-09-09)
 
 
