@@ -195,6 +195,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         // Impedisce a callback BLE tardivi e asincroni (es. onStateChanged di disconnect())
         // di far ripubblicare la notifica dopo che l'abbiamo già rimossa qui sotto.
         isStopping = true
+        // Disconnettere il BR80 lo fa quasi sempre ripartire con l'advertising quasi subito:
+        // senza questa finestra di raffreddamento, il nostro stesso scan in background lo
+        // rileverebbe e riconnetterebbe da solo un istante dopo un'uscita esplicita dall'utente.
+        BleServiceStateHolder.suppressAutoConnectUntil = System.currentTimeMillis() + 8000L
         gattManager.disconnect(enterPassiveListening = false)
         // Senza questo il widget restava con l'ultimo stato "Connesso"/batteria noti anche a
         // servizio ormai fermato, perché nessun punto di stopServiceCompletely() lo ridisegnava.

@@ -104,8 +104,14 @@ object BleServiceStateHolder {
     var currentState: BleGattManager.ConnectionState = BleGattManager.ConnectionState.DISCONNECTED
     var batteryLevel: Int = -1
     // Distingue "processo vivo, il service gestisce già la riconnessione da solo" da "processo
-    // appena avviato a freddo da Br80AclConnectReceiver" — nel primo caso il nostro stesso
-    // connectGatt() genera comunque un evento ACL_CONNECTED, da ignorare per non spammare la
-    // notifica heads-up mentre l'app ci sta già pensando da sola.
+    // appena avviato a freddo da Br80RemoteScanReceiver" — nel primo caso il nostro stesso
+    // connectGatt() genera comunque un evento rilevabile dallo scan in background, da ignorare
+    // per non spammare la notifica/riconnessione mentre l'app ci sta già pensando da sola.
     var isServiceRunning: Boolean = false
+    // Timestamp (epoch ms) fino al quale Br80RemoteScanReceiver ignora ogni rilevamento:
+    // disconnettere il BR80 (es. tasto Esci) lo fa quasi sempre ripartire con l'advertising
+    // quasi subito, che il nostro stesso scan in background rileverebbe come "telecomando
+    // rilevato" e riconnetterebbe da solo un istante dopo un'uscita esplicita — impostato da
+    // BleForegroundService.stopServiceCompletely() per dare tempo al radio di calmarsi.
+    var suppressAutoConnectUntil: Long = 0L
 }

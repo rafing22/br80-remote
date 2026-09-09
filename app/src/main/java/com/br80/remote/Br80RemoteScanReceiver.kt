@@ -19,6 +19,11 @@ class Br80RemoteScanReceiver : BroadcastReceiver() {
         // ci sta già pensando.
         if (BleServiceStateHolder.isServiceRunning) return
 
+        // Subito dopo un'uscita esplicita (Esci) il BR80 riparte quasi sempre con l'advertising
+        // per via della disconnessione stessa, non di una pressione reale: ignora per una breve
+        // finestra per non riconnettersi da solo un istante dopo che l'utente ha chiuso l'app.
+        if (System.currentTimeMillis() < BleServiceStateHolder.suppressAutoConnectUntil) return
+
         val results = IntentCompat.getParcelableArrayListExtra(
             intent, BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT, ScanResult::class.java
         ) ?: return
