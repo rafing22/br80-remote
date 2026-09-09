@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.0](https://github.com/rafing22/br80-remote/compare/v4.3.9...v4.4.0) (2026-09-09)
+
+
+### Features
+
+* popup di notifica quando il BR80 viene rilevato ad app chiusa ([1080254](https://github.com/rafing22/br80-remote/commit/1080254f710a3a6d15678a6f280bcde910e0eacb))
+
 ## [4.3.9](https://github.com/rafing22/br80-remote/compare/v4.3.8...v4.3.9) (2026-09-08)
 
 
