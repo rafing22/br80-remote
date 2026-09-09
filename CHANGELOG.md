@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.1](https://github.com/rafing22/br80-remote/compare/v4.5.0...v4.5.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* app si riapriva da sola subito dopo Esci senza pressioni reali ([3a50dbd](https://github.com/rafing22/br80-remote/commit/3a50dbd70ccc03a3cd041b66f7ed56188a82084a))
+
 ## [4.5.0](https://github.com/rafing22/br80-remote/compare/v4.4.1...v4.5.0) (2026-09-09)
 
 
