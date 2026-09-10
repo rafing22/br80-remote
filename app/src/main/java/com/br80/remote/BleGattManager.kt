@@ -229,7 +229,7 @@ class BleGattManager(
             log("Errore handshake: ${e.message}")
             closeGattInternal(refresh = true)
             updateState(ConnectionState.DISCONNECTED)
-            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            if (!userRequestedDisconnect) scheduleAutoReconnect(wasConnected = true)
         }
     }
 
@@ -277,7 +277,7 @@ class BleGattManager(
             log("Errore handshake: ${e.message}")
             closeGattInternal(refresh = true)
             updateState(ConnectionState.DISCONNECTED)
-            if (!userRequestedDisconnect) scheduleAutoReconnect()
+            if (!userRequestedDisconnect) scheduleAutoReconnect(wasConnected = true)
         }
     }
 
@@ -391,7 +391,10 @@ class BleGattManager(
         handshakePhase = null
         closeGattInternal(refresh = true)
         updateState(ConnectionState.DISCONNECTED)
-        if (!userRequestedDisconnect) scheduleAutoReconnect()
+        // wasConnected=true: qui il GATT era già stabilito (siamo dentro l'handshake), il
+        // telecomando era raggiungibile — non far salire il gradino del backoff, era solo
+        // lento a rispondere allo step in corso (scoperta servizi/wake/notifiche).
+        if (!userRequestedDisconnect) scheduleAutoReconnect(wasConnected = true)
     }
 
     private suspend fun performHandshake(gatt: BluetoothGatt) {
@@ -824,13 +827,25 @@ class BleGattManager(
     // Auto-reconnect / Keep-Alive
     // ---------------------------------------------------------------------------------------
 
-    private fun scheduleAutoReconnect() {
+    /** @param wasConnected true se il link GATT era già stabilito quando è scattato questo
+     * fallimento (handshake fallito, o disconnessione durante l'uso normale) — in quel caso il
+     * telecomando era comunque raggiungibile, quindi non fa salire il gradino del backoff
+     * (restiamo al primo, più breve): il gradino crescente serve a non tempestare di scan un
+     * telecomando davvero irraggiungibile, non un caso in cui si connette ma è solo lento a
+     * rispondere. Di default false (mai connesso in questo tentativo: scan fallito, CONN_TIMEOUT
+     * prima di STATE_CONNECTED), che fa salire il gradino come prima. */
+    private fun scheduleAutoReconnect(wasConnected: Boolean = false) {
         if (userRequestedDisconnect) return
 
         stopKeepAlive()
         reconnectJob?.cancel()
-        val delayMs = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
-        reconnectAttempts++
+        val delayMs = if (wasConnected) {
+            reconnectDelays[0]
+        } else {
+            val d = reconnectDelays[minOf(reconnectAttempts, reconnectDelays.size - 1)]
+            reconnectAttempts++
+            d
+        }
         log("Auto-Healing: ascolto o riconnessione programmata tra ${delayMs / 1000}s...")
 
         reconnectJob = scope.launch {
@@ -911,7 +926,9 @@ class BleGattManager(
                     } else {
                         closeGattInternal(refresh = true)
                         updateState(ConnectionState.DISCONNECTED)
-                        if (!userRequestedDisconnect) scheduleAutoReconnect()
+                        // cont null: non era una connessione iniziale in corso, il link era già
+                        // stabilito prima di questo errore — telecomando raggiungibile.
+                        if (!userRequestedDisconnect) scheduleAutoReconnect(wasConnected = true)
                     }
                     return@launch
                 }
@@ -947,10 +964,11 @@ class BleGattManager(
                         cont.resume(ConnectOutcome.Failed(status))
                     } else {
                         // Disconnessione durante l'uso normale (non parte di un handshake in
-                        // corso): qui main faceva scattare l'auto-healing direttamente.
+                        // corso): qui main faceva scattare l'auto-healing direttamente. Link
+                        // già stabilito prima di questa disconnessione: telecomando raggiungibile.
                         closeGattInternal(refresh = false)
                         updateState(ConnectionState.DISCONNECTED)
-                        if (!userRequestedDisconnect) scheduleAutoReconnect()
+                        if (!userRequestedDisconnect) scheduleAutoReconnect(wasConnected = true)
                     }
                 }
             }
