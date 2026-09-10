@@ -31,6 +31,13 @@ class Br80RemoteScanReceiver : BroadcastReceiver() {
         val matches = results.any { it.device.address.equals(lastMac, ignoreCase = true) }
         if (!matches) return
 
+        // Impostato SUBITO, prima ancora di avviare il service: l'avvio di un service a freddo
+        // richiede un istante (onCreate() gira in modo asincrono), e in quella finestra possono
+        // arrivare altri rilevamenti dallo stesso scan che troverebbero ancora
+        // isServiceRunning=false, riavviando la connessione e la notifica più volte di seguito
+        // (osservato dal vivo: la notifica "ricompariva" ripetutamente).
+        BleServiceStateHolder.suppressAutoConnectUntil = System.currentTimeMillis() + 10_000L
+
         // Avvia subito la connessione (invece di aspettare un tap sulla notifica): la notifica
         // resta solo come conferma/apertura app, non più come trigger della connessione.
         val connectIntent = Intent(context, BleForegroundService::class.java).apply {
