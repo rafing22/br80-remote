@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.6](https://github.com/rafing22/br80-remote/compare/v4.5.5...v4.5.6) (2026-09-10)
+
+
+### Bug Fixes
+
+* connessione più lenta perché lo scan in background girava sempre ([d62f31f](https://github.com/rafing22/br80-remote/commit/d62f31fde4381d2b4e811873f422d4639f345caf))
+
 ## [4.5.5](https://github.com/rafing22/br80-remote/compare/v4.5.4...v4.5.5) (2026-09-10)
 
 
