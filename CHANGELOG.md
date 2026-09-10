@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.4](https://github.com/rafing22/br80-remote/compare/v4.5.3...v4.5.4) (2026-09-10)
+
+
+### Bug Fixes
+
+* indicatore RSSI vuoto se l'app si apre a connessione già avvenuta ([9ff7d88](https://github.com/rafing22/br80-remote/commit/9ff7d88d1b1ab4a1f73bd6df6a751a10c023431b))
+
 ## [4.5.3](https://github.com/rafing22/br80-remote/compare/v4.5.2...v4.5.3) (2026-09-10)
 
 
