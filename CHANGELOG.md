@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.5](https://github.com/rafing22/br80-remote/compare/v4.5.4...v4.5.5) (2026-09-10)
+
+
+### Bug Fixes
+
+* notifica "telecomando rilevato" ancora doppia per rilevamenti ravvicinati ([9d1bf4c](https://github.com/rafing22/br80-remote/commit/9d1bf4c01d299b7c7b5e58892b834f372303c5aa))
+
 ## [4.5.4](https://github.com/rafing22/br80-remote/compare/v4.5.3...v4.5.4) (2026-09-10)
 
 
