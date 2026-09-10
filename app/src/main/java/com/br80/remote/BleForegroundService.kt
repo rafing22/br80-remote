@@ -275,6 +275,12 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         updateNotification()
         BleServiceStateHolder.currentState = state
         Br80WidgetProvider.updateAllWidgets(this)
+        if (state == BleGattManager.ConnectionState.CONNECTED) {
+            // La notifica "telecomando rilevato, connessione in corso..." diventa ridondante
+            // appena la notifica ongoing del service passa a "Connesso" — non aspettare il suo
+            // timeout di 15s.
+            Br80RemoteDetectedNotifier.dismiss(this)
+        }
         listener?.onStateChanged(state)
     }
 

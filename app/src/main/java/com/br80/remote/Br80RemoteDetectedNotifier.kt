@@ -50,4 +50,12 @@ object Br80RemoteDetectedNotifier {
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)
             ?.notify(HEADSUP_NOTIFICATION_ID, notification)
     }
+
+    /** Da chiamare quando la connessione va a buon fine: la notifica ongoing del service mostra
+     * già "Connesso", questa (con lo stesso messaggio ormai superato "connessione in corso...")
+     * diventerebbe un doppione ridondante se lasciata fino al suo timeout di 15s. */
+    fun dismiss(context: Context) {
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)
+            ?.cancel(HEADSUP_NOTIFICATION_ID)
+    }
 }
