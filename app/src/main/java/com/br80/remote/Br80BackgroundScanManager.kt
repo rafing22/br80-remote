@@ -42,6 +42,24 @@ object Br80BackgroundScanManager {
         }
     }
 
+    /** Da chiamare quando il service è vivo (onCreate): mentre l'app gestisce da sola la
+     * connessione, questo scan aggiuntivo non serve più (il suo unico scopo è rilevare il
+     * telecomando ad app killata) e resterebbe comunque attivo in parallelo alle operazioni GATT
+     * del service — due scan BLE concorrenti competono per lo stesso controller radio e possono
+     * degradare la scoperta servizi/scrittura Wake (rallentamento riprodotto dal vivo dopo
+     * l'introduzione di questo scan permanente). Va ri-registrato in onDestroy() perché resti
+     * attivo per quando serve davvero: ad app chiusa. */
+    @SuppressLint("MissingPermission")
+    fun stop(context: Context) {
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        val scanner = adapter?.bluetoothLeScanner ?: return
+        try {
+            scanner.stopScan(scanResultPendingIntent(context))
+        } catch (e: Exception) {
+            Log.w(TAG, "Arresto scan in background fallito: ${e.message}")
+        }
+    }
+
     private fun scanResultPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, Br80RemoteScanReceiver::class.java)
         // FLAG_MUTABLE, non FLAG_IMMUTABLE come altrove nel progetto: lo stack Bluetooth deve

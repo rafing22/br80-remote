@@ -138,7 +138,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         BleServiceStateHolder.batteryLevel = gattManager.batteryLevel
         Br80WidgetProvider.updateAllWidgets(this)
 
-        Br80BackgroundScanManager.ensureRegistered(this)
+        // Mentre il service è vivo se ne occupa lui: fermare lo scan offloaded evita che competa
+        // per il controller radio con le operazioni GATT normali (rallentamento riprodotto dal
+        // vivo). Viene ri-registrato in onDestroy(), quando serve davvero (app chiusa).
+        Br80BackgroundScanManager.stop(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -384,6 +387,9 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     override fun onDestroy() {
         super.onDestroy()
         BleServiceStateHolder.isServiceRunning = false
+        // Ri-arma lo scan offloaded appena il service termina: da questo momento non c'è più
+        // nessun altro meccanismo che rileva il telecomando finché l'app non viene riaperta.
+        Br80BackgroundScanManager.ensureRegistered(this)
         debugSimulatorReceiver?.let {
             try {
                 unregisterReceiver(it)
