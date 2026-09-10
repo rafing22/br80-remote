@@ -77,7 +77,12 @@ class BleGattManager(
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var isConnectingGatt = false
-    private var lastKnownRssi: Int? = null
+    // Pubblico (non più private) così la UI può leggere l'ultimo valore noto al bind, invece di
+    // restare vuota finché non arriva un nuovo aggiornamento "push" da uno scan — con la
+    // connessione automatica in background la UI si apre spesso a connessione già avvenuta,
+    // quando nessuno scan è più in corso per generarne uno nuovo.
+    var lastKnownRssi: Int? = null
+        private set
     private val weakSignalRssiThreshold = -75 // Sotto questa soglia il segnale è considerato marginale
     private var userRequestedDisconnect = false
     private var isScanning = false

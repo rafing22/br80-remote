@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                 if (it.batteryLevel >= 0) {
                     onBatteryUpdated(it.batteryLevel)
                 }
+                it.lastKnownRssi?.let { rssi -> onRssiUpdated(rssi) }
                 val hasSavedMac = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
                 if ((pendingConnectOnBind || hasSavedMac) && it.currentState == BleGattManager.ConnectionState.DISCONNECTED) {
                     pendingConnectOnBind = false

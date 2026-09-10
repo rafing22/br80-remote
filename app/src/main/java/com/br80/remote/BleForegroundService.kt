@@ -43,6 +43,9 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
     val batteryLevel: Int
         get() = gattManager.batteryLevel
 
+    val lastKnownRssi: Int?
+        get() = gattManager.lastKnownRssi
+
     interface BleServiceListener {
         fun onStateChanged(state: BleGattManager.ConnectionState)
         fun onButtonRawEvent(button: Br80Button, isPress: Boolean)
