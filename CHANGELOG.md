@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.2](https://github.com/rafing22/br80-remote/compare/v4.5.1...v4.5.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* backoff BLE non fa più salire il gradino se il telecomando era raggiungibile ([179692f](https://github.com/rafing22/br80-remote/commit/179692fea056320601e4941a231bce017aa2ed3d))
+
 ## [4.5.1](https://github.com/rafing22/br80-remote/compare/v4.5.0...v4.5.1) (2026-09-09)
 
 
