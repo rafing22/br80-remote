@@ -913,10 +913,22 @@ class BleGattManager(
     // continuation in sospeso, se ce n'è una. Nessuna logica di business qui dentro.
     // ---------------------------------------------------------------------------------------
 
+    // Le callback di BluetoothGattCallback arrivano su un thread di sistema (binder) e possono
+    // già essere in coda/in esecuzione quando una nuova connectGatt() sostituisce bluetoothGatt
+    // (es. dopo una riconnessione rapida): la cancellazione della coroutine che le racchiude
+    // non basta a fermarle in tempo, perché quella cancellazione è cooperativa e non interrompe
+    // una callback binder già partita. Un controllo per riferimento su gatt stesso, prima di
+    // toccare qualunque stato condiviso (continuation, currentState, batteryLevel...), è
+    // l'unica garanzia reale contro una callback "vecchia" che corrompe lo stato di una
+    // connessione più recente. Pattern preso in prestito (senza copiare codice) dall'app
+    // ufficiale LIVALL, che fa lo stesso confronto per riferimento nella sua BleManager.java.
+    private fun isStaleGatt(gatt: BluetoothGatt): Boolean = gatt !== bluetoothGatt
+
     private val gattCallback = object : BluetoothGattCallback() {
 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (isStaleGatt(gatt)) return
             scope.launch {
                 log("Stato connessione BLE: status=$status (${gattStatusString(status)}), newState=$newState")
 
@@ -981,6 +993,7 @@ class BleGattManager(
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (isStaleGatt(gatt)) return
             scope.launch {
                 val cont = pendingServicesContinuation
                 pendingServicesContinuation = null
@@ -990,6 +1003,7 @@ class BleGattManager(
 
         @SuppressLint("MissingPermission")
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            if (isStaleGatt(gatt)) return
             scope.launch {
                 val cont = pendingWriteContinuation
                 pendingWriteContinuation = null
@@ -999,6 +1013,7 @@ class BleGattManager(
 
         @SuppressLint("MissingPermission")
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            if (isStaleGatt(gatt)) return
             scope.launch {
                 val cont = pendingDescriptorContinuation
                 pendingDescriptorContinuation = null
@@ -1012,6 +1027,7 @@ class BleGattManager(
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
+            if (isStaleGatt(gatt)) return
             @Suppress("DEPRECATION")
             val bytes = characteristic.value ?: ByteArray(0)
             scope.launch {
@@ -1022,6 +1038,7 @@ class BleGattManager(
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
+            if (isStaleGatt(gatt)) return
             scope.launch {
                 val cont = pendingReadContinuation
                 pendingReadContinuation = null
@@ -1035,6 +1052,7 @@ class BleGattManager(
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
+            if (isStaleGatt(gatt)) return
             if (characteristic.uuid == buttonUuid) {
                 @Suppress("DEPRECATION")
                 handleButtonPayload(characteristic.value)
@@ -1042,6 +1060,7 @@ class BleGattManager(
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            if (isStaleGatt(gatt)) return
             if (characteristic.uuid == buttonUuid) {
                 handleButtonPayload(value)
             }
