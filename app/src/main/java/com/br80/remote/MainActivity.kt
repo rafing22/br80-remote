@@ -74,7 +74,11 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
                     onBatteryUpdated(it.batteryLevel)
                 }
                 it.lastKnownRssi?.let { rssi -> onRssiUpdated(rssi) }
-                val hasSavedMac = !mappingStorage.getLastConnectedMac().isNullOrEmpty()
+                // hasSavedMac è il fallback implicito (auto-connessione all'apertura app): va
+                // rispettata la disattivazione. pendingConnectOnBind resta invariato perché può
+                // derivare anche da un tap esplicito sul pulsante Connetti (override sempre
+                // valido, vedi onConnectButtonClicked).
+                val hasSavedMac = !mappingStorage.getLastConnectedMac().isNullOrEmpty() && !mappingStorage.isAppDisabled()
                 if ((pendingConnectOnBind || hasSavedMac) && it.currentState == BleGattManager.ConnectionState.DISCONNECTED) {
                     pendingConnectOnBind = false
                     it.connectDevice()
@@ -104,7 +108,7 @@ class MainActivity : AppCompatActivity(), BleForegroundService.BleServiceListene
         // altrimenti un permesso aggiunto in un aggiornamento successivo (es. CALL_PHONE,
         // READ_CALL_LOG) non veniva mai richiesto per chi aveva già un telecomando salvato:
         // l'utente non passa mai dal pulsante Connetti manuale dove la richiesta avviene.
-        if (!mappingStorage.getLastConnectedMac().isNullOrEmpty()) {
+        if (!mappingStorage.getLastConnectedMac().isNullOrEmpty() && !mappingStorage.isAppDisabled()) {
             pendingConnectOnBind = true
             checkPermissionsAndConnect()
         }

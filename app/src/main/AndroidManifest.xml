@@ -137,6 +137,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.br80.remote.widget.ACTION_CYCLE_PROFILE" />
+                <action android:name="com.br80.remote.widget.ACTION_TOGGLE_DISABLED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

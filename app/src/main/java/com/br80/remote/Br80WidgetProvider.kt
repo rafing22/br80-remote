@@ -26,6 +26,11 @@ class Br80WidgetProvider : AppWidgetProvider() {
             updateAllWidgets(context)
             return
         }
+        if (intent.action == ACTION_TOGGLE_DISABLED) {
+            val disabled = !MappingStorage.getInstance(context).isAppDisabled()
+            BleForegroundService.applyDisabledState(context, disabled)
+            return
+        }
         super.onReceive(context, intent)
     }
 
@@ -42,8 +47,9 @@ class Br80WidgetProvider : AppWidgetProvider() {
         val mappingStorage = MappingStorage.getInstance(context)
         val views = RemoteViews(context.packageName, R.layout.widget_br80)
 
+        val appDisabled = mappingStorage.isAppDisabled()
         val connected = BleServiceStateHolder.currentState == BleGattManager.ConnectionState.CONNECTED
-        views.setTextViewText(R.id.tvWidgetStatus, if (connected) "Connesso" else "In attesa")
+        views.setTextViewText(R.id.tvWidgetStatus, if (appDisabled) "Disattivata" else if (connected) "Connesso" else "In attesa")
         views.setImageViewResource(
             R.id.viewWidgetStatusDot,
             if (connected) R.drawable.widget_dot_success else R.drawable.widget_dot_muted
@@ -78,11 +84,16 @@ class Br80WidgetProvider : AppWidgetProvider() {
         val cycleIntent = Intent(context, Br80WidgetProvider::class.java).apply { action = ACTION_CYCLE_PROFILE }
         views.setOnClickPendingIntent(R.id.btnWidgetProfile, PendingIntent.getBroadcast(context, 12, cycleIntent, flags))
 
+        views.setTextViewText(R.id.btnWidgetDisable, if (appDisabled) "Riattiva" else "Disattiva")
+        val toggleDisableIntent = Intent(context, Br80WidgetProvider::class.java).apply { action = ACTION_TOGGLE_DISABLED }
+        views.setOnClickPendingIntent(R.id.btnWidgetDisable, PendingIntent.getBroadcast(context, 13, toggleDisableIntent, flags))
+
         return views
     }
 
     companion object {
         const val ACTION_CYCLE_PROFILE = "com.br80.remote.widget.ACTION_CYCLE_PROFILE"
+        const val ACTION_TOGGLE_DISABLED = "com.br80.remote.widget.ACTION_TOGGLE_DISABLED"
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)

@@ -17,6 +17,24 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISATTIVAZIONE TEMPORANEA" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptAppDisabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Disattiva app (libera il telecomando per altre app)"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ferma la connessione e l'ascolto in background: utile quando un'altra app (es. quella ufficiale del produttore) deve usare il telecomando. Il tasto Connetti resta comunque disponibile."
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="24dp" />
+
             <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVVIO &amp; ALWAYS-ON" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
 
             <CheckBox

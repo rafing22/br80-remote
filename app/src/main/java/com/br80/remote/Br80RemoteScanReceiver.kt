@@ -13,6 +13,11 @@ class Br80RemoteScanReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         intent ?: return
 
+        // Difesa in profondità: lo scan potrebbe essere rimasto armato da prima che l'app
+        // venisse disattivata esplicitamente (applyDisabledState lo ferma di norma subito, ma
+        // un rilevamento già in coda potrebbe comunque arrivare qui).
+        if (MappingStorage.getInstance(context).isAppDisabled()) return
+
         // Processo già vivo, il service sta già gestendo la propria riconnessione (il nostro
         // stesso connectGatt() genera anche l'ACL per lo stesso MAC che questo scan rileva):
         // niente da fare, evita di spammare la notifica/riavviare la connessione mentre l'app

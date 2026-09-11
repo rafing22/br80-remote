@@ -389,7 +389,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         BleServiceStateHolder.isServiceRunning = false
         // Ri-arma lo scan offloaded appena il service termina: da questo momento non c'è più
         // nessun altro meccanismo che rileva il telecomando finché l'app non viene riaperta.
-        Br80BackgroundScanManager.ensureRegistered(this)
+        // Non se l'app è stata disattivata esplicitamente (applyDisabledState già lo ferma).
+        if (!mappingStorage.isAppDisabled()) {
+            Br80BackgroundScanManager.ensureRegistered(this)
+        }
         debugSimulatorReceiver?.let {
             try {
                 unregisterReceiver(it)
@@ -425,5 +428,39 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         // Solo debug: `adb shell am broadcast -a com.br80.remote.debug.SIMULATE_BUTTON
         // --es button UP --ez press true`
         const val ACTION_DEBUG_SIMULATE_BUTTON = "com.br80.remote.debug.SIMULATE_BUTTON"
+
+        /** Attiva/disattiva il flag "app disattivata": ferma subito service+scan in background
+         * se attivato, li riarma subito se disattivato. Punto unico condiviso da widget e UI in
+         * app per non duplicare questa logica. */
+        fun applyDisabledState(context: Context, disabled: Boolean) {
+            val mappingStorage = MappingStorage.getInstance(context)
+            // No-op se lo stato è già quello richiesto: onResume() di ConnectionFragment
+            // re-imposta isChecked leggendo il flag ad ogni ritorno in foreground, e farlo
+            // scattare senza questo controllo rifarebbe start/stop service e log spurio anche
+            // quando nulla è davvero cambiato.
+            if (mappingStorage.isAppDisabled() == disabled) return
+            mappingStorage.setAppDisabled(disabled)
+            if (disabled) {
+                // Solo se il service è già vivo: startService(ACTION_STOP_SERVICE) su un
+                // service morto lo creerebbe solo per fermarlo un istante dopo (notifica che
+                // lampeggia inutilmente, e su Android 12+ da un contesto non esente rischia
+                // ForegroundServiceStartNotAllowedException).
+                if (BleServiceStateHolder.isServiceRunning) {
+                    val stopIntent = Intent(context, BleForegroundService::class.java).apply {
+                        action = ACTION_STOP_SERVICE
+                    }
+                    context.startService(stopIntent)
+                }
+                Br80BackgroundScanManager.stop(context)
+            } else if (!BleServiceStateHolder.isServiceRunning) {
+                // Se il service è già vivo (es. l'utente ha usato il Connetti manuale come
+                // override mentre l'app era "disattivata"), onDestroy() penserà da solo a
+                // riarmare lo scan quando servirà davvero — registrarlo già ora significherebbe
+                // farlo girare in parallelo alla connessione GATT attiva, la stessa contesa
+                // radio che Br80BackgroundScanManager.stop() esiste apposta per evitare.
+                Br80BackgroundScanManager.ensureRegistered(context)
+            }
+            Br80WidgetProvider.updateAllWidgets(context)
+        }
     }
 }

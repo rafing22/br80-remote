@@ -96,4 +96,16 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/btnWidgetDisable"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/widget_button_bg"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="Disattiva"
+        android:textSize="11sp"
+        android:textColor="@color/cockpit_muted" />
+
 </LinearLayout>

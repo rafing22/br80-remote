@@ -15,11 +15,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.br80.remote.Br80AccessibilityService
+import com.br80.remote.BleForegroundService
 import com.br80.remote.R
 import com.br80.remote.toColorStateList
 
 class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connection, "Connessione & Automazione") {
 
+    private lateinit var cbOptAppDisabled: CheckBox
     private lateinit var cbOptBoot: CheckBox
     private lateinit var cbOptKeepAlive: CheckBox
     private lateinit var cbOptConditionalBt: CheckBox
@@ -31,6 +33,7 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        cbOptAppDisabled = view.findViewById(R.id.cbOptAppDisabled)
         cbOptBoot = view.findViewById(R.id.cbOptBoot)
         cbOptKeepAlive = view.findViewById(R.id.cbOptKeepAlive)
         cbOptConditionalBt = view.findViewById(R.id.cbOptConditionalBt)
@@ -40,10 +43,16 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         btnOptOverlay = view.findViewById(R.id.btnOptOverlay)
         btnOptAccessibility = view.findViewById(R.id.btnOptAccessibility)
 
+        cbOptAppDisabled.isChecked = mappingStorage.isAppDisabled()
         cbOptBoot.isChecked = mappingStorage.isAutoStartOnBootEnabled()
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
         cbOptConditionalBt.isChecked = mappingStorage.isConditionalBtEnabled()
         updateConditionalBtDeviceLabel()
+
+        cbOptAppDisabled.setOnCheckedChangeListener { _, isChecked ->
+            BleForegroundService.applyDisabledState(requireContext(), isChecked)
+            host.appendLog("App " + if (isChecked) "DISATTIVATA (telecomando libero per altre app)" else "RIATTIVATA")
+        }
 
         cbOptBoot.setOnCheckedChangeListener { _, isChecked ->
             mappingStorage.setAutoStartOnBootEnabled(isChecked)
@@ -98,6 +107,8 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         // alla connessione del dispositivo BT scelto) mentre questa schermata resta aperta:
         // senza questo refresh il checkbox restava fermo allo stato letto solo in onViewCreated.
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
+        // Il widget può disattivare/riattivare l'app mentre questa schermata resta aperta.
+        cbOptAppDisabled.isChecked = mappingStorage.isAppDisabled()
     }
 
     private fun updateConditionalBtDeviceLabel() {

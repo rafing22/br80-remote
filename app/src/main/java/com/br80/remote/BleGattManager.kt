@@ -471,6 +471,17 @@ class BleGattManager(
         updateState(ConnectionState.CONNECTED)
         startKeepAliveIfEnabled()
 
+        // Letto attivamente qui perché lastKnownRssi viene aggiornato solo dal ramo scan della
+        // strategia "doppio binario" di connectToRemote() — se vince il tentativo diretto al MAC
+        // noto (il caso più comune per una riconnessione), quello scan può non trovare mai nulla,
+        // lasciando l'indicatore RSSI della UI vuoto per l'intera sessione anche a connessione
+        // riuscita.
+        try {
+            gatt.readRemoteRssi()
+        } catch (e: Exception) {
+            Log.w(tag, "readRemoteRssi non disponibile: ${e.message}")
+        }
+
         delay(400L)
         readBatteryLevel(gatt)
     }
@@ -998,6 +1009,15 @@ class BleGattManager(
                 val cont = pendingServicesContinuation
                 pendingServicesContinuation = null
                 cont?.takeIf { it.isActive }?.resume(status)
+            }
+        }
+
+        override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
+            if (isStaleGatt(gatt)) return
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            scope.launch {
+                lastKnownRssi = rssi
+                listener.onRssiUpdated(rssi)
             }
         }
 

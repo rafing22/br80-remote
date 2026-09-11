@@ -400,6 +400,17 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_AUTO_BOOT, enabled).apply()
     }
 
+    // Blocca solo i percorsi automatici (scan in background, auto-connessione al boot/apertura
+    // app): il tasto "Connetti" manuale resta sempre disponibile come override — vedi
+    // BleForegroundService.applyDisabledState().
+    fun isAppDisabled(): Boolean {
+        return prefs.getBoolean(KEY_APP_DISABLED, false)
+    }
+
+    fun setAppDisabled(disabled: Boolean) {
+        prefs.edit().putBoolean(KEY_APP_DISABLED, disabled).apply()
+    }
+
     fun isHapticFeedbackEnabled(): Boolean {
         return prefs.getBoolean(KEY_HAPTIC_FEEDBACK, true)
     }
@@ -659,6 +670,7 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_TTS_LABEL_PREFIX = "pref_tts_label_action_"
         private const val KEY_TTS_LABELS_MIGRATED = "pref_tts_labels_migrated"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
+        private const val KEY_APP_DISABLED = "pref_app_disabled"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
         private const val KEY_CONDITIONAL_BT_DEVICES = "pref_conditional_bt_devices"
         private const val KEY_AUDIO_BT_ENABLED = "pref_audio_bt_enabled"
