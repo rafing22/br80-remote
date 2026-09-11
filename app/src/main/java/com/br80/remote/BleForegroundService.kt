@@ -273,6 +273,12 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
             } else {
                 onLog("Bluetooth riattivato: in attesa della connessione del dispositivo BT target per il Keep-Alive condizionale.")
             }
+        } else if (!isBtOn) {
+            // L'utente ha spento il Bluetooth (es. dai Quick Settings) mentre l'app era connessa
+            // o a metà di un tentativo di riconnessione: interrompe subito job/scan/GATT pendenti
+            // invece di aspettare che i singoli timeout se ne accorgano da soli tra qualche secondo.
+            onLog("Bluetooth disattivato dal sistema. Interrompo connessione e riconnessione in corso.")
+            gattManager.onBluetoothTurnedOff()
         }
     }
 

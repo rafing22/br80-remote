@@ -325,7 +325,18 @@ class BleGattManager(
         return if (knownDevice != null) {
             coroutineScope {
                 val direct = async { connectAndAwaitGatt(knownDevice) }
-                startLeScanForeground(adapter, onDeviceFound = { /* no-op: vedi commento sopra */ })
+                // Anti-throttling: dopo alcuni tentativi di riconnessione consecutivi falliti
+                // (telecomando davvero irraggiungibile, non solo lento), passa la scansione di
+                // supporto a LOW_POWER invece di LOW_LATENCY. Riduce il traffico radio durante
+                // un tentativo di riconnessione già prolungato, invece di continuare a scansionare
+                // aggressivamente un dispositivo che negli ultimi tentativi non si è mai fatto
+                // trovare — mitiga il rischio di throttling di sistema su connectGatt/startScan
+                // ravvicinati.
+                if (reconnectAttempts >= 4) {
+                    startLeScanBackground(adapter, onDeviceFound = { /* no-op: vedi commento sopra */ })
+                } else {
+                    startLeScanForeground(adapter, onDeviceFound = { /* no-op: vedi commento sopra */ })
+                }
                 direct.await()
             }
         } else {
@@ -798,6 +809,25 @@ class BleGattManager(
             userRequestedDisconnect = true
             log("Disconnessione completa richiesta dall'utente.")
         }
+    }
+
+    /** Da chiamare quando l'utente spegne il Bluetooth (es. dai Quick Settings) mentre l'app è
+     * connessa o a metà di un tentativo di riconnessione: interrompe subito ogni job pendente
+     * (connect/reconnect/scan/keep-alive) invece di aspettare che i singoli timeout (5-8s) se ne
+     * accorgano da soli. Non programma un nuovo tentativo: l'adapter è spento, sarà l'evento di
+     * riaccensione (gestito da BleForegroundService) a farlo ripartire. reconnectAttempts viene
+     * azzerato perché questo non è un segnale di "telecomando irraggiungibile" — è un'azione
+     * esplicita dell'utente, non ha senso far ripartire il backoff da dove si era fermato. */
+    @SuppressLint("MissingPermission")
+    fun onBluetoothTurnedOff() {
+        connectJob?.cancel()
+        reconnectJob?.cancel()
+        reconnectJob = null
+        stopLeScan()
+        closeGattInternal(refresh = false)
+        reconnectAttempts = 0
+        updateState(ConnectionState.DISCONNECTED)
+        log("Bluetooth disattivato: connessione interrotta, in attesa che venga riattivato.")
     }
 
     private fun refreshGatt(gatt: BluetoothGatt): Boolean {
