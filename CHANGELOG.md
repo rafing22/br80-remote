@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.0](https://github.com/rafing22/br80-remote/compare/v4.5.7...v4.6.0) (2026-09-11)
+
+
+### Features
+
+* pulsante per disattivare temporaneamente l'app (in app + widget); fix: RSSI letto attivamente ([9700758](https://github.com/rafing22/br80-remote/commit/970075878c509f65d9fc8f8bd021d1562c59f185))
+
 ## [4.5.7](https://github.com/rafing22/br80-remote/compare/v4.5.6...v4.5.7) (2026-09-11)
 
 
