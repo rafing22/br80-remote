@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.1](https://github.com/rafing22/br80-remote/compare/v4.6.0...v4.6.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* interrompi subito connessione/riconnessione se il Bluetooth viene spento ([20f713f](https://github.com/rafing22/br80-remote/commit/20f713f72eb0b5f3c51d2386cd6a0dfbd495d5fa))
+
 ## [4.6.0](https://github.com/rafing22/br80-remote/compare/v4.5.7...v4.6.0) (2026-09-11)
 
 
