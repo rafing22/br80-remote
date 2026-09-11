@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.2](https://github.com/rafing22/br80-remote/compare/v4.6.1...v4.6.2) (2026-09-11)
+
+
+### Miscellaneous Chores
+
+* forza release per includere il rebranding ([9849717](https://github.com/rafing22/br80-remote/commit/9849717cd734f5bef58afac0c182078ff4b20e5c))
+
 ## [4.6.1](https://github.com/rafing22/br80-remote/compare/v4.6.0...v4.6.1) (2026-09-11)
 
 
