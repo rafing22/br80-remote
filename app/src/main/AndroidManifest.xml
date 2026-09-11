@@ -71,7 +71,7 @@
         <activity
             android:name=".tasker.Br80EventConfigActivity"
             android:exported="true"
-            android:label="Livall BR80 Remote">
+            android:label="RRB - Rider Remote Bridge">
             <intent-filter>
                 <action android:name="net.dinglisch.android.tasker.ACTION_EDIT_EVENT" />
             </intent-filter>

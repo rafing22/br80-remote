@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Scegli il Tasto Virtuale che deve avviare questo Profilo Tasker. Ricorda di mappare lo stesso Tasto Virtuale sull'azione &quot;Attiva Trigger Tasker&quot; nell'app Livall BR80 Remote (Opzioni &gt; Gestisci Tasti Tasker)."
+        android:text="Scegli il Tasto Virtuale che deve avviare questo Profilo Tasker. Ricorda di mappare lo stesso Tasto Virtuale sull'azione &quot;Attiva Trigger Tasker&quot; nell'app RRB - Rider Remote Bridge (Opzioni &gt; Gestisci Tasti Tasker)."
         android:textSize="13sp"
         android:textColor="@color/cockpit_muted"
         android:layout_marginBottom="24dp" />

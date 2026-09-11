@@ -12,7 +12,7 @@ import com.joaomgcd.taskerpluginlibrary.input.TaskerInput
 
 /**
  * Schermata mostrata da Tasker quando l'utente crea/modifica l'Evento plugin
- * "Livall BR80 Remote" in un Profilo: sceglie un Tasto Virtuale da uno Spinner, poi
+ * "RRB - Rider Remote Bridge" in un Profilo: sceglie un Tasto Virtuale da uno Spinner, poi
  * conferma con il tasto Indietro di sistema (convenzione standard dei plugin
  * Tasker, gestita da TaskerPluginConfigHelper.onBackPressed()).
  */

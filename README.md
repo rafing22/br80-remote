@@ -1,4 +1,4 @@
-# Livall BR80 Remote — Android BLE Controller & Automation Bridge (v4.3)
+# RRB - Rider Remote Bridge — Android BLE Controller & Automation Bridge (v4.3)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
 
@@ -66,7 +66,7 @@ Basato su una revisione indipendente di architettura e stile (analisi di un mode
 
 ## 🤖 Novità Versione 3.4 — Plugin Tasker nativo
 
-- **Niente più file XML da esportare e importare a mano**: l'app espone un vero plugin **Evento** per Tasker (libreria ufficiale `com.joaomgcd:taskerpluginlibrary`). Nei Profili Tasker compare "Evento → Plugin → Livall BR80 Remote": si sceglie tasto e gesto da un menu nativo, si collega un Task, fine.
+- **Niente più file XML da esportare e importare a mano**: l'app espone un vero plugin **Evento** per Tasker (libreria ufficiale `com.joaomgcd:taskerpluginlibrary`). Nei Profili Tasker compare "Evento → Plugin → RRB - Rider Remote Bridge": si sceglie tasto e gesto da un menu nativo, si collega un Task, fine.
 - Nuova azione mappabile **"Attiva Trigger Tasker"**: solo i tasti/gesti che mappi esplicitamente su questa azione attivano il Profilo Tasker collegato, esponendo le variabili `%bt_button`, `%bt_gesture`, `%bt_battery`.
 - Il vecchio broadcast grezzo `com.br80.remote.BUTTON_EVENT` resta comunque attivo per ogni gesto, per chi usa ancora MacroDroid o altre app di automazione.
 
@@ -218,7 +218,7 @@ Ogni volta che viene riconosciuto un gesto, l'app trasmette un `Intent` di broad
 
 ### 1. Download Diretto
 Puoi scaricare l'ultimo APK (firmato con la chiave di release dedicata) da:
-- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`Livall-BR80-Remote-vX.Y.Z.apk`**, con X.Y.Z l'ultima versione)
+- **[GitHub Releases](https://github.com/rafing22/br80-remote/releases)** (File **`RRB-Rider-Remote-Bridge-vX.Y.Z.apk`**, con X.Y.Z l'ultima versione)
 - **[GitHub Actions](https://github.com/rafing22/br80-remote/actions)**
 
 Se hai installata una versione precedente alla 3.6, disinstallala prima di aggiornare: da quella versione le Release sono firmate con una chiave dedicata diversa dalla vecchia `debug.keystore`, e Android rifiuta l'aggiornamento in-place per firma diversa (con perdita delle mappature/profili salvati localmente).

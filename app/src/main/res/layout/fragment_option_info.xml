@@ -31,7 +31,7 @@
                 android:id="@+id/tvAppVersionInfo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Livall BR80 Remote • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+                android:text="RRB - Rider Remote Bridge • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
                 android:textSize="12sp"
                 android:textColor="@color/cockpit_muted_dim"
                 android:gravity="center"

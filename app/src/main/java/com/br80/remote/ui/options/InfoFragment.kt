@@ -30,7 +30,7 @@ class InfoFragment : OptionsDetailFragment(R.layout.fragment_option_info, "Info 
 
         val tvAppVersionInfo = view.findViewById<TextView>(R.id.tvAppVersionInfo)
         tvAppVersionInfo.text =
-            "Livall BR80 Remote v${BuildConfig.VERSION_NAME} • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
+            "RRB - Rider Remote Bridge v${BuildConfig.VERSION_NAME} • Open Source\nSupporta telecomandi Livall BR80 / BlingRemote"
         tvAppVersionInfo.setOnClickListener { onVersionInfoTapped() }
 
         if (BuildConfig.DEBUG && mappingStorage.isDeveloperModeEnabled()) {
