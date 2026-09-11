@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.7](https://github.com/rafing22/br80-remote/compare/v4.5.6...v4.5.7) (2026-09-11)
+
+
+### Bug Fixes
+
+* guardia esspicita contro callback GATT "stale" dopo una riconnessione rapida ([6a3540d](https://github.com/rafing22/br80-remote/commit/6a3540d579ddae8f2c49c054fb78413626ddca22))
+
 ## [4.5.6](https://github.com/rafing22/br80-remote/compare/v4.5.5...v4.5.6) (2026-09-10)
 
 
