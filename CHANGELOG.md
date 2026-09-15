@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.0](https://github.com/rafing22/br80-remote/compare/v4.6.2...v4.7.0) (2026-09-15)
+
+
+### Features
+
+* disattivazione automatica completa a dispositivo BT specifico ([f13aece](https://github.com/rafing22/br80-remote/commit/f13aece7daf2d2492b9de8d16827ceff34e40adb))
+
 ## [4.6.2](https://github.com/rafing22/br80-remote/compare/v4.6.1...v4.6.2) (2026-09-11)
 
 
