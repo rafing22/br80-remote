@@ -27,6 +27,9 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
     private lateinit var cbOptConditionalBt: CheckBox
     private lateinit var tvConditionalBtDevice: TextView
     private lateinit var btnOptChooseBtDevice: Button
+    private lateinit var cbOptAutoDisableBt: CheckBox
+    private lateinit var tvAutoDisableBtDevice: TextView
+    private lateinit var btnOptChooseAutoDisableBtDevice: Button
     private lateinit var btnOptDoze: Button
     private lateinit var btnOptOverlay: Button
     private lateinit var btnOptAccessibility: Button
@@ -39,6 +42,9 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         cbOptConditionalBt = view.findViewById(R.id.cbOptConditionalBt)
         tvConditionalBtDevice = view.findViewById(R.id.tvConditionalBtDevice)
         btnOptChooseBtDevice = view.findViewById(R.id.btnOptChooseBtDevice)
+        cbOptAutoDisableBt = view.findViewById(R.id.cbOptAutoDisableBt)
+        tvAutoDisableBtDevice = view.findViewById(R.id.tvAutoDisableBtDevice)
+        btnOptChooseAutoDisableBtDevice = view.findViewById(R.id.btnOptChooseAutoDisableBtDevice)
         btnOptDoze = view.findViewById(R.id.btnOptDoze)
         btnOptOverlay = view.findViewById(R.id.btnOptOverlay)
         btnOptAccessibility = view.findViewById(R.id.btnOptAccessibility)
@@ -48,6 +54,8 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
         cbOptKeepAlive.isChecked = mappingStorage.isKeepAliveEnabled()
         cbOptConditionalBt.isChecked = mappingStorage.isConditionalBtEnabled()
         updateConditionalBtDeviceLabel()
+        cbOptAutoDisableBt.isChecked = mappingStorage.isAutoDisableBtEnabled()
+        updateAutoDisableBtDeviceLabel()
 
         cbOptAppDisabled.setOnCheckedChangeListener { _, isChecked ->
             BleForegroundService.applyDisabledState(requireContext(), isChecked)
@@ -93,6 +101,24 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
             }
         }
 
+        cbOptAutoDisableBt.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && mappingStorage.getAutoDisableBtDevices().isEmpty()) {
+                Toast.makeText(requireContext(), "Seleziona prima almeno un dispositivo BT dall'elenco qui sotto.", Toast.LENGTH_LONG).show()
+                cbOptAutoDisableBt.isChecked = false
+                return@setOnCheckedChangeListener
+            }
+            mappingStorage.setAutoDisableBtEnabled(isChecked)
+            host.appendLog("Disattivazione automatica a dispositivo BT: " + if (isChecked) "ATTIVA" else "DISATTIVATA")
+        }
+
+        btnOptChooseAutoDisableBtDevice.setOnClickListener {
+            showBondedDeviceMultiPickerDialog(requireContext(), mappingStorage.getAutoDisableBtDevices()) { selected ->
+                mappingStorage.setAutoDisableBtDevices(selected)
+                updateAutoDisableBtDeviceLabel()
+                host.appendLog("Dispositivi BT per auto-disattivazione impostati: ${selected.joinToString(", ") { it.second }}")
+            }
+        }
+
         btnOptDoze.setOnClickListener { requestIgnoreBatteryOptimization() }
         btnOptOverlay.setOnClickListener { requestOverlayPermission() }
         btnOptAccessibility.setOnClickListener { requestAccessibilityPermission() }
@@ -114,6 +140,15 @@ class ConnectionFragment : OptionsDetailFragment(R.layout.fragment_option_connec
     private fun updateConditionalBtDeviceLabel() {
         val devices = mappingStorage.getConditionalBtDevices()
         tvConditionalBtDevice.text = if (devices.isEmpty()) {
+            "Nessun dispositivo selezionato"
+        } else {
+            "Dispositivi selezionati: " + devices.joinToString(", ") { it.second }
+        }
+    }
+
+    private fun updateAutoDisableBtDeviceLabel() {
+        val devices = mappingStorage.getAutoDisableBtDevices()
+        tvAutoDisableBtDevice.text = if (devices.isEmpty()) {
             "Nessun dispositivo selezionato"
         } else {
             "Dispositivi selezionati: " + devices.joinToString(", ") { it.second }

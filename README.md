@@ -1,6 +1,15 @@
-# RRB - Rider Remote Bridge — Android BLE Controller & Automation Bridge (v4.3)
+# RRB - Rider Remote Bridge — Android BLE Controller & Automation Bridge (v4.6)
 
 Applicazione Android open source per connettere, decodificare e mappare i tasti del telecomando Bluetooth Low Energy **Livall BR80** (noto anche come *BlingRemote*), trasformandolo in un controller versatile per musica, assistente vocale Google Gemini, navigazione, chiamate e automazioni avanzate (**Tasker**, **MacroDroid**, ecc.).
+
+---
+
+## 🔌 Novità Versione 4.6 — Disattivazione automatica a dispositivo BT, Bluetooth OFF gestito, priorità connessione adattiva
+
+- **Disattivazione automatica a dispositivo BT specifico**: elenco indipendente dal Keep-Alive condizionale (es. Bluetooth dell'auto) — alla disconnessione del dispositivo scelto l'app si disattiva completamente (come il toggle manuale "Disattiva app"), non solo ascolto passivo; alla riconnessione si riattiva da sola.
+- **Gestione Bluetooth OFF improvviso**: se l'utente spegne il Bluetooth dai Quick Settings mentre l'app è connessa o a metà riconnessione, ogni job/scan/GATT pendente viene interrotto subito invece di aspettare i singoli timeout.
+- **Anti-throttling**: dopo 4 tentativi di riconnessione consecutivi falliti, la scansione di supporto passa a bassa potenza per ridurre il traffico radio.
+- **Rebranding**: l'app si chiama ora "RRB - Rider Remote Bridge" (era "Livall BR80 Remote").
 
 ---
 

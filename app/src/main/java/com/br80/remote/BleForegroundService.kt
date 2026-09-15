@@ -265,6 +265,19 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
         Br80WidgetProvider.updateAllWidgets(this)
     }
 
+    override fun onAutoDisableTargetConnectionChanged(isConnected: Boolean, deviceName: String?) {
+        if (!mappingStorage.isAutoDisableBtEnabled()) return
+        val name = deviceName ?: "Dispositivo BT"
+        if (isConnected) {
+            onLog("Dispositivo BT ($name) connesso: riattivo l'app.")
+            applyDisabledState(this, false)
+            connectDevice()
+        } else {
+            onLog("Dispositivo BT ($name) disconnesso: disattivo completamente l'app.")
+            applyDisabledState(this, true)
+        }
+    }
+
     override fun onBluetoothStateChanged(isBtOn: Boolean) {
         if (isBtOn && !mappingStorage.getLastConnectedMac().isNullOrEmpty()) {
             if (!mappingStorage.isConditionalBtEnabled() || btDeviceMonitor.isTargetCurrentlyConnected()) {

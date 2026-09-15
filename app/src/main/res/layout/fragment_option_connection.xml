@@ -35,6 +35,41 @@
                 android:layout_marginStart="32dp"
                 android:layout_marginBottom="24dp" />
 
+            <CheckBox
+                android:id="@+id/cbOptAutoDisableBt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Disattiva automaticamente a dispositivo BT specifico"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Elenco indipendente dal Keep-Alive condizionale (es. Bluetooth dell'auto): alla disconnessione del dispositivo scelto disattiva completamente l'app (come il toggle manuale sopra), non solo ascolto passivo; alla riconnessione si riattiva da sola."
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvAutoDisableBtDevice"
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Nessun dispositivo selezionato"
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptChooseAutoDisableBtDevice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scegli Dispositivo BT (Auto Disattivazione)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="24dp" />
+
             <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVVIO &amp; ALWAYS-ON" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
 
             <CheckBox

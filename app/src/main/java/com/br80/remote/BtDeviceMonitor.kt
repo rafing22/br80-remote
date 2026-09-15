@@ -24,6 +24,7 @@ class BtDeviceMonitor(
 
     interface BtDeviceMonitorListener {
         fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?)
+        fun onAutoDisableTargetConnectionChanged(isConnected: Boolean, deviceName: String?)
         fun onBluetoothStateChanged(isBtOn: Boolean)
     }
 
@@ -37,31 +38,41 @@ class BtDeviceMonitor(
                 BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
                     // ACL_CONNECTED (sotto) resta solo per la disconnessione totale del link:
                     // per il momento in cui il dispositivo è DAVVERO pronto (usato per Keep-Alive
-                    // condizionale) serve il broadcast di stato del profilo A2DP/HFP, non l'evento
-                    // ACL grezzo — quest'ultimo scatta quando il link radio si forma, PRIMA che la
-                    // negoziazione del profilo audio sia completa: un controllo sincrono su ACL
-                    // trovava sempre "non connesso" anche a cuffie già accoppiate (visto dal vivo).
+                    // condizionale e per la disattivazione automatica) serve il broadcast di stato
+                    // del profilo A2DP/HFP, non l'evento ACL grezzo — quest'ultimo scatta quando il
+                    // link radio si forma, PRIMA che la negoziazione del profilo audio sia completa:
+                    // un controllo sincrono su ACL trovava sempre "non connesso" anche a cuffie già
+                    // accoppiate (visto dal vivo).
                     val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-                    val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
+                        ?: return
 
-                    if (device != null && isTargetDevice(device, targetMacs)) {
+                    val conditionalMacs = mappingStorage.getConditionalBtDevices().map { it.first }
+                    if (isTargetDevice(device, conditionalMacs)) {
                         // Ricalcola lo stato aggregato: se hai più dispositivi target configurati,
                         // la disconnessione di UNO solo non deve spegnere il keep-alive se un
                         // altro dispositivo target resta connesso.
                         val stillConnected = isTargetCurrentlyConnected()
-                        val name = device.name ?: mappingStorage.getConditionalBtDevices()
-                            .firstOrNull { it.first.equals(device.address, ignoreCase = true) }?.second
-                            ?: "Dispositivo BT"
+                        val name = deviceDisplayName(device, mappingStorage.getConditionalBtDevices())
                         Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
                         listener.onTargetDeviceConnectionChanged(stillConnected, name)
+                    }
+
+                    val autoDisableMacs = mappingStorage.getAutoDisableBtDevices().map { it.first }
+                    if (isTargetDevice(device, autoDisableMacs)) {
+                        val stillConnected = isAutoDisableTargetCurrentlyConnected()
+                        val name = deviceDisplayName(device, mappingStorage.getAutoDisableBtDevices())
+                        Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
+                        listener.onAutoDisableTargetConnectionChanged(stillConnected, name)
                     }
                 }
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     // Solo log/diagnostica: non attendibile per decidere lo stato "connesso"
                     // (vedi sopra). Lo stato aggregato reale arriva dai broadcast di profilo.
                     val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-                    val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
-                    if (device != null && isTargetDevice(device, targetMacs)) {
+                        ?: return
+                    val allTracked = mappingStorage.getConditionalBtDevices().map { it.first } +
+                        mappingStorage.getAutoDisableBtDevices().map { it.first }
+                    if (isTargetDevice(device, allTracked)) {
                         Log.d(tag, "Link ACL formato con ${device.address}, in attesa della negoziazione profilo A2DP/HFP...")
                     }
                 }
@@ -91,6 +102,7 @@ class BtDeviceMonitor(
 
             // Verifica immediata dello stato attuale se il tracciamento condizionale è attivo
             checkCurrentTargetConnectionState()
+            checkCurrentAutoDisableConnectionState()
         } catch (e: Exception) {
             Log.e(tag, "Errore registrazione BtDeviceMonitor: ${e.message}")
         }
@@ -108,7 +120,14 @@ class BtDeviceMonitor(
     }
 
     fun isTargetCurrentlyConnected(): Boolean {
-        val targetMacs = mappingStorage.getConditionalBtDevices().map { it.first }
+        return isAnyOfMacsConnected(mappingStorage.getConditionalBtDevices().map { it.first })
+    }
+
+    fun isAutoDisableTargetCurrentlyConnected(): Boolean {
+        return isAnyOfMacsConnected(mappingStorage.getAutoDisableBtDevices().map { it.first })
+    }
+
+    private fun isAnyOfMacsConnected(targetMacs: List<String>): Boolean {
         if (targetMacs.isEmpty()) return false
 
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
@@ -136,6 +155,20 @@ class BtDeviceMonitor(
             val name = mappingStorage.getConditionalBtDevices().firstOrNull()?.second
             listener.onTargetDeviceConnectionChanged(isConnected, name)
         }
+    }
+
+    private fun checkCurrentAutoDisableConnectionState() {
+        if (mappingStorage.isAutoDisableBtEnabled()) {
+            val isConnected = isAutoDisableTargetCurrentlyConnected()
+            val name = mappingStorage.getAutoDisableBtDevices().firstOrNull()?.second
+            listener.onAutoDisableTargetConnectionChanged(isConnected, name)
+        }
+    }
+
+    private fun deviceDisplayName(device: BluetoothDevice, knownDevices: Set<Pair<String, String>>): String {
+        return device.name
+            ?: knownDevices.firstOrNull { it.first.equals(device.address, ignoreCase = true) }?.second
+            ?: "Dispositivo BT"
     }
 
     private fun isTargetDevice(device: BluetoothDevice, targetMacs: List<String>): Boolean {

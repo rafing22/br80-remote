@@ -471,6 +471,26 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putStringSet(KEY_CONDITIONAL_BT_DEVICES, encodeDeviceSet(devices)).apply()
     }
 
+    // Dispositivi BT per la disattivazione automatica completa dell'app (es. Bluetooth auto),
+    // indipendenti dall'elenco del Keep-Alive condizionale: alla disconnessione del dispositivo
+    // scelto l'app si disattiva del tutto (come il toggle manuale "Disattiva app"), non solo
+    // ascolto passivo; alla riconnessione si riattiva da sola.
+    fun isAutoDisableBtEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_DISABLE_BT_ENABLED, false)
+    }
+
+    fun setAutoDisableBtEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_DISABLE_BT_ENABLED, enabled).apply()
+    }
+
+    fun getAutoDisableBtDevices(): Set<Pair<String, String>> {
+        return decodeDeviceSet(prefs.getStringSet(KEY_AUTO_DISABLE_BT_DEVICES, emptySet()))
+    }
+
+    fun setAutoDisableBtDevices(devices: Set<Pair<String, String>>) {
+        prefs.edit().putStringSet(KEY_AUTO_DISABLE_BT_DEVICES, encodeDeviceSet(devices)).apply()
+    }
+
     // Dispositivi Audio BT per TTS / Comandi Vocali (es. Interfono/Casco), indipendenti dal Keep-Alive condizionale
     fun isAudioBtRoutingEnabled(): Boolean {
         return prefs.getBoolean(KEY_AUDIO_BT_ENABLED, false)
@@ -673,6 +693,8 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_APP_DISABLED = "pref_app_disabled"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
         private const val KEY_CONDITIONAL_BT_DEVICES = "pref_conditional_bt_devices"
+        private const val KEY_AUTO_DISABLE_BT_ENABLED = "pref_auto_disable_bt_enabled"
+        private const val KEY_AUTO_DISABLE_BT_DEVICES = "pref_auto_disable_bt_devices"
         private const val KEY_AUDIO_BT_ENABLED = "pref_audio_bt_enabled"
         private const val KEY_AUDIO_BT_DEVICES = "pref_audio_bt_devices"
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
