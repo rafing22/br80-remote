@@ -84,7 +84,10 @@ enum class ActionType(
     SYSTEM_BACK("system_back", "Tasto Indietro", "Simula il tasto di sistema Indietro (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
     SYSTEM_HOME("system_home", "Tasto Home", "Simula il tasto di sistema Home (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
     LOCK_SCREEN("lock_screen", "Blocca Schermo", "Blocca immediatamente lo schermo del telefono (richiede Servizio Accessibilità attivo)", ActionCategory.UTILITY),
-    VOLUME_SET_LEVEL("volume_set_level", "Imposta Volume Preciso", "Imposta il volume multimediale al livello preciso configurato in Opzioni", ActionCategory.MEDIA),
+    VOLUME_SET_25("volume_set_25", "Volume 25%", "Imposta il volume multimediale al 25%", ActionCategory.MEDIA),
+    VOLUME_SET_50("volume_set_50", "Volume 50%", "Imposta il volume multimediale al 50%", ActionCategory.MEDIA),
+    VOLUME_SET_75("volume_set_75", "Volume 75%", "Imposta il volume multimediale al 75%", ActionCategory.MEDIA),
+    VOLUME_SET_100("volume_set_100", "Volume 100%", "Imposta il volume multimediale al massimo", ActionCategory.MEDIA),
     REDIAL_LAST_RECEIVED("redial_last_received", "Richiama Ultima Chiamata Ricevuta", "Richiama l'ultimo numero da cui hai ricevuto una chiamata", ActionCategory.PHONE),
     REDIAL_LAST_DIALED("redial_last_dialed", "Richiama Ultimo Numero Effettuato", "Richiama l'ultimo numero che hai chiamato", ActionCategory.PHONE),
 
@@ -575,14 +578,6 @@ class MappingStorage private constructor(context: Context) {
         return true
     }
 
-    // Livello di volume preciso applicato dall'azione VOLUME_SET_LEVEL (default 70%)
-    fun getPreferredVolumeLevelPercent(): Int {
-        return prefs.getInt(KEY_PREFERRED_VOLUME_PERCENT, 70)
-    }
-
-    fun setPreferredVolumeLevelPercent(percent: Int) {
-        prefs.edit().putInt(KEY_PREFERRED_VOLUME_PERCENT, percent.coerceIn(0, 100)).apply()
-    }
 
     // Opzione sviluppatore nascosta (sblocco a 7 tocchi in Opzioni): abilita il gancio
     // di debug ADB per simulare pressioni tasto, oltre a esistere solo in build di debug.
@@ -700,7 +695,6 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_ACTIVE_PROFILE_NAME = "pref_active_profile_name"
         private const val KEY_PROFILE_NAMES = "pref_profile_names"
         private const val KEY_ROOM_MIGRATION_DONE = "pref_room_migration_done"
-        private const val KEY_PREFERRED_VOLUME_PERCENT = "pref_preferred_volume_percent"
         private const val KEY_DEVELOPER_MODE = "pref_developer_mode_enabled"
     }
 }

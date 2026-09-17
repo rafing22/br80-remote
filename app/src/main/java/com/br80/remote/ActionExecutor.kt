@@ -154,8 +154,17 @@ class ActionExecutor(
                 ActionType.LOCK_SCREEN -> {
                     performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN, "Blocca Schermo")
                 }
-                ActionType.VOLUME_SET_LEVEL -> {
-                    setVolumeToPreferredLevel()
+                ActionType.VOLUME_SET_25 -> {
+                    setVolumeToPercent(25)
+                }
+                ActionType.VOLUME_SET_50 -> {
+                    setVolumeToPercent(50)
+                }
+                ActionType.VOLUME_SET_75 -> {
+                    setVolumeToPercent(75)
+                }
+                ActionType.VOLUME_SET_100 -> {
+                    setVolumeToPercent(100)
                 }
                 ActionType.REDIAL_LAST_RECEIVED -> {
                     redialFromCallLog(CallLog.Calls.INCOMING_TYPE)
@@ -526,9 +535,8 @@ class ActionExecutor(
         onLog(if (success) "$actionLabel eseguito." else "$actionLabel: esecuzione non riuscita.")
     }
 
-    private fun setVolumeToPreferredLevel() {
+    private fun setVolumeToPercent(percent: Int) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-        val percent = mappingStorage.getPreferredVolumeLevelPercent()
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val level = ((percent / 100f) * maxVolume).toInt().coerceIn(0, maxVolume)
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, level, AudioManager.FLAG_SHOW_UI)

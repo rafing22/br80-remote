@@ -35,11 +35,13 @@
                 android:layout_marginStart="32dp"
                 android:layout_marginBottom="24dp" />
 
+            <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AUTOMAZIONI SU DISPOSITIVO BLUETOOTH" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />
+
             <CheckBox
-                android:id="@+id/cbOptAutoDisableBt"
+                android:id="@+id/cbOptConditionalBt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Disattiva automaticamente a dispositivo BT specifico"
+                android:text="Keep-Alive condizionale a un dispositivo BT"
                 android:textSize="14sp"
                 android:textColor="@color/cockpit_ink" />
 
@@ -47,7 +49,42 @@
                 style="@style/Br80.Text.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Elenco indipendente dal Keep-Alive condizionale (es. Bluetooth dell'auto): alla disconnessione del dispositivo scelto disattiva completamente l'app (come il toggle manuale sopra), non solo ascolto passivo; alla riconnessione si riattiva da sola."
+                android:text="Quando il dispositivo scelto si CONNETTE: attiva il ping anti-standby e l'ascolto reattivo del BR80. Alla disconnessione, il servizio resta attivo ma torna in ascolto passivo."
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvConditionalBtDevice"
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Nessun dispositivo selezionato"
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnOptChooseBtDevice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scegli Dispositivo BT (Interfono / Casco)"
+                android:textSize="13sp"
+                android:backgroundTint="@color/cockpit_card"
+                android:textColor="@color/cockpit_ink"
+                android:layout_marginBottom="20dp" />
+
+            <CheckBox
+                android:id="@+id/cbOptAutoDisableBt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Disattivazione automatica a un dispositivo BT"
+                android:textSize="14sp"
+                android:textColor="@color/cockpit_ink" />
+
+            <TextView
+                style="@style/Br80.Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Quando il dispositivo scelto si DISCONNETTE: disattiva completamente l'app (come il toggle sopra). Alla riconnessione, si riattiva da sola. Elenco indipendente dal Keep-Alive condizionale qui sopra."
                 android:layout_marginStart="32dp"
                 android:layout_marginBottom="8dp" />
 
@@ -64,7 +101,7 @@
                 android:id="@+id/btnOptChooseAutoDisableBtDevice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Scegli Dispositivo BT (Auto Disattivazione)"
+                android:text="Scegli Dispositivo BT (Auto-Disattivazione)"
                 android:textSize="13sp"
                 android:backgroundTint="@color/cockpit_card"
                 android:textColor="@color/cockpit_ink"
@@ -95,33 +132,6 @@
                 android:layout_height="wrap_content"
                 android:text="Invia un ping periodico per evitare il deep sleep del BR80."
                 android:layout_marginStart="32dp"
-                android:layout_marginBottom="12dp" />
-
-            <CheckBox
-                android:id="@+id/cbOptConditionalBt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Keep-Alive condizionale a dispositivo BT specifico"
-                android:textSize="14sp"
-                android:textColor="@color/cockpit_ink" />
-
-            <TextView
-                android:id="@+id/tvConditionalBtDevice"
-                style="@style/Br80.Text.Caption"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Nessun dispositivo selezionato"
-                android:layout_marginStart="32dp"
-                android:layout_marginBottom="8dp" />
-
-            <Button
-                android:id="@+id/btnOptChooseBtDevice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Scegli Dispositivo BT (Interfono / Casco)"
-                android:textSize="13sp"
-                android:backgroundTint="@color/cockpit_card"
-                android:textColor="@color/cockpit_ink"
                 android:layout_marginBottom="24dp" />
 
             <TextView style="@style/Br80.Text.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PERMESSI DI SISTEMA" android:letterSpacing="0.1" android:layout_marginBottom="8dp" />

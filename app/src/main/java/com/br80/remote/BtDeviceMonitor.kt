@@ -22,6 +22,16 @@ class BtDeviceMonitor(
     private val tag = "BtDeviceMonitor"
     private var isReceiverRegistered = false
 
+    // Ultimo stato aggregato già segnalato al listener per ciascun elenco (null = mai calcolato).
+    // Un dispositivo che espone sia A2DP sia HFP/Headset (es. auricolari con supporto chiamate)
+    // genera PIÙ broadcast di sistema separati per la stessa disconnessione/riconnessione fisica
+    // (ACL + A2DP + HEADSET): senza questo controllo, ogni broadcast ridondante ridispacciava da
+    // capo entrambi i callback, causando un loop di attivazioni/disattivazioni concorrenti che si
+    // accavallavano a vicenda (riprodotto dal vivo con Galaxy Buds Live: 3 cicli identici nello
+    // stesso secondo). Dispacciare solo sui cambi di stato REALI elimina il loop alla radice.
+    private var lastDispatchedConditionalState: Boolean? = null
+    private var lastDispatchedAutoDisableState: Boolean? = null
+
     interface BtDeviceMonitorListener {
         fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?)
         fun onAutoDisableTargetConnectionChanged(isConnected: Boolean, deviceName: String?)
@@ -52,17 +62,23 @@ class BtDeviceMonitor(
                         // la disconnessione di UNO solo non deve spegnere il keep-alive se un
                         // altro dispositivo target resta connesso.
                         val stillConnected = isTargetCurrentlyConnected()
-                        val name = deviceDisplayName(device, mappingStorage.getConditionalBtDevices())
-                        Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
-                        listener.onTargetDeviceConnectionChanged(stillConnected, name)
+                        if (stillConnected != lastDispatchedConditionalState) {
+                            lastDispatchedConditionalState = stillConnected
+                            val name = deviceDisplayName(device, mappingStorage.getConditionalBtDevices())
+                            Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
+                            listener.onTargetDeviceConnectionChanged(stillConnected, name)
+                        }
                     }
 
                     val autoDisableMacs = mappingStorage.getAutoDisableBtDevices().map { it.first }
                     if (isTargetDevice(device, autoDisableMacs)) {
                         val stillConnected = isAutoDisableTargetCurrentlyConnected()
-                        val name = deviceDisplayName(device, mappingStorage.getAutoDisableBtDevices())
-                        Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
-                        listener.onAutoDisableTargetConnectionChanged(stillConnected, name)
+                        if (stillConnected != lastDispatchedAutoDisableState) {
+                            lastDispatchedAutoDisableState = stillConnected
+                            val name = deviceDisplayName(device, mappingStorage.getAutoDisableBtDevices())
+                            Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
+                            listener.onAutoDisableTargetConnectionChanged(stillConnected, name)
+                        }
                     }
                 }
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
@@ -152,6 +168,7 @@ class BtDeviceMonitor(
     private fun checkCurrentTargetConnectionState() {
         if (mappingStorage.isConditionalBtEnabled()) {
             val isConnected = isTargetCurrentlyConnected()
+            lastDispatchedConditionalState = isConnected
             val name = mappingStorage.getConditionalBtDevices().firstOrNull()?.second
             listener.onTargetDeviceConnectionChanged(isConnected, name)
         }
@@ -160,6 +177,7 @@ class BtDeviceMonitor(
     private fun checkCurrentAutoDisableConnectionState() {
         if (mappingStorage.isAutoDisableBtEnabled()) {
             val isConnected = isAutoDisableTargetCurrentlyConnected()
+            lastDispatchedAutoDisableState = isConnected
             val name = mappingStorage.getAutoDisableBtDevices().firstOrNull()?.second
             listener.onAutoDisableTargetConnectionChanged(isConnected, name)
         }
