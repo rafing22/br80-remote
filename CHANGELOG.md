@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.8.0](https://github.com/rafing22/br80-remote/compare/v4.7.0...v4.8.0) (2026-09-17)
+
+
+### Features
+
+* raccolta feedback utenti (template Issue + pulsante in-app) ([d030229](https://github.com/rafing22/br80-remote/commit/d0302291a11c7a064a46b77990000d4fb517b276))
+
+
+### Bug Fixes
+
+* la disattivazione automatica a dispositivo BT non si riattivava più ([e87d453](https://github.com/rafing22/br80-remote/commit/e87d45303e52a2f80a40da34c404e5dfea4ae719))
+
 ## [4.7.0](https://github.com/rafing22/br80-remote/compare/v4.6.2...v4.7.0) (2026-09-15)
 
 
