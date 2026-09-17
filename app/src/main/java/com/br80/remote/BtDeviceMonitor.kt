@@ -10,6 +10,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.IntentCompat
 
@@ -31,6 +33,18 @@ class BtDeviceMonitor(
     // stesso secondo). Dispacciare solo sui cambi di stato REALI elimina il loop alla radice.
     private var lastDispatchedConditionalState: Boolean? = null
     private var lastDispatchedAutoDisableState: Boolean? = null
+
+    // Debounce per gli eventi di DISCONNESSIONE: confermato dal vivo che, appena dopo una
+    // riconnessione, il sistema può emettere un BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED
+    // con esito "disconnesso" prima che il proxy di profilo (usato da isAnyOfMacsConnected)
+    // abbia sincronizzato lo stato vero (~80ms di scarto osservato in log). Un dispatch
+    // immediato su quel falso negativo disattivava di nuovo l'app un istante dopo averla
+    // appena riattivata. Un evento di CONNESSIONE non ha lo stesso problema (dispatchato
+    // subito, vedi sotto) — solo la disconnessione va confermata con un ricontrollo ritardato.
+    private val handler = Handler(Looper.getMainLooper())
+    private var conditionalDisconnectCheck: Runnable? = null
+    private var autoDisableDisconnectCheck: Runnable? = null
+    private val disconnectDebounceMs = 1500L
 
     interface BtDeviceMonitorListener {
         fun onTargetDeviceConnectionChanged(isConnected: Boolean, deviceName: String?)
@@ -62,22 +76,56 @@ class BtDeviceMonitor(
                         // la disconnessione di UNO solo non deve spegnere il keep-alive se un
                         // altro dispositivo target resta connesso.
                         val stillConnected = isTargetCurrentlyConnected()
-                        if (stillConnected != lastDispatchedConditionalState) {
-                            lastDispatchedConditionalState = stillConnected
-                            val name = deviceDisplayName(device, mappingStorage.getConditionalBtDevices())
-                            Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
-                            listener.onTargetDeviceConnectionChanged(stillConnected, name)
+                        val name = deviceDisplayName(device, mappingStorage.getConditionalBtDevices())
+                        if (stillConnected) {
+                            conditionalDisconnectCheck?.let { handler.removeCallbacks(it) }
+                            conditionalDisconnectCheck = null
+                            if (stillConnected != lastDispatchedConditionalState) {
+                                lastDispatchedConditionalState = true
+                                Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Stato aggregato connesso=true")
+                                listener.onTargetDeviceConnectionChanged(true, name)
+                            }
+                        } else {
+                            Log.d(tag, "Evento BT target [$action] su $name [${device.address}]. Possibile disconnessione, conferma tra ${disconnectDebounceMs}ms...")
+                            conditionalDisconnectCheck?.let { handler.removeCallbacks(it) }
+                            val check = Runnable {
+                                val confirmedStillConnected = isTargetCurrentlyConnected()
+                                if (confirmedStillConnected != lastDispatchedConditionalState) {
+                                    lastDispatchedConditionalState = confirmedStillConnected
+                                    Log.d(tag, "Disconnessione target confermata dopo debounce: connesso=$confirmedStillConnected")
+                                    listener.onTargetDeviceConnectionChanged(confirmedStillConnected, name)
+                                }
+                            }
+                            conditionalDisconnectCheck = check
+                            handler.postDelayed(check, disconnectDebounceMs)
                         }
                     }
 
                     val autoDisableMacs = mappingStorage.getAutoDisableBtDevices().map { it.first }
                     if (isTargetDevice(device, autoDisableMacs)) {
                         val stillConnected = isAutoDisableTargetCurrentlyConnected()
-                        if (stillConnected != lastDispatchedAutoDisableState) {
-                            lastDispatchedAutoDisableState = stillConnected
-                            val name = deviceDisplayName(device, mappingStorage.getAutoDisableBtDevices())
-                            Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Stato aggregato connesso=$stillConnected")
-                            listener.onAutoDisableTargetConnectionChanged(stillConnected, name)
+                        val name = deviceDisplayName(device, mappingStorage.getAutoDisableBtDevices())
+                        if (stillConnected) {
+                            autoDisableDisconnectCheck?.let { handler.removeCallbacks(it) }
+                            autoDisableDisconnectCheck = null
+                            if (stillConnected != lastDispatchedAutoDisableState) {
+                                lastDispatchedAutoDisableState = true
+                                Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Stato aggregato connesso=true")
+                                listener.onAutoDisableTargetConnectionChanged(true, name)
+                            }
+                        } else {
+                            Log.d(tag, "Evento BT auto-disattivazione [$action] su $name [${device.address}]. Possibile disconnessione, conferma tra ${disconnectDebounceMs}ms...")
+                            autoDisableDisconnectCheck?.let { handler.removeCallbacks(it) }
+                            val check = Runnable {
+                                val confirmedStillConnected = isAutoDisableTargetCurrentlyConnected()
+                                if (confirmedStillConnected != lastDispatchedAutoDisableState) {
+                                    lastDispatchedAutoDisableState = confirmedStillConnected
+                                    Log.d(tag, "Disconnessione auto-disattivazione confermata dopo debounce: connesso=$confirmedStillConnected")
+                                    listener.onAutoDisableTargetConnectionChanged(confirmedStillConnected, name)
+                                }
+                            }
+                            autoDisableDisconnectCheck = check
+                            handler.postDelayed(check, disconnectDebounceMs)
                         }
                     }
                 }
@@ -125,6 +173,10 @@ class BtDeviceMonitor(
     }
 
     fun stopMonitoring() {
+        conditionalDisconnectCheck?.let { handler.removeCallbacks(it) }
+        autoDisableDisconnectCheck?.let { handler.removeCallbacks(it) }
+        conditionalDisconnectCheck = null
+        autoDisableDisconnectCheck = null
         if (!isReceiverRegistered) return
         try {
             context.unregisterReceiver(receiver)
@@ -165,22 +217,40 @@ class BtDeviceMonitor(
         return false
     }
 
+    // Entrambi i controlli di sincronizzazione sotto girano all'avvio del servizio (startMonitoring,
+    // chiamato da BleForegroundService.onCreate()) — incluso quando il servizio viene appena
+    // risvegliato da Br80AutoDisableWakeReceiver proprio perché il dispositivo si è riconnesso.
+    // In quel caso preciso, il profilo A2DP/HFP potrebbe non essere ancora registrato come
+    // connesso nel sistema nell'istante in cui questo controllo sincrono gira (stesso ritardo di
+    // negoziazione per cui ACL_CONNECTED non basta da solo, vedi commenti sopra) — un falso
+    // "non connesso" qui disattiverebbe di nuovo l'app un istante dopo averla riattivata (bug
+    // confermato dal vivo: il servizio si fermava da solo ~26ms dopo essere ripartito). Per
+    // questo, un esito "non connesso" in QUESTO controllo iniziale non viene mai dispacciato
+    // come disconnessione: solo un vero evento di disconnessione in diretta (broadcast successivo,
+    // non questo controllo una tantum) può farlo. Nessun problema simmetrico sull'esito "connesso":
+    // dispacciarlo subito è sicuro e anzi desiderabile (riattiva Keep-Alive/servizio prima possibile).
     private fun checkCurrentTargetConnectionState() {
-        if (mappingStorage.isConditionalBtEnabled()) {
-            val isConnected = isTargetCurrentlyConnected()
-            lastDispatchedConditionalState = isConnected
-            val name = mappingStorage.getConditionalBtDevices().firstOrNull()?.second
-            listener.onTargetDeviceConnectionChanged(isConnected, name)
+        if (!mappingStorage.isConditionalBtEnabled()) return
+        val isConnected = isTargetCurrentlyConnected()
+        if (!isConnected) {
+            lastDispatchedConditionalState = null // stato ignoto, non "disconnesso": vedi commento sopra
+            return
         }
+        lastDispatchedConditionalState = true
+        val name = mappingStorage.getConditionalBtDevices().firstOrNull()?.second
+        listener.onTargetDeviceConnectionChanged(true, name)
     }
 
     private fun checkCurrentAutoDisableConnectionState() {
-        if (mappingStorage.isAutoDisableBtEnabled()) {
-            val isConnected = isAutoDisableTargetCurrentlyConnected()
-            lastDispatchedAutoDisableState = isConnected
-            val name = mappingStorage.getAutoDisableBtDevices().firstOrNull()?.second
-            listener.onAutoDisableTargetConnectionChanged(isConnected, name)
+        if (!mappingStorage.isAutoDisableBtEnabled()) return
+        val isConnected = isAutoDisableTargetCurrentlyConnected()
+        if (!isConnected) {
+            lastDispatchedAutoDisableState = null // stato ignoto, non "disconnesso": vedi commento sopra
+            return
         }
+        lastDispatchedAutoDisableState = true
+        val name = mappingStorage.getAutoDisableBtDevices().firstOrNull()?.second
+        listener.onAutoDisableTargetConnectionChanged(true, name)
     }
 
     private fun deviceDisplayName(device: BluetoothDevice, knownDevices: Set<Pair<String, String>>): String {

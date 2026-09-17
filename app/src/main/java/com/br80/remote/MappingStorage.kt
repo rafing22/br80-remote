@@ -414,6 +414,16 @@ class MappingStorage private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_APP_DISABLED, disabled).apply()
     }
 
+    // Vale sia per il toggle manuale "Disattiva app" sia per l'auto-disattivazione a
+    // dispositivo BT — entrambi passano da BleForegroundService.applyDisabledState().
+    fun isCloseFromRecentsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_CLOSE_FROM_RECENTS, false)
+    }
+
+    fun setCloseFromRecentsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CLOSE_FROM_RECENTS, enabled).apply()
+    }
+
     fun isHapticFeedbackEnabled(): Boolean {
         return prefs.getBoolean(KEY_HAPTIC_FEEDBACK, true)
     }
@@ -686,6 +696,7 @@ class MappingStorage private constructor(context: Context) {
         private const val KEY_TTS_LABELS_MIGRATED = "pref_tts_labels_migrated"
         private const val KEY_AUTO_BOOT = "pref_auto_boot"
         private const val KEY_APP_DISABLED = "pref_app_disabled"
+        private const val KEY_CLOSE_FROM_RECENTS = "pref_close_from_recents"
         private const val KEY_CONDITIONAL_BT_ENABLED = "pref_conditional_bt_enabled"
         private const val KEY_CONDITIONAL_BT_DEVICES = "pref_conditional_bt_devices"
         private const val KEY_AUTO_DISABLE_BT_ENABLED = "pref_auto_disable_bt_enabled"

@@ -1,5 +1,6 @@
 package com.br80.remote
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -471,6 +472,10 @@ class BleForegroundService : Service(), BleGattManager.BleGattListener, BtDevice
                     context.startService(stopIntent)
                 }
                 Br80BackgroundScanManager.stop(context)
+                if (mappingStorage.isCloseFromRecentsEnabled()) {
+                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+                }
             } else if (!BleServiceStateHolder.isServiceRunning) {
                 // Se il service è già vivo (es. l'utente ha usato il Connetti manuale come
                 // override mentre l'app era "disattivata"), onDestroy() penserà da solo a

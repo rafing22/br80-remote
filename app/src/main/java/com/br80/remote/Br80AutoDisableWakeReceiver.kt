@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.content.IntentCompat
 
 /**
@@ -43,6 +44,8 @@ class Br80AutoDisableWakeReceiver : BroadcastReceiver() {
             ?: return
         val targetMacs = mappingStorage.getAutoDisableBtDevices().map { it.first }
         if (targetMacs.none { it.equals(device.address, ignoreCase = true) }) return
+
+        Log.d("Br80AutoDisableWake", "Riattivo l'app: dispositivo ${device.address} riconnesso.")
 
         BleForegroundService.applyDisabledState(context, false)
 
