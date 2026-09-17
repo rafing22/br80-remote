@@ -129,6 +129,19 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- Riattiva l'app quando il dispositivo BT della "Disattivazione automatica" si
+             ricollega, anche ad app/servizio completamente spenti: ACTION_ACL_CONNECTED è
+             esente dalle restrizioni sui broadcast impliciti di Android 8+, quindi arriva
+             comunque anche a processo killato (vedi Br80AutoDisableWakeReceiver). -->
+        <receiver
+            android:name=".Br80AutoDisableWakeReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Widget home screen: stato, riconnessione, cambio profilo, uscita -->
         <receiver
             android:name=".Br80WidgetProvider"
