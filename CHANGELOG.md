@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.10.0](https://github.com/rafing22/br80-remote/compare/v4.9.0...v4.10.0) (2026-09-17)
+
+
+### Features
+
+* opzione per chiudere l'app dalle app recenti alla disattivazione ([0bd3aba](https://github.com/rafing22/br80-remote/commit/0bd3abafefa014f69fc478e6c8626f8ee3ccf946))
+
+
+### Bug Fixes
+
+* race condition impediva la riattivazione dopo riconnessione al dispositivo BT ([0bd3aba](https://github.com/rafing22/br80-remote/commit/0bd3abafefa014f69fc478e6c8626f8ee3ccf946))
+
 ## [4.9.0](https://github.com/rafing22/br80-remote/compare/v4.8.0...v4.9.0) (2026-09-17)
 
 
