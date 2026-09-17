@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.9.0](https://github.com/rafing22/br80-remote/compare/v4.8.0...v4.9.0) (2026-09-17)
+
+
+### Features
+
+* 4 preset di volume assegnabili come azioni, al posto di un'unica ([8cef4b7](https://github.com/rafing22/br80-remote/commit/8cef4b733edaf6126c2dfb40250ce4fb29d1c54b))
+
+
+### Bug Fixes
+
+* loop di attivazione/disattivazione con dispositivi A2DP+HFP ([8cef4b7](https://github.com/rafing22/br80-remote/commit/8cef4b733edaf6126c2dfb40250ce4fb29d1c54b))
+
 ## [4.8.0](https://github.com/rafing22/br80-remote/compare/v4.7.0...v4.8.0) (2026-09-17)
 
 
